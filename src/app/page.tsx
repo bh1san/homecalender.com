@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getNews } from "@/ai/flows/news-flow";
 import { NewsItem } from "@/ai/schemas";
+import CurrentDateTime from "@/components/current-date-time";
 
 const upcomingEvents = [
     { day: "३१", month: "असार", title: "विश्व युवा दक्षता दिवस/बीतक कथा प्रारम्भ", relativeTime: "आज" },
@@ -162,13 +163,7 @@ function Header() {
             </div>
             <div className="bg-[#A4161A]">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-                    <div>
-                        <h1 className="text-3xl font-bold">३१ असार २०८२, मंगलवार</h1>
-                        <p className="text-sm">साउन कृष्ण पञ्चमी</p>
-                        <p className="text-sm">पञ्चाङ्गः सौभाग्य कौलव शतभिषा</p>
-                        <p className="text-sm">बिहानको १२ : ३५</p>
-                        <p className="text-sm mt-1">Jul 15, 2025</p>
-                    </div>
+                    <CurrentDateTime />
                     <div className="hidden sm:block">
                         <Image src="https://placehold.co/400x100.png" alt="Ad Banner" width={400} height={100} data-ai-hint="game banner"/>
                     </div>
