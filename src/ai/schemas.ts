@@ -11,11 +11,17 @@ import {z} from 'genkit';
 
 export const NewsItemSchema = z.object({
   title: z.string().describe('The headline of the news article.'),
-  imageHint: z.string().describe('A two-word hint for generating a relevant placeholder image (e.g., "political protest", "sports victory").'),
+  imageDataUri: z
+    .string()
+    .describe(
+      "A generated image for the news article, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+    ),
 });
 export type NewsItem = z.infer<typeof NewsItemSchema>;
 
 export const NewsResponseSchema = z.object({
-  headlines: z.array(NewsItemSchema).describe('A list of 8 recent news headlines from Nepal.'),
+  headlines: z
+    .array(NewsItemSchema)
+    .describe('A list of 8 recent news headlines from Nepal with generated images.'),
 });
 export type NewsResponse = z.infer<typeof NewsResponseSchema>;

@@ -15,6 +15,7 @@ import FestivalList from "@/components/festival-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getNews } from "@/ai/flows/news-flow";
+import { NewsItem } from "@/ai/schemas";
 
 const upcomingEvents = [
     { day: "३१", month: "असार", title: "विश्व युवा दक्षता दिवस/बीतक कथा प्रारम्भ", relativeTime: "आज" },
@@ -23,11 +24,7 @@ const upcomingEvents = [
 
 export default async function Home() {
   const newsData = await getNews();
-  const newsItems = newsData.headlines.map(item => ({
-    title: item.title,
-    image: "https://placehold.co/150x100.png",
-    hint: item.imageHint,
-  }));
+  const newsItems = newsData.headlines;
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -46,7 +43,7 @@ export default async function Home() {
             <div className="flex space-x-4 overflow-x-auto pb-4">
                 {newsItems.map((item, index) => (
                     <div key={index} className="flex-shrink-0 w-48 bg-white rounded-lg shadow-md overflow-hidden">
-                        <Image src={item.image} alt={item.title} width={192} height={128} className="w-full h-32 object-cover" data-ai-hint={item.hint}/>
+                        <Image src={item.imageDataUri} alt={item.title} width={192} height={128} className="w-full h-32 object-cover" />
                         <div className="p-3">
                             <p className="text-sm font-medium text-gray-800 leading-tight">{item.title}</p>
                         </div>
