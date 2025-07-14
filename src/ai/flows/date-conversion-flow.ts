@@ -3,28 +3,15 @@
  * @fileOverview A flow for converting dates between Gregorian (AD) and Nepali (BS) calendars.
  *
  * - convertDate - A function that handles the date conversion.
- * - DateConversionInput - The input type for the convertDate function.
- * - DateConversionOutput - The return type for the convertDate function.
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
-
-export const DateConversionInputSchema = z.object({
-  source: z.enum(['ad_to_bs', 'bs_to_ad']),
-  year: z.number(),
-  month: z.number(),
-  day: z.number(),
-});
-export type DateConversionInput = z.infer<typeof DateConversionInputSchema>;
-
-export const DateConversionOutputSchema = z.object({
-  year: z.number(),
-  month: z.string(),
-  day: z.number(),
-  fullDate: z.string().describe("The full converted date in 'Month Day, Year' format."),
-});
-export type DateConversionOutput = z.infer<typeof DateConversionOutputSchema>;
+import {
+  DateConversionInput,
+  DateConversionInputSchema,
+  DateConversionOutput,
+  DateConversionOutputSchema,
+} from '@/ai/schemas';
 
 export async function convertDate(
   input: DateConversionInput

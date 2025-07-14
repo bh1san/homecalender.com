@@ -15,11 +15,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { convertDate } from "@/ai/flows/date-conversion-flow";
 import {
-  convertDate,
   DateConversionInput,
   DateConversionOutput,
-} from "@/ai/flows/date-conversion-flow";
+} from "@/ai/schemas";
 import {
   Select,
   SelectContent,
