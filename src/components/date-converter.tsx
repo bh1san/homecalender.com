@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRightLeft } from "lucide-react";
+import { ArrowRightLeft, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,56 +15,104 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import {
+  convertDate,
+  DateConversionInput,
+  DateConversionOutput,
+} from "@/ai/flows/date-conversion-flow";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
+
+const nepaliMonths = [
+  "Baisakh", "Jestha", "Ashadh", "Shrawan", "Bhadra",
+  "Ashwin", "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra"
+];
+
+const gregorianMonths = [
+  "January", "February", "March", "April", "May", "June", 
+  "July", "August", "September", "October", "November", "December"
+];
+
 
 export default function DateConverter() {
   const { toast } = useToast();
-  const [gregorianDate, setGregorianDate] = useState({ year: "", month: "", day: "" });
-  const [nepaliResult, setNepaliResult] = useState("");
-  const [nepaliDate, setNepaliDate] = useState({ year: "", month: "", day: "" });
-  const [gregorianResult, setGregorianResult] = useState("");
+  
+  const [gregorianDate, setGregorianDate] = useState({ year: "2024", month: "7", day: "15" });
+  const [nepaliResult, setNepaliResult] = useState<DateConversionOutput | null>(null);
+  const [isConvertingAD, setIsConvertingAD] = useState(false);
 
-  const handleGregorianToNepali = () => {
-    if (gregorianDate.year && gregorianDate.month && gregorianDate.day) {
-      // Mock conversion logic
-      const year = parseInt(gregorianDate.year);
-      const month = parseInt(gregorianDate.month);
-      const day = parseInt(gregorianDate.day);
-      if (year > 1943 && year < 2034 && month > 0 && month < 13 && day > 0 && day < 32) {
-        const nepaliYear = year + 56;
-        const nepaliMonth = "Jestha";
-        const nepaliDay = (day + 14) % 32;
-        setNepaliResult(`${nepaliYear} ${nepaliMonth} ${nepaliDay}`);
-      } else {
-        setNepaliResult("Invalid date provided.");
-      }
-    } else {
+  const [nepaliDate, setNepaliDate] = useState({ year: "2081", month: "4", day: "1" });
+  const [gregorianResult, setGregorianResult] = useState<DateConversionOutput | null>(null);
+  const [isConvertingBS, setIsConvertingBS] = useState(false);
+
+  const handleGregorianToNepali = async () => {
+    if (!gregorianDate.year || !gregorianDate.month || !gregorianDate.day) {
       toast({
         variant: "destructive",
         title: "Error",
         description: "Please fill all Gregorian date fields.",
       });
+      return;
+    }
+
+    setIsConvertingAD(true);
+    setNepaliResult(null);
+    try {
+      const input: DateConversionInput = {
+        source: "ad_to_bs",
+        year: parseInt(gregorianDate.year),
+        month: parseInt(gregorianDate.month),
+        day: parseInt(gregorianDate.day),
+      };
+      const result = await convertDate(input);
+      setNepaliResult(result);
+    } catch (error) {
+      console.error("Conversion failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Conversion Failed",
+        description: "Could not convert the Gregorian date. Please try again.",
+      });
+    } finally {
+      setIsConvertingAD(false);
     }
   };
 
-  const handleNepaliToGregorian = () => {
-    if (nepaliDate.year && nepaliDate.month && nepaliDate.day) {
-        // Mock conversion logic
-        const year = parseInt(nepaliDate.year);
-        const day = parseInt(nepaliDate.day);
-        if (year > 2000 && year < 2091 && day > 0 && day < 33) {
-            const gregorianYear = year - 57;
-            const gregorianMonth = "May";
-            const gregorianDay = (day + 15) % 31;
-            setGregorianResult(`${gregorianYear} ${gregorianMonth} ${gregorianDay}`);
-        } else {
-            setGregorianResult("Invalid date provided.");
-        }
-    } else {
+  const handleNepaliToGregorian = async () => {
+    if (!nepaliDate.year || !nepaliDate.month || !nepaliDate.day) {
        toast({
         variant: "destructive",
         title: "Error",
         description: "Please fill all Nepali date fields.",
       });
+      return;
+    }
+    
+    setIsConvertingBS(true);
+    setGregorianResult(null);
+    try {
+      const input: DateConversionInput = {
+        source: "bs_to_ad",
+        year: parseInt(nepaliDate.year),
+        month: parseInt(nepaliDate.month),
+        day: parseInt(nepaliDate.day),
+      };
+      const result = await convertDate(input);
+      setGregorianResult(result);
+    } catch (error) {
+      console.error("Conversion failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Conversion Failed",
+        description: "Could not convert the Nepali date. Please try again.",
+      });
+    } finally {
+      setIsConvertingBS(false);
     }
   };
 
@@ -82,7 +130,14 @@ export default function DateConverter() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="gregorian-month">Month</Label>
-            <Input id="gregorian-month" type="number" placeholder="e.g., 5" value={gregorianDate.month} onChange={(e) => setGregorianDate({...gregorianDate, month: e.target.value})} />
+             <Select value={gregorianDate.month} onValueChange={(value) => setGregorianDate({...gregorianDate, month: value})}>
+                <SelectTrigger id="gregorian-month"><SelectValue placeholder="Select month..." /></SelectTrigger>
+                <SelectContent>
+                  {gregorianMonths.map((month, index) => (
+                    <SelectItem key={month} value={String(index + 1)}>{month}</SelectItem>
+                  ))}
+                </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="gregorian-day">Day</Label>
@@ -90,12 +145,17 @@ export default function DateConverter() {
           </div>
         </CardContent>
         <CardFooter className="flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <Button onClick={handleGregorianToNepali}>
-            <ArrowRightLeft className="mr-2 h-4 w-4" /> Convert to Nepali
+          <Button onClick={handleGregorianToNepali} disabled={isConvertingAD}>
+            {isConvertingAD ? (
+              <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <ArrowRightLeft className="mr-2 h-4 w-4" />
+            )}
+             Convert to Nepali
           </Button>
           {nepaliResult && (
             <div className="rounded-md bg-accent/20 p-3 text-center font-medium text-primary">
-              <p>Nepali Date: <span className="font-bold">{nepaliResult}</span></p>
+              <p>Nepali Date: <span className="font-bold">{nepaliResult.fullDate}</span></p>
             </div>
           )}
         </CardFooter>
@@ -120,7 +180,14 @@ export default function DateConverter() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="nepali-month">Month</Label>
-            <Input id="nepali-month" placeholder="e.g., Jestha" value={nepaliDate.month} onChange={(e) => setNepaliDate({...nepaliDate, month: e.target.value})} />
+             <Select value={nepaliDate.month} onValueChange={(value) => setNepaliDate({...nepaliDate, month: value})}>
+                <SelectTrigger id="nepali-month"><SelectValue placeholder="Select month..." /></SelectTrigger>
+                <SelectContent>
+                  {nepaliMonths.map((month, index) => (
+                    <SelectItem key={month} value={String(index + 1)}>{month}</SelectItem>
+                  ))}
+                </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="nepali-day">Day</Label>
@@ -128,12 +195,17 @@ export default function DateConverter() {
           </div>
         </CardContent>
         <CardFooter className="flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <Button onClick={handleNepaliToGregorian}>
-            <ArrowRightLeft className="mr-2 h-4 w-4" /> Convert to Gregorian
+          <Button onClick={handleNepaliToGregorian} disabled={isConvertingBS}>
+            {isConvertingBS ? (
+                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <ArrowRightLeft className="mr-2 h-4 w-4" />
+            )}
+            Convert to Gregorian
           </Button>
           {gregorianResult && (
             <div className="rounded-md bg-accent/20 p-3 text-center font-medium text-primary">
-               <p>Gregorian Date: <span className="font-bold">{gregorianResult}</span></p>
+               <p>Gregorian Date: <span className="font-bold">{gregorianResult.fullDate}</span></p>
             </div>
           )}
         </CardFooter>
