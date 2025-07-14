@@ -14,24 +14,21 @@ import DateConverter from "@/components/date-converter";
 import FestivalList from "@/components/festival-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
-const newsItems = [
-    { title: "ओखलढुङ्गाको मानेभन्ज्याङ क्षेत्रमा भारी", image: "https://placehold.co/150x100.png", hint: "building news" },
-    { title: "पाकिस्तानमा मनसुनको प्रकोप : १९१ जनाको मृत्यु", image: "https://placehold.co/150x100.png", hint: "flood disaster" },
-    { title: "दोस्रो बुढासुब्बा कप को उपाधि भिजन स्पोर्टस", image: "https://placehold.co/150x100.png", hint: "soccer goal" },
-    { title: "पछिल्लो २४ घण्टामा ७ जनामा कोरोना सङ्क्रमण", image: "https://placehold.co/150x100.png", hint: "virus molecule" },
-    { title: "एक अस्ट्रेलियन जसलाई दाजुको मृत्युले इटाली", image: "https://placehold.co/150x100.png", hint: "T20 cricket" },
-    { title: "तीनपटक प्लेन उठाएर आएँ, चौथोपटक चढेर", image: "https://placehold.co/150x100.png", hint: "man suit" },
-    { title: "मन्त्रीको छोराले चलाएको कार दुर्घटना, एक जना", image: "https://placehold.co/150x100.png", hint: "car accident" },
-    { title: "आर्मी फ्रेन्ड्ससँग ३-० ले पराजित", image: "https://placehold.co/150x100.png", hint: "soccer match" },
-];
+import { getNews } from "@/ai/flows/news-flow";
 
 const upcomingEvents = [
     { day: "३१", month: "असार", title: "विश्व युवा दक्षता दिवस/बीतक कथा प्रारम्भ", relativeTime: "आज" },
     { day: "१", month: "साउन", title: "साउने स‌ङ्क्रान्ति/लुतो फाल्ने दिन/दक्षिणायन आरम्भ", relativeTime: "२ दिन पछि" },
 ]
 
-export default function Home() {
+export default async function Home() {
+  const newsData = await getNews();
+  const newsItems = newsData.headlines.map(item => ({
+    title: item.title,
+    image: "https://placehold.co/150x100.png",
+    hint: item.imageHint,
+  }));
+
   return (
     <div className="bg-gray-50 min-h-screen">
       <Header />
