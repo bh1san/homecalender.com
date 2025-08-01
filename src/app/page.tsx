@@ -63,25 +63,25 @@ export default function Home() {
   }, [location.country]);
 
   return (
-    <div className="bg-white/80 dark:bg-black/80 min-h-screen">
+    <div className="min-h-screen">
       <Header />
       <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-4">
             <LocationSelector onLocationChange={(country) => setLocation({ country })} />
             <div className="relative w-full max-w-xs">
-                <Input type="search" placeholder="Search events" className="pl-10"/>
+                <Input type="search" placeholder="Search events" className="pl-10 bg-white/80"/>
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400"/>
             </div>
         </div>
 
         <section className="mb-8">
-          <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">
+          <h3 className="text-lg font-semibold mb-3 text-white dark:text-gray-200 bg-black/50 p-2 rounded">
             News Bulletin {location.country ? `from ${location.country}` : 'Headlines'}
           </h3>
             {loading && !newsItems.length ? (
                 <div className="flex space-x-4 overflow-x-auto pb-4">
                     {[...Array(8)].map((_, index) => (
-                        <div key={index} className="flex-shrink-0 w-48 bg-card rounded-lg shadow-md overflow-hidden">
+                        <div key={index} className="flex-shrink-0 w-48 bg-card/80 rounded-lg shadow-md overflow-hidden">
                              <div className="w-full h-32 bg-muted animate-pulse" />
                             <div className="p-3">
                                  <div className="h-4 bg-muted-foreground/20 rounded w-3/4 mb-2 animate-pulse" />
@@ -94,7 +94,7 @@ export default function Home() {
                 newsItems.length > 0 && (
                     <div className="flex space-x-4 overflow-x-auto pb-4">
                         {newsItems.map((item, index) => (
-                            <div key={index} className="flex-shrink-0 w-48 bg-card rounded-lg shadow-md overflow-hidden">
+                            <div key={index} className="flex-shrink-0 w-48 bg-card/80 rounded-lg shadow-md overflow-hidden">
                                 <Image src={item.imageDataUri} alt={item.title} width={192} height={128} className="w-full h-32 object-cover" />
                                 <div className="p-3">
                                     <p className="text-sm font-medium text-card-foreground leading-tight">{item.title}</p>
@@ -108,7 +108,7 @@ export default function Home() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
-            <Card className="w-full shadow-lg bg-card/90">
+            <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
                 <CardContent className="p-2 sm:p-4">
                   <Tabs defaultValue="calendar" className="w-full">
                     <TabsList className="grid w-full grid-cols-3 bg-muted/60">
@@ -123,7 +123,7 @@ export default function Home() {
                       </TabsTrigger>
                     </TabsList>
                     <TabsContent value="calendar" className="mt-6">
-                        {isNepal ? <NepaliCalendar /> : <Calendar mode="single" className="w-full rounded-md bg-card" />}
+                        {isNepal ? <NepaliCalendar /> : <Calendar mode="single" className="w-full rounded-md bg-card/90" />}
                     </TabsContent>
                     <TabsContent value="converter" className="mt-6">
                       <DateConverter />
@@ -136,7 +136,7 @@ export default function Home() {
                             ))}
                          </div>
                       ) : (
-                         festivals.length > 0 ? <FestivalList festivals={festivals} /> : <p className="text-center text-muted-foreground">Select a country to see its festivals.</p>
+                         festivals.length > 0 ? <FestivalList festivals={festivals} /> : <p className="text-center text-muted-foreground p-4 bg-background/80 rounded">Select a country to see its festivals.</p>
                       )}
                     </TabsContent>
                   </Tabs>
@@ -145,7 +145,7 @@ export default function Home() {
           </div>
 
           <div className="space-y-8">
-            <Card className="bg-card/90">
+            <Card className="bg-card/80 backdrop-blur-sm">
                 <CardHeader>
                     <CardTitle className="text-lg font-semibold text-card-foreground">Upcoming Events</CardTitle>
                 </CardHeader>
@@ -168,13 +168,13 @@ export default function Home() {
             </Card>
 
             <div className="grid grid-cols-2 gap-4">
-                <Button variant="outline" className="justify-start bg-card/90"><Gift className="mr-2 text-pink-500"/> Remit</Button>
-                <Button variant="outline" className="justify-start bg-card/90"><History className="mr-2 text-green-500"/> Recharge</Button>
-                <Button variant="outline" className="justify-start bg-card/90"><Heart className="mr-2 text-blue-500"/> Gifts</Button>
-                <Button variant="outline" className="justify-start bg-card/90"><CalendarDays className="mr-2 text-red-500"/> Holidays</Button>
+                <Button variant="outline" className="justify-start bg-card/80 backdrop-blur-sm"><Gift className="mr-2 text-pink-500"/> Remit</Button>
+                <Button variant="outline" className="justify-start bg-card/80 backdrop-blur-sm"><History className="mr-2 text-green-500"/> Recharge</Button>
+                <Button variant="outline" className="justify-start bg-card/80 backdrop-blur-sm"><Heart className="mr-2 text-blue-500"/> Gifts</Button>
+                <Button variant="outline" className="justify-start bg-card/80 backdrop-blur-sm"><CalendarDays className="mr-2 text-red-500"/> Holidays</Button>
             </div>
             
-            <Card className="bg-card/90">
+            <Card className="bg-card/80 backdrop-blur-sm">
                 <CardHeader>
                     <CardTitle className="text-lg font-semibold text-card-foreground">Our Doctors</CardTitle>
                 </CardHeader>
@@ -200,7 +200,7 @@ function Header() {
     ];
 
     return (
-        <header className="bg-accent/90 text-white shadow-md backdrop-blur-sm">
+        <header className="bg-accent/90 text-white shadow-md backdrop-blur-sm sticky top-0 z-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
                     <div className="flex items-center space-x-4">
