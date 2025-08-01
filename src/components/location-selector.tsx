@@ -18,11 +18,12 @@ interface LocationSelectorProps {
 
 // A minimal list of countries for demonstration
 const countries = [
-  "Argentina", "Australia", "Bangladesh", "Brazil", "Canada", "China",
+  "Argentina", "Australia", "Bahrain", "Bangladesh", "Brazil", "Canada", "China",
   "Egypt", "France", "Germany", "India", "Indonesia", "Italy", "Japan",
-  "Mexico", "Nepal", "Netherlands", "Nigeria", "Pakistan", "Philippines",
-  "Russia", "Saudi Arabia", "South Africa", "South Korea", "Spain",
-  "Thailand", "Turkey", "United Kingdom", "United States", "Vietnam"
+  "Kuwait", "Mexico", "Nepal", "Netherlands", "Nigeria", "Oman", "Pakistan",
+  "Philippines", "Qatar", "Russia", "Saudi Arabia", "South Africa",
+  "South Korea", "Spain", "Thailand", "Turkey", "United Arab Emirates",
+  "United Kingdom", "United States", "Vietnam"
 ];
 
 export default function LocationSelector({ onLocationChange }: LocationSelectorProps) {
@@ -70,7 +71,7 @@ export default function LocationSelector({ onLocationChange }: LocationSelectorP
           <SelectValue placeholder="Select Country..." />
         </SelectTrigger>
         <SelectContent>
-          {countries.map((country) => (
+          {countries.sort().map((country) => (
             <SelectItem key={country} value={country}>
               {country}
             </SelectItem>
@@ -84,5 +85,3 @@ export default function LocationSelector({ onLocationChange }: LocationSelectorP
     </div>
   );
 }
-
-    
