@@ -75,17 +75,17 @@ export default function Home() {
         </div>
 
         <section className="mb-8">
-          <h3 className="text-lg font-semibold mb-3 text-gray-800">
+          <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200">
             News Bulletin {location.country ? `from ${location.country}` : 'Headlines'}
           </h3>
             {loading && !newsItems.length ? (
                 <div className="flex space-x-4 overflow-x-auto pb-4">
                     {[...Array(8)].map((_, index) => (
-                        <div key={index} className="flex-shrink-0 w-48 bg-white rounded-lg shadow-md overflow-hidden">
-                             <div className="w-full h-32 bg-gray-200 animate-pulse" />
+                        <div key={index} className="flex-shrink-0 w-48 bg-card rounded-lg shadow-md overflow-hidden">
+                             <div className="w-full h-32 bg-muted animate-pulse" />
                             <div className="p-3">
-                                 <div className="h-4 bg-gray-200 rounded w-3/4 mb-2 animate-pulse" />
-                                 <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
+                                 <div className="h-4 bg-muted-foreground/20 rounded w-3/4 mb-2 animate-pulse" />
+                                 <div className="h-4 bg-muted-foreground/20 rounded w-1/2 animate-pulse" />
                             </div>
                         </div>
                     ))}
@@ -94,10 +94,10 @@ export default function Home() {
                 newsItems.length > 0 && (
                     <div className="flex space-x-4 overflow-x-auto pb-4">
                         {newsItems.map((item, index) => (
-                            <div key={index} className="flex-shrink-0 w-48 bg-white rounded-lg shadow-md overflow-hidden">
+                            <div key={index} className="flex-shrink-0 w-48 bg-card rounded-lg shadow-md overflow-hidden">
                                 <Image src={item.imageDataUri} alt={item.title} width={192} height={128} className="w-full h-32 object-cover" />
                                 <div className="p-3">
-                                    <p className="text-sm font-medium text-gray-800 leading-tight">{item.title}</p>
+                                    <p className="text-sm font-medium text-card-foreground leading-tight">{item.title}</p>
                                 </div>
                             </div>
                         ))}
@@ -108,10 +108,10 @@ export default function Home() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
-            <Card className="w-full shadow-lg">
+            <Card className="w-full shadow-lg bg-card/90">
                 <CardContent className="p-2 sm:p-4">
                   <Tabs defaultValue="calendar" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 bg-gray-100">
+                    <TabsList className="grid w-full grid-cols-3 bg-muted/60">
                       <TabsTrigger value="calendar">
                         <CalendarDays className="mr-2 h-4 w-4" /> Calendar
                       </TabsTrigger>
@@ -123,7 +123,7 @@ export default function Home() {
                       </TabsTrigger>
                     </TabsList>
                     <TabsContent value="calendar" className="mt-6">
-                        {isNepal ? <NepaliCalendar /> : <Calendar mode="single" className="w-full" />}
+                        {isNepal ? <NepaliCalendar /> : <Calendar mode="single" className="w-full rounded-md bg-card" />}
                     </TabsContent>
                     <TabsContent value="converter" className="mt-6">
                       <DateConverter />
@@ -132,11 +132,11 @@ export default function Home() {
                       {loading ? (
                          <div className="space-y-2">
                             {[...Array(5)].map((_, i) => (
-                               <div key={i} className="h-16 bg-gray-200 rounded animate-pulse" />
+                               <div key={i} className="h-16 bg-muted/50 rounded animate-pulse" />
                             ))}
                          </div>
                       ) : (
-                         festivals.length > 0 ? <FestivalList festivals={festivals} /> : <p className="text-center text-gray-500">Select a country to see its festivals.</p>
+                         festivals.length > 0 ? <FestivalList festivals={festivals} /> : <p className="text-center text-muted-foreground">Select a country to see its festivals.</p>
                       )}
                     </TabsContent>
                   </Tabs>
@@ -145,21 +145,21 @@ export default function Home() {
           </div>
 
           <div className="space-y-8">
-            <Card>
+            <Card className="bg-card/90">
                 <CardHeader>
-                    <CardTitle className="text-lg font-semibold text-gray-800">Upcoming Events</CardTitle>
+                    <CardTitle className="text-lg font-semibold text-card-foreground">Upcoming Events</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
                         {upcomingEvents.map(event => (
                             <div key={event.title} className="flex items-start gap-4">
                                 <div className="flex-shrink-0 text-center">
-                                    <div className="bg-primary text-white font-bold p-2 rounded-t-md text-sm">{event.day}</div>
-                                    <div className="bg-gray-200 text-gray-700 p-1 rounded-b-md text-xs">{event.month}</div>
+                                    <div className="bg-primary text-primary-foreground font-bold p-2 rounded-t-md text-sm">{event.day}</div>
+                                    <div className="bg-secondary text-secondary-foreground p-1 rounded-b-md text-xs">{event.month}</div>
                                 </div>
                                 <div>
-                                    <p className="font-medium text-gray-900">{event.title}</p>
-                                    <p className="text-sm text-gray-500">{event.relativeTime}</p>
+                                    <p className="font-medium text-card-foreground">{event.title}</p>
+                                    <p className="text-sm text-muted-foreground">{event.relativeTime}</p>
                                 </div>
                             </div>
                         ))}
@@ -168,21 +168,21 @@ export default function Home() {
             </Card>
 
             <div className="grid grid-cols-2 gap-4">
-                <Button variant="outline" className="justify-start bg-white"><Gift className="mr-2 text-pink-500"/> Remit</Button>
-                <Button variant="outline" className="justify-start bg-white"><History className="mr-2 text-green-500"/> Recharge</Button>
-                <Button variant="outline" className="justify-start bg-white"><Heart className="mr-2 text-blue-500"/> Gifts</Button>
-                <Button variant="outline" className="justify-start bg-white"><CalendarDays className="mr-2 text-red-500"/> Holidays</Button>
+                <Button variant="outline" className="justify-start bg-card/90"><Gift className="mr-2 text-pink-500"/> Remit</Button>
+                <Button variant="outline" className="justify-start bg-card/90"><History className="mr-2 text-green-500"/> Recharge</Button>
+                <Button variant="outline" className="justify-start bg-card/90"><Heart className="mr-2 text-blue-500"/> Gifts</Button>
+                <Button variant="outline" className="justify-start bg-card/90"><CalendarDays className="mr-2 text-red-500"/> Holidays</Button>
             </div>
             
-            <Card>
+            <Card className="bg-card/90">
                 <CardHeader>
-                    <CardTitle className="text-lg font-semibold text-gray-800">Our Doctors</CardTitle>
+                    <CardTitle className="text-lg font-semibold text-card-foreground">Our Doctors</CardTitle>
                 </CardHeader>
                 <CardContent className="flex items-center gap-4">
                     <Image src="https://placehold.co/60x60.png" alt="Dr. Babita Sharma" width={60} height={60} className="rounded-full" data-ai-hint="woman doctor"/>
                     <div>
                         <p className="font-bold text-red-600">Dr. Babita Sharma</p>
-                        <p className="text-sm text-gray-600">MBBS, MD Psychiatry and Psychotherapy</p>
+                        <p className="text-sm text-muted-foreground">MBBS, MD Psychiatry and Psychotherapy</p>
                     </div>
                 </CardContent>
             </Card>
@@ -200,7 +200,7 @@ function Header() {
     ];
 
     return (
-        <header className="bg-accent text-white shadow-md">
+        <header className="bg-accent/90 text-white shadow-md backdrop-blur-sm">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
                     <div className="flex items-center space-x-4">
