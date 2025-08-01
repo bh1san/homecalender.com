@@ -1,7 +1,7 @@
 
 "use client";
 
-import { ArrowRightLeft, CalendarDays, PartyPopper, Search, Gift, History, Heart, User, LoaderCircle } from "lucide-react";
+import { ArrowRightLeft, CalendarDays, PartyPopper, Search, Gift, History, Heart, User, MapPin } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -20,12 +20,14 @@ import { Input } from "@/components/ui/input";
 import { getNews } from "@/ai/flows/news-flow";
 import { NewsItem, Festival } from "@/ai/schemas";
 import CurrentDateTime from "@/components/current-date-time";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getFestivals } from "@/ai/flows/festival-flow";
+import { Calendar } from "@/components/ui/calendar";
+import LocationSelector from "@/components/location-selector";
 
 const upcomingEvents = [
-    { day: "३१", month: "असार", title: "विश्व युवा दक्षता दिवस/बीतक कथा प्रारम्भ", relativeTime: "आज" },
-    { day: "१", month: "साउन", title: "साउने स‌ङ्क्रान्ति/लुतो फाल्ने दिन/दक्षिणायन आरम्भ", relativeTime: "२ दिन पछि" },
+    { day: "15", month: "Jul", title: "World Youth Skills Day", relativeTime: "Today" },
+    { day: "17", month: "Jul", title: "First day of Shrawan", relativeTime: "2 days later" },
 ]
 
 export default function Home() {
@@ -34,65 +36,38 @@ export default function Home() {
   const [festivals, setFestivals] = useState<Festival[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const isNepal = useMemo(() => location.country === 'Nepal', [location.country]);
+
   useEffect(() => {
-    const fetchLocationAndData = async () => {
+    const fetchData = async (country: string) => {
       setLoading(true);
-
-      const getCountry = (): Promise<string> => {
-        return new Promise((resolve) => {
-          if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(async (position) => {
-              try {
-                const response = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${position.coords.latitude}&longitude=${position.coords.longitude}&localityLanguage=en`);
-                const data = await response.json();
-                resolve(data.countryName || 'Nepal');
-              } catch (error) {
-                console.error("Error fetching country from location:", error);
-                resolve('Nepal'); // Fallback country
-              }
-            }, (error) => {
-              console.error("Geolocation error:", error);
-              resolve('Nepal'); // Fallback country
-            });
-          } else {
-            console.error("Geolocation is not supported by this browser.");
-            resolve('Nepal'); // Fallback country
-          }
-        });
-      };
-
-      const country = await getCountry();
-      setLocation({ country });
-
-      if (country) {
-        try {
-          const [newsData, festivalData] = await Promise.all([
-            getNews(country),
-            getFestivals(country)
-          ]);
-          setNewsItems(newsData.headlines);
-          setFestivals(festivalData.festivals);
-        } catch (error) {
-          console.error("Error fetching data:", error);
-          // Set fallback data if API calls fail
-          const newsData = await getNews('Nepal');
-          const festivalData = await getFestivals('Nepal');
-          setNewsItems(newsData.headlines);
-          setFestivals(festivalData.festivals);
-        }
+      try {
+        const [newsData, festivalData] = await Promise.all([
+          getNews(country),
+          getFestivals(country)
+        ]);
+        setNewsItems(newsData.headlines);
+        setFestivals(festivalData.festivals);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
-    fetchLocationAndData();
-  }, []);
+    if (location.country) {
+      fetchData(location.country);
+    } else {
+        setLoading(false);
+    }
+  }, [location.country]);
 
   return (
     <div className="bg-gray-50 min-h-screen">
       <Header />
       <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-700">{location.country ? `${location.country} ` : ''}Calendar 2082</h2>
+            <LocationSelector onLocationChange={(country) => setLocation({ country })} />
             <div className="relative w-full max-w-xs">
                 <Input type="search" placeholder="Search events" className="pl-10"/>
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400"/>
@@ -100,8 +75,10 @@ export default function Home() {
         </div>
 
         <section className="mb-8">
-          <h3 className="text-lg font-semibold mb-3 text-gray-800">News Bulletin {location.country && `from ${location.country}`}</h3>
-            {loading ? (
+          <h3 className="text-lg font-semibold mb-3 text-gray-800">
+            News Bulletin {location.country ? `from ${location.country}` : 'Headlines'}
+          </h3>
+            {loading && !newsItems.length ? (
                 <div className="flex space-x-4 overflow-x-auto pb-4">
                     {[...Array(8)].map((_, index) => (
                         <div key={index} className="flex-shrink-0 w-48 bg-white rounded-lg shadow-md overflow-hidden">
@@ -114,16 +91,18 @@ export default function Home() {
                     ))}
                 </div>
             ) : (
-                <div className="flex space-x-4 overflow-x-auto pb-4">
-                    {newsItems.map((item, index) => (
-                        <div key={index} className="flex-shrink-0 w-48 bg-white rounded-lg shadow-md overflow-hidden">
-                            <Image src={item.imageDataUri} alt={item.title} width={192} height={128} className="w-full h-32 object-cover" />
-                            <div className="p-3">
-                                <p className="text-sm font-medium text-gray-800 leading-tight">{item.title}</p>
+                newsItems.length > 0 && (
+                    <div className="flex space-x-4 overflow-x-auto pb-4">
+                        {newsItems.map((item, index) => (
+                            <div key={index} className="flex-shrink-0 w-48 bg-white rounded-lg shadow-md overflow-hidden">
+                                <Image src={item.imageDataUri} alt={item.title} width={192} height={128} className="w-full h-32 object-cover" />
+                                <div className="p-3">
+                                    <p className="text-sm font-medium text-gray-800 leading-tight">{item.title}</p>
+                                </div>
                             </div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                )
             )}
         </section>
 
@@ -144,7 +123,7 @@ export default function Home() {
                       </TabsTrigger>
                     </TabsList>
                     <TabsContent value="calendar" className="mt-6">
-                      <NepaliCalendar />
+                        {isNepal ? <NepaliCalendar /> : <Calendar mode="single" className="w-full" />}
                     </TabsContent>
                     <TabsContent value="converter" className="mt-6">
                       <DateConverter />
@@ -157,7 +136,7 @@ export default function Home() {
                             ))}
                          </div>
                       ) : (
-                        <FestivalList festivals={festivals} />
+                         festivals.length > 0 ? <FestivalList festivals={festivals} /> : <p className="text-center text-gray-500">Select a country to see its festivals.</p>
                       )}
                     </TabsContent>
                   </Tabs>
@@ -254,3 +233,5 @@ function Header() {
         </header>
     )
 }
+
+    
