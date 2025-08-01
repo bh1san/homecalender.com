@@ -1,4 +1,7 @@
-import { ArrowRightLeft, CalendarDays, PartyPopper, Search, Gift, History, Heart, User } from "lucide-react";
+
+"use client";
+
+import { ArrowRightLeft, CalendarDays, PartyPopper, Search, Gift, History, Heart, User, LoaderCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -15,24 +18,81 @@ import FestivalList from "@/components/festival-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getNews } from "@/ai/flows/news-flow";
-import { NewsItem } from "@/ai/schemas";
+import { NewsItem, Festival } from "@/ai/schemas";
 import CurrentDateTime from "@/components/current-date-time";
+import { useEffect, useState } from "react";
+import { getFestivals } from "@/ai/flows/festival-flow";
 
 const upcomingEvents = [
     { day: "३१", month: "असार", title: "विश्व युवा दक्षता दिवस/बीतक कथा प्रारम्भ", relativeTime: "आज" },
     { day: "१", month: "साउन", title: "साउने स‌ङ्क्रान्ति/लुतो फाल्ने दिन/दक्षिणायन आरम्भ", relativeTime: "२ दिन पछि" },
 ]
 
-export default async function Home() {
-  const newsData = await getNews();
-  const newsItems = newsData.headlines;
+export default function Home() {
+  const [location, setLocation] = useState<{ country: string | null }>({ country: null });
+  const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
+  const [festivals, setFestivals] = useState<Festival[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLocationAndData = async () => {
+      setLoading(true);
+
+      const getCountry = (): Promise<string> => {
+        return new Promise((resolve) => {
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(async (position) => {
+              try {
+                const response = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${position.coords.latitude}&longitude=${position.coords.longitude}&localityLanguage=en`);
+                const data = await response.json();
+                resolve(data.countryName || 'Nepal');
+              } catch (error) {
+                console.error("Error fetching country from location:", error);
+                resolve('Nepal'); // Fallback country
+              }
+            }, (error) => {
+              console.error("Geolocation error:", error);
+              resolve('Nepal'); // Fallback country
+            });
+          } else {
+            console.error("Geolocation is not supported by this browser.");
+            resolve('Nepal'); // Fallback country
+          }
+        });
+      };
+
+      const country = await getCountry();
+      setLocation({ country });
+
+      if (country) {
+        try {
+          const [newsData, festivalData] = await Promise.all([
+            getNews(country),
+            getFestivals(country)
+          ]);
+          setNewsItems(newsData.headlines);
+          setFestivals(festivalData.festivals);
+        } catch (error) {
+          console.error("Error fetching data:", error);
+          // Set fallback data if API calls fail
+          const newsData = await getNews('Nepal');
+          const festivalData = await getFestivals('Nepal');
+          setNewsItems(newsData.headlines);
+          setFestivals(festivalData.festivals);
+        }
+      }
+      setLoading(false);
+    };
+
+    fetchLocationAndData();
+  }, []);
 
   return (
     <div className="bg-gray-50 min-h-screen">
       <Header />
       <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-700">Nepali Calendar 2082</h2>
+            <h2 className="text-xl font-semibold text-gray-700">{location.country ? `${location.country} ` : ''}Calendar 2082</h2>
             <div className="relative w-full max-w-xs">
                 <Input type="search" placeholder="Search events" className="pl-10"/>
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400"/>
@@ -40,17 +100,31 @@ export default async function Home() {
         </div>
 
         <section className="mb-8">
-            <h3 className="text-lg font-semibold mb-3 text-gray-800">समाचार बुलेटिन</h3>
-            <div className="flex space-x-4 overflow-x-auto pb-4">
-                {newsItems.map((item, index) => (
-                    <div key={index} className="flex-shrink-0 w-48 bg-white rounded-lg shadow-md overflow-hidden">
-                        <Image src={item.imageDataUri} alt={item.title} width={192} height={128} className="w-full h-32 object-cover" />
-                        <div className="p-3">
-                            <p className="text-sm font-medium text-gray-800 leading-tight">{item.title}</p>
+          <h3 className="text-lg font-semibold mb-3 text-gray-800">News Bulletin {location.country && `from ${location.country}`}</h3>
+            {loading ? (
+                <div className="flex space-x-4 overflow-x-auto pb-4">
+                    {[...Array(8)].map((_, index) => (
+                        <div key={index} className="flex-shrink-0 w-48 bg-white rounded-lg shadow-md overflow-hidden">
+                             <div className="w-full h-32 bg-gray-200 animate-pulse" />
+                            <div className="p-3">
+                                 <div className="h-4 bg-gray-200 rounded w-3/4 mb-2 animate-pulse" />
+                                 <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
+                            </div>
                         </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            ) : (
+                <div className="flex space-x-4 overflow-x-auto pb-4">
+                    {newsItems.map((item, index) => (
+                        <div key={index} className="flex-shrink-0 w-48 bg-white rounded-lg shadow-md overflow-hidden">
+                            <Image src={item.imageDataUri} alt={item.title} width={192} height={128} className="w-full h-32 object-cover" />
+                            <div className="p-3">
+                                <p className="text-sm font-medium text-gray-800 leading-tight">{item.title}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
         </section>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -76,7 +150,15 @@ export default async function Home() {
                       <DateConverter />
                     </TabsContent>
                     <TabsContent value="festivals" className="mt-6">
-                      <FestivalList />
+                      {loading ? (
+                         <div className="space-y-2">
+                            {[...Array(5)].map((_, i) => (
+                               <div key={i} className="h-16 bg-gray-200 rounded animate-pulse" />
+                            ))}
+                         </div>
+                      ) : (
+                        <FestivalList festivals={festivals} />
+                      )}
                     </TabsContent>
                   </Tabs>
                 </CardContent>
@@ -86,7 +168,7 @@ export default async function Home() {
           <div className="space-y-8">
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-lg font-semibold text-gray-800">आउँदा दिनहरु</CardTitle>
+                    <CardTitle className="text-lg font-semibold text-gray-800">Upcoming Events</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
@@ -115,7 +197,7 @@ export default async function Home() {
             
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-lg font-semibold text-gray-800">हाम्रा डाक्टरहरू</CardTitle>
+                    <CardTitle className="text-lg font-semibold text-gray-800">Our Doctors</CardTitle>
                 </CardHeader>
                 <CardContent className="flex items-center gap-4">
                     <Image src="https://placehold.co/60x60.png" alt="Dr. Babita Sharma" width={60} height={60} className="rounded-full" data-ai-hint="woman doctor"/>
@@ -145,7 +227,7 @@ function Header() {
                     <div className="flex items-center space-x-4">
                         <div className="flex items-center space-x-1">
                             <span className="text-2xl font-bold">#</span>
-                            <span className="font-bold text-xl">HAMRO PATRO</span>
+                            <span className="font-bold text-xl">HOMECALENDAR.COM</span>
                         </div>
                         <nav className="hidden md:flex items-center space-x-4">
                             {navLinks.map(link => (

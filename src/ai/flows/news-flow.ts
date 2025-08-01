@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview A flow for fetching recent Nepali news headlines with generated images.
+ * @fileOverview A flow for fetching recent news headlines with generated images based on location.
  *
  * - getNews - A function that fetches a list of news headlines with images.
  */
@@ -9,10 +9,9 @@ import {ai} from '@/ai/genkit';
 import {NewsResponse, NewsResponseSchema} from '@/ai/schemas';
 import {z} from 'genkit';
 
-// Cache for the news response
-let cachedNewsResponse: NewsResponse | null = null;
-let cacheTimestamp: number | null = null;
-const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+const NewsGenerationInputSchema = z.object({
+  country: z.string().describe('The country for which to generate news headlines.'),
+});
 
 const NewsGenerationItemSchema = z.object({
   title: z.string().describe('The headline of the news article.'),
@@ -26,29 +25,26 @@ const NewsGenerationItemSchema = z.object({
 const NewsGenerationResponseSchema = z.object({
   headlines: z
     .array(NewsGenerationItemSchema)
-    .describe('A list of 8 recent news headlines from Nepal.'),
+    .describe('A list of 8 recent news headlines from the specified country.'),
 });
 
 const newsPrompt = ai.definePrompt({
   name: 'newsPrompt',
+  input: {schema: NewsGenerationInputSchema},
   output: {schema: NewsGenerationResponseSchema},
-  prompt: `You are a news aggregator for a Nepali news portal. Generate a list of 8 diverse and recent-sounding news headlines from Nepal. Cover topics like politics, society, sports, and current events. For each headline, provide a two-word hint for a relevant placeholder image.`,
+  prompt: `You are a news aggregator. Generate a list of 8 diverse and recent-sounding news headlines from {{country}}. Cover topics like politics, society, sports, and current events. For each headline, provide a two-word hint for a relevant placeholder image.`,
 });
 
 const newsFlow = ai.defineFlow(
   {
     name: 'newsFlow',
+    inputSchema: NewsGenerationInputSchema,
     outputSchema: NewsResponseSchema,
   },
-  async () => {
-    // Check if we have a valid cache
-    if (cachedNewsResponse && cacheTimestamp && Date.now() - cacheTimestamp < CACHE_DURATION_MS) {
-      console.log('Returning cached news response.');
-      return cachedNewsResponse;
-    }
-    console.log('Generating new news response.');
+  async ({ country }) => {
+    console.log(`Generating new news response for ${country}.`);
 
-    const {output} = await newsPrompt();
+    const {output} = await newsPrompt({ country });
     if (!output) {
       throw new Error('Could not generate news headlines.');
     }
@@ -59,7 +55,6 @@ const newsFlow = ai.defineFlow(
 
     for (const headline of output.headlines) {
       let imageDataUri = placeholderImage;
-      // Only generate images for the first 3 headlines
       if (generatedImageCount < 3) {
         try {
             const {media} = await ai.generate({
@@ -82,16 +77,10 @@ const newsFlow = ai.defineFlow(
       });
     }
 
-    const response = {headlines: headlinesWithImages};
-    
-    // Update cache
-    cachedNewsResponse = response;
-    cacheTimestamp = Date.now();
-    
-    return response;
+    return {headlines: headlinesWithImages};
   }
 );
 
-export async function getNews(): Promise<NewsResponse> {
-  return newsFlow();
+export async function getNews(country: string): Promise<NewsResponse> {
+  return newsFlow({ country });
 }

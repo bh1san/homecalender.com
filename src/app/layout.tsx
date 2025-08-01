@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'Nepali Patro',
-  description: 'A utility app replicating the core functions of a Nepali calendar and date converter.',
+  title: 'HomeCalendar.com',
+  description: 'A utility app replicating the core functions of a local calendar and date converter.',
 };
 
 export default function RootLayout({
