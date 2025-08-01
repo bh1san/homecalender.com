@@ -206,7 +206,7 @@ function Header() {
                     <div className="flex items-center space-x-4">
                         <div className="flex items-center space-x-1">
                             <span className="text-2xl font-bold">#</span>
-                            <span className="font-bold text-xl">HOMECALENDAR.COM</span>
+                            <span className="font-bold text-xl">HOMECALENDER.COM</span>
                         </div>
                         <nav className="hidden md:flex items-center space-x-4">
                             {navLinks.map(link => (

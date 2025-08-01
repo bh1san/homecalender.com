@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'HomeCalendar.com',
+  title: 'HomeCalender.com',
   description: 'A utility app replicating the core functions of a local calendar and date converter.',
 };
 
