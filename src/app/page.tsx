@@ -154,7 +154,7 @@ export default function Home() {
                         {upcomingEvents.map(event => (
                             <div key={event.title} className="flex items-start gap-4">
                                 <div className="flex-shrink-0 text-center">
-                                    <div className="bg-blue-600 text-white font-bold p-2 rounded-t-md text-sm">{event.day}</div>
+                                    <div className="bg-primary text-white font-bold p-2 rounded-t-md text-sm">{event.day}</div>
                                     <div className="bg-gray-200 text-gray-700 p-1 rounded-b-md text-xs">{event.month}</div>
                                 </div>
                                 <div>
@@ -200,7 +200,7 @@ function Header() {
     ];
 
     return (
-        <header className="bg-[#BA181B] text-white shadow-md">
+        <header className="bg-accent text-white shadow-md">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
                     <div className="flex items-center space-x-4">
@@ -217,12 +217,12 @@ function Header() {
                         </nav>
                     </div>
                     <div className="flex items-center space-x-4">
-                        <Button variant="outline" size="sm" className="bg-transparent border-white text-white hover:bg-white hover:text-red-600">EN</Button>
+                        <Button variant="outline" size="sm" className="bg-transparent border-white text-white hover:bg-white hover:text-accent-foreground">EN</Button>
                         <User className="h-6 w-6"/>
                     </div>
                 </div>
             </div>
-            <div className="bg-[#A4161A]">
+            <div className="bg-accent/80">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
                     <CurrentDateTime />
                     <div className="hidden sm:block">
@@ -233,5 +233,3 @@ function Header() {
         </header>
     )
 }
-
-    
