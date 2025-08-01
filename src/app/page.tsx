@@ -63,7 +63,7 @@ export default function Home() {
   }, [location.country]);
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-white/80 dark:bg-black/80 min-h-screen">
       <Header />
       <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-4">
