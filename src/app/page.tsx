@@ -1,4 +1,3 @@
-
 "use client";
 
 import { ArrowRightLeft, CalendarDays, PartyPopper, Search, Menu, Plus, MessageSquare } from "lucide-react";
@@ -27,43 +26,14 @@ import { Calendar } from "@/components/ui/calendar";
 import LocationSelector from "@/components/location-selector";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import MotivationalQuote from "@/components/motivational-quote";
-import { format, differenceInDays, parseISO } from 'date-fns';
 import { User } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import UpcomingEventsWidget from "@/components/upcoming-events-widget";
 
 type Settings = {
     logoUrl: string;
     navLinks: string[];
 }
-
-const parseFestivalDate = (dateString: string): Date | null => {
-    try {
-        const date = parseISO(dateString);
-        if (isNaN(date.getTime())) {
-            return null;
-        }
-        return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-    } catch {
-        return null;
-    }
-};
-
-const formatUpcomingEventDate = (date: Date): string => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const diff = differenceInDays(date, today);
-     if (diff === 0) return "Today";
-    if (diff === 1) return "Tomorrow";
-    if (diff < 0) return "Past";
-    return `in ${diff} days`;
-};
-
-type UpcomingEvent = {
-    day: string;
-    month: string;
-    title: string;
-    countdown: string;
-};
 
 export default function Home() {
   const [location, setLocation] = useState<{ country: string | null }>({ country: "Nepal" });
@@ -73,30 +43,7 @@ export default function Home() {
   const [loadingFestivals, setLoadingFestivals] = useState(true);
   const [settings, setSettings] = useState<Settings>({ logoUrl: "https://placehold.co/200x50.png", navLinks: [] });
   const [loadingSettings, setLoadingSettings] = useState(true);
-  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
   const [today, setToday] = useState<CurrentDateInfoResponse | null>(null);
-
-  const processFestivals = useCallback((festivalData: Festival[], currentDate: Date) => {
-      const todayDate = new Date(currentDate);
-      todayDate.setHours(0, 0, 0, 0); // Normalize today's date
-
-      const events = festivalData
-          .map(festival => ({ ...festival, parsedDate: parseFestivalDate(festival.gregorianStartDate) }))
-          .filter(event => {
-              if (!event.parsedDate) return false;
-              const diff = differenceInDays(event.parsedDate, todayDate);
-              return diff >= 0;
-          })
-          .sort((a, b) => a.parsedDate!.getTime() - b.parsedDate!.getTime())
-          .slice(0, 5)
-          .map(event => ({
-              day: format(event.parsedDate!, 'dd'),
-              month: format(event.parsedDate!, 'MMM'),
-              title: event.name,
-              countdown: formatUpcomingEventDate(event.parsedDate!),
-          }));
-      setUpcomingEvents(events);
-  }, []);
   
   useEffect(() => {
     const fetchSettings = async () => {
@@ -123,7 +70,6 @@ export default function Home() {
       setLoadingFestivals(true);
       setNewsItems([]);
       setFestivals([]);
-      setUpcomingEvents([]);
 
       try {
         const newsPromise = getNews(country);
@@ -134,9 +80,6 @@ export default function Home() {
         
         const festivalData = await festivalPromise;
         setFestivals(festivalData.festivals);
-        if (today) {
-           processFestivals(festivalData.festivals, new Date(today.adYear, today.adMonth, today.adDay));
-        }
         
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -149,13 +92,7 @@ export default function Home() {
     const countryToFetch = location.country || "Nepal";
     fetchNewsAndFestivals(countryToFetch);
     
-  }, [location.country, processFestivals, today]);
-
-  useEffect(() => {
-      if (today && festivals.length > 0) {
-          processFestivals(festivals, new Date(today.adYear, today.adMonth, today.adDay));
-      }
-  }, [today, festivals, processFestivals]);
+  }, [location.country]);
 
   return (
     <div className="min-h-screen bg-muted/40 font-body">
@@ -228,37 +165,7 @@ export default function Home() {
                     <CardTitle className="text-lg font-semibold text-card-foreground">आउँदा दिनहरु</CardTitle>
                 </CardHeader>
                 <CardContent>
-                     {loadingFestivals ? (
-                        <div className="space-y-4">
-                            {[...Array(3)].map((_, i) => (
-                                <div key={i} className="flex items-start gap-4 p-2">
-                                    <div className="w-12 h-12 bg-muted rounded-md animate-pulse" />
-                                    <div className="w-full">
-                                        <div className="h-5 bg-muted rounded w-3/4 animate-pulse" />
-                                        <div className="h-4 bg-muted/50 rounded w-1/2 mt-1 animate-pulse" />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="space-y-2">
-                            {upcomingEvents.map(event => (
-                                <div key={event.title} className="flex items-center gap-3 p-2 rounded-lg transition-colors border-b last:border-b-0">
-                                    <div className="flex-shrink-0 text-center bg-primary/10 text-primary p-2 rounded-md">
-                                        <div className="font-bold text-lg">{event.day}</div>
-                                        <div className="text-xs font-medium">{event.month}</div>
-                                     </div>
-                                    <div className="flex-grow">
-                                        <p className="font-medium text-card-foreground text-sm">{event.title}</p>
-                                        <p className="text-xs text-muted-foreground">{event.countdown}</p>
-                                    </div>
-                                </div>
-                            ))}
-                            {upcomingEvents.length === 0 && !loadingFestivals && (
-                                <p className="text-sm text-center text-muted-foreground">No upcoming events found.</p>
-                            )}
-                        </div>
-                     )}
+                    {isNepal ? <UpcomingEventsWidget /> : <p className="text-sm text-center text-muted-foreground">Upcoming events widget is only available for Nepal.</p>}
                 </CardContent>
             </Card>
 
