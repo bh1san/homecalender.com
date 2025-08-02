@@ -1,21 +1,47 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 
 const UpcomingEventsWidget = () => {
-  return (
-    <div className="w-full h-full">
-        <iframe
-            src="https://www.hamropatro.com/widgets/events-on-this-day-js.php"
-            frameBorder="0"
-            scrolling="no"
-            marginWidth={0}
-            marginHeight={0}
-            style={{ border: 'none', overflow: 'hidden', width: '100%', height: '303px' }}
-            allowTransparency={true}
-        ></iframe>
-    </div>
-  );
+  const widgetContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!widgetContainerRef.current) return;
+
+    // Clear any previous widget content
+    widgetContainerRef.current.innerHTML = '';
+
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.innerHTML = `
+      var nc_ev_width = 'responsive';
+      var nc_ev_height = 303;
+      var nc_ev_def_lan = 'np';
+      var nc_ev_api_id = 2102025082274;
+    `;
+    
+    const widgetScript = document.createElement('script');
+    widgetScript.type = 'text/javascript';
+    widgetScript.src = 'https://www.ashesh.com.np/calendar-event/ev.js';
+    widgetScript.async = true;
+
+    const widgetLink = document.createElement('div');
+    widgetLink.id = 'ncwidgetlink';
+    widgetLink.innerHTML = 'Powered by © <a href="https://www.ashesh.com.np/nepali-calendar/" id="nclink" title="Nepali calendar" target="_blank">Nepali Calendar</a>';
+
+    widgetContainerRef.current.appendChild(script);
+    widgetContainerRef.current.appendChild(widgetScript);
+    widgetContainerRef.current.appendChild(widgetLink);
+
+    return () => {
+      // Cleanup on component unmount
+      if (widgetContainerRef.current) {
+        widgetContainerRef.current.innerHTML = '';
+      }
+    };
+  }, []);
+
+  return <div ref={widgetContainerRef} className="w-full h-[303px]"></div>;
 };
 
 export default UpcomingEventsWidget;
