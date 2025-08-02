@@ -33,6 +33,7 @@ export default function NepaliCalendar() {
 
   const fetchMonthEvents = useCallback(async (year: number, month: number) => {
     try {
+      // month is 0-indexed in the component, but 1-indexed for the API
       const result = await getCalendarEvents({ year, month: month + 1 });
       return result.month_events;
     } catch (error) {
@@ -44,8 +45,8 @@ export default function NepaliCalendar() {
   useEffect(() => {
     const initializeCalendar = async () => {
       setIsLoading(true);
-      const now = new Date();
       try {
+        const now = new Date();
         const bsDate: DateConversionOutput = await convertDate({
           source: 'ad_to_bs',
           year: now.getFullYear(),
@@ -57,6 +58,10 @@ export default function NepaliCalendar() {
 
         if (nepaliMonthIndex !== -1) {
           const today = { year: bsDate.year, month: nepaliMonthIndex, day: bsDate.day };
+          
+          setDisplayDate({ year: today.year, month: today.month });
+          setSelectedDay(today.day);
+
           const monthEvents = await fetchMonthEvents(today.year, today.month);
           
           setCalendarData({
@@ -64,9 +69,6 @@ export default function NepaliCalendar() {
             gregorianDate: now,
             monthEvents: monthEvents,
           });
-          
-          setDisplayDate({ year: today.year, month: today.month });
-          setSelectedDay(today.day);
         }
       } catch (error) {
         console.error("Failed to initialize calendar", error);
@@ -78,13 +80,12 @@ export default function NepaliCalendar() {
   }, [fetchMonthEvents]);
 
   const changeDisplayedMonth = useCallback(async (year: number, month: number) => {
+      if (!calendarData) return;
       setIsLoading(true);
       setSelectedDay(null);
       setDisplayDate({ year, month });
       const newMonthEvents = await fetchMonthEvents(year, month);
-      if (calendarData) {
-        setCalendarData(prevData => ({...prevData!, monthEvents: newMonthEvents}));
-      }
+      setCalendarData(prevData => ({...(prevData as CalendarData), monthEvents: newMonthEvents}));
       setIsLoading(false);
   }, [calendarData, fetchMonthEvents]);
   
@@ -128,11 +129,19 @@ export default function NepaliCalendar() {
     return String(num).split("").map(digit => nepaliDigits[parseInt(digit)]).join("");
   }
 
-  if (!displayDate || !calendarData) {
+  if (isLoading && !calendarData) {
     return (
         <div className="w-full flex items-center justify-center p-8">
             <LoaderCircle className="w-8 h-8 animate-spin text-primary" />
             <span className="ml-2">Loading Calendar...</span>
+        </div>
+    );
+  }
+  
+  if (!displayDate || !calendarData) {
+     return (
+        <div className="w-full flex items-center justify-center p-8">
+            <span className="ml-2 text-red-500">Could not load calendar data.</span>
         </div>
     );
   }
@@ -230,3 +239,5 @@ export default function NepaliCalendar() {
     </div>
   );
 }
+
+    
