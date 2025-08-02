@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Defines the Zod schemas and TypeScript types for the AI flows.
  */
@@ -129,7 +130,7 @@ export const PatroDataResponseSchema = z.object({
     goldSilver: GoldSilverSchema.nullable(),
     forex: z.array(ForexSchema),
     today: CurrentDateInfoResponseSchema.nullable(),
-    monthEvents: z.array(CalendarEventSchema).optional(),
+    monthEvents: z.array(CalendarEventSchema),
     upcomingEvents: z.array(UpcomingEventSchema),
 });
 export type PatroDataResponse = z.infer<typeof PatroDataResponseSchema>;

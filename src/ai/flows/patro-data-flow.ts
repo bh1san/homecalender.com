@@ -45,7 +45,7 @@ const scraperPrompt = ai.definePrompt({
     1.  **Horoscope (Rashifal):** Generate a unique, plausible-sounding horoscope for all 12 rashi (zodiac signs: Mesh, Brish, Mithun, Karkat, Simha, Kanya, Tula, Brishchik, Dhanu, Makar, Kumbha, Meen).
     2.  **Gold/Silver Prices:** Provide realistic prices for Fine Gold (99.9%), Tejabi Gold, and Silver in Nepalese Rupees (NPR) per Tola.
     3.  **Foreign Exchange (Forex):** Provide a list of buy and sell rates for at least 15 major currencies against NPR. Include the currency name, ISO3 code, unit, and a valid flag image URL.
-    4.  **Today's Date:** Generate the full date details for today. This includes BS and AD dates, day of the week, tithi, panchanga, and any events. The BS weekday should be a number from 0 (Sunday) to 6 (Saturday).
+    4.  **Today's Date:** Generate the full date details for today. This includes BS and AD dates, day of the week, tithi, panchanga, and any events. The BS weekday should be a number from 0 (Sunday) to 6 (Saturday). The adMonth should be 0-indexed.
     5.  **Month Events:** Generate a complete list of events for the current Nepali month. Each day should have its day number, tithi, gregorian day, events list, holiday status, and panchanga.
     6.  **Upcoming Events:** Generate a list of 8 plausible upcoming events or holidays for Nepal, including their summary, start date (YYYY-MM-DD), and holiday status.
     `
@@ -101,10 +101,11 @@ const patroDataFlow = ai.defineFlow(
 
     } catch (apiError) {
         console.warn("RapidAPI call failed. Falling back to AI generation.", apiError instanceof Error ? apiError.message : apiError);
+        today = null; // Reset to ensure AI fallback is triggered
+        monthEvents = [];
     }
     
     // If API fails or is not configured, AI generation is used as a fallback for all data.
-    // This ensures the app is always functional.
     if (!today || monthEvents.length === 0) {
         console.log("Generating all patro data using AI fallback...");
         const aiResponse = await scraperPrompt().then(r => r.output).catch(e => {
@@ -166,5 +167,3 @@ const patroDataFlow = ai.defineFlow(
 export async function getPatroData(): Promise<PatroDataResponse> {
   return patroDataFlow();
 }
-
-    
