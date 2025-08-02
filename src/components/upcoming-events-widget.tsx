@@ -1,14 +1,15 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
-import { getUpcomingEvents } from "@/ai/flows/upcoming-events-flow";
-import { UpcomingEvent } from "@/ai/schemas";
 import { getNepaliMonthName, getNepaliNumber } from "@/lib/nepali-date-converter";
+import { UpcomingEvent } from "@/ai/schemas";
 import { Badge } from "./ui/badge";
 
-// This is a simple helper and might not be perfectly accurate without a conversion library.
-// It splits the YYYY-MM-DD string.
+interface UpcomingEventsWidgetProps {
+    loading: boolean;
+    events?: UpcomingEvent[];
+}
+
 function getADDateParts(dateStr: string): { month: number, day: number, year: number } {
     try {
         const parts = dateStr.split('-').map(Number);
@@ -19,25 +20,7 @@ function getADDateParts(dateStr: string): { month: number, day: number, year: nu
 }
 
 
-export default function UpcomingEventsWidget() {
-  const [events, setEvents] = useState<UpcomingEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchAndFormatEvents = async () => {
-      setLoading(true);
-      try {
-        const upcomingEventsData = await getUpcomingEvents();
-        setEvents(upcomingEventsData.events);
-      } catch (error) {
-        console.error("Failed to fetch upcoming events:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchAndFormatEvents();
-  }, []);
-
+export default function UpcomingEventsWidget({ loading, events }: UpcomingEventsWidgetProps) {
 
   if (loading) {
     return (
@@ -55,7 +38,7 @@ export default function UpcomingEventsWidget() {
     );
   }
 
-  if (events.length === 0) {
+  if (!events || events.length === 0) {
     return <p className="text-center text-muted-foreground p-6">कुनै आउँदो कार्यक्रम छैन।</p>;
   }
 
@@ -63,7 +46,6 @@ export default function UpcomingEventsWidget() {
     <div className="p-0">
         <ul className="space-y-1">
             {events.map((event, index) => {
-                // Since the API now provides the date parts directly, we use them.
                 const { day, month } = getADDateParts(event.startDate);
                 
                 return (

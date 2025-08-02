@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 
 interface NepaliCalendarProps {
-    today: CurrentDateInfoResponse | null;
+    today: CurrentDateInfoResponse | null | undefined;
 }
 
 const WEEK_DAYS_NP = ["आइत", "सोम", "मंगल", "बुध", "बिहि", "शुक्र", "शनि"];
@@ -25,26 +25,23 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
     const [monthData, setMonthData] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
     
+    // This logic needs to be robust. The API must provide the first day of the week,
+    // or we must calculate it accurately. Assuming the API for month events is ordered.
     const firstDayOfWeek = useMemo(() => {
-        if (!monthData || monthData.length === 0) return 0; // Default to Sunday if no data
-        // Find the day of the week for the 1st of the month.
-        // Assuming the API returns data for the 1st day.
-        const firstDayOfMonthData = monthData.find(d => d.day === 1);
-        if (!firstDayOfMonthData || firstDayOfMonthData.gregorian_day === undefined) {
-             // As a fallback, calculate based on today's info if it's the current month
-            if (today && today.bsYear === currentBSDate.year && today.bsMonth === currentBSDate.month) {
-                const dayOfWeekOfFirst = (today.bsWeekDay - (today.bsDay - 1)) % 7;
-                return dayOfWeekOfFirst < 0 ? dayOfWeekOfFirst + 7 : dayOfWeekOfFirst;
-            }
-            return 0; // Default fallback
+        if (!monthData || monthData.length === 0 || !today) return 0;
+        
+        // Find the day of the week for the 1st of the current month.
+        if (today.bsYear === currentBSDate.year && today.bsMonth === currentBSDate.month) {
+            // We are in the current month, calculate offset from today's date
+            const dayOfWeekOfFirst = (today.bsWeekDay - (today.bsDay - 1)) % 7;
+            return dayOfWeekOfFirst < 0 ? dayOfWeekOfFirst + 7 : dayOfWeekOfFirst;
         }
-        // This is a rough calculation and might not be perfect without a proper library
-        // It relies on having the gregorian day and a known weekday
-        if (today) {
-             const dayOfWeekOfFirst = (today.bsWeekDay - (today.bsDay - 1)) % 7;
-             return dayOfWeekOfFirst < 0 ? dayOfWeekOfFirst + 7 : dayOfWeekOfFirst;
-        }
-        return 0;
+        
+        // For other months, we'd need a more reliable way to get the start day.
+        // A robust solution would be an API endpoint for this.
+        // As a fallback, we'll try to estimate, but this can be inaccurate.
+        // Let's assume a default for now if not current month.
+        return 1; // Fallback to Monday, this is a known limitation.
 
     }, [monthData, today, currentBSDate]);
 
@@ -68,11 +65,16 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
     useEffect(() => {
         if (today) {
             const newCurrentBSDate = { year: today.bsYear, month: today.bsMonth };
-            setCurrentBSDate(newCurrentBSDate);
+            if(currentBSDate.year !== newCurrentBSDate.year || currentBSDate.month !== newCurrentBSDate.month) {
+                setCurrentBSDate(newCurrentBSDate);
+            }
             fetchMonthData(newCurrentBSDate.year, newCurrentBSDate.month);
-        } else {
-            // Fallback to a default date if today's date is not available
-            fetchMonthData(currentBSDate.year, currentBSDate.month);
+        } else if (!today) {
+             // When location changes away from Nepal, we might get `undefined` for `today`
+             // In this case, we can either clear the calendar or show a placeholder.
+             // For now, lets just show loading.
+             setLoading(true);
+             setMonthData([]);
         }
     }, [today, fetchMonthData]);
     
@@ -101,6 +103,20 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
             return newDate;
         });
     };
+    
+    if (!today) {
+        return (
+             <div className="relative grid grid-cols-7 gap-2 min-h-[600px]">
+                {Array.from({ length: 35 }).map((_, i) => (
+                    <div key={i} className="rounded-md bg-muted/50 animate-pulse min-h-[100px]" />
+                ))}
+                 <div className="absolute inset-0 flex items-center justify-center bg-card/80 backdrop-blur-sm">
+                    <Loader className="animate-spin text-primary h-8 w-8" />
+                 </div>
+             </div>
+        );
+    }
+
 
     const calendarCells = [];
     for (let i = 0; i < firstDayOfWeek; i++) {

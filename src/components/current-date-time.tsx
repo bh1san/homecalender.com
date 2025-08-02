@@ -1,14 +1,13 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { getNepaliMonthName, getNepaliDayOfWeek, getEnglishMonthName } from '@/lib/nepali-date-converter';
-import { getCurrentDateInfo } from '@/ai/flows/calendar-events-flow';
 import { CurrentDateInfoResponse } from '@/ai/schemas';
 
 interface CurrentDateTimeProps {
   country: string | null;
-  onDateLoaded?: (date: CurrentDateInfoResponse) => void;
+  today: CurrentDateInfoResponse | null | undefined;
 }
 
 const toNepaliNumber = (num: number | string) => {
@@ -21,41 +20,17 @@ const toNepaliNumber = (num: number | string) => {
     }).join("");
 }
 
-export default function CurrentDateTime({ country, onDateLoaded }: CurrentDateTimeProps) {
-  const [dateInfo, setDateInfo] = useState<CurrentDateInfoResponse | null>(null);
+export default function CurrentDateTime({ country, today }: CurrentDateTimeProps) {
   const [timeString, setTimeString] = useState("");
-  const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
   const [gregorianDateString, setGregorianDateString] = useState("");
-
-  const fetchDateAndTime = useCallback(async () => {
-    if (country !== "Nepal") {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    try {
-      const info = await getCurrentDateInfo();
-      setDateInfo(info);
-      if (onDateLoaded) {
-        onDateLoaded(info);
-      }
-    } catch (error) {
-      console.error("Failed to fetch date and time", error);
-      setDateInfo(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [country, onDateLoaded]);
-
+  
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
   useEffect(() => {
     if (!isMounted) return;
-
-    fetchDateAndTime();
 
     const intervalId = setInterval(() => {
       const timezone = country === "Nepal" ? "Asia/Kathmandu" : undefined;
@@ -71,10 +46,10 @@ export default function CurrentDateTime({ country, onDateLoaded }: CurrentDateTi
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [isMounted, country, fetchDateAndTime]);
+  }, [isMounted, country]);
 
 
-  if (loading && country === 'Nepal') {
+  if (!today && country === 'Nepal') {
     return (
         <div className="space-y-2 text-white">
             <div className="h-9 w-64 bg-white/20 animate-pulse rounded-md" />
@@ -95,7 +70,7 @@ export default function CurrentDateTime({ country, onDateLoaded }: CurrentDateTi
       );
   }
 
-  if (country !== "Nepal" || !dateInfo) {
+  if (country !== "Nepal" || !today) {
       return (
         <div>
             <h1 className="text-3xl font-bold">{gregorianDateString || 'Loading date...'}</h1>
@@ -104,8 +79,8 @@ export default function CurrentDateTime({ country, onDateLoaded }: CurrentDateTi
       )
   }
     
-  const nepaliDateStr = `${toNepaliNumber(dateInfo.bsDay)} ${getNepaliMonthName(dateInfo.bsMonth)} ${toNepaliNumber(dateInfo.bsYear)}, ${getNepaliDayOfWeek(dateInfo.bsWeekDay)}`;
-  const gregorianDateStr = `${getEnglishMonthName(dateInfo.adMonth)} ${dateInfo.adDay}, ${dateInfo.adYear}`;
+  const nepaliDateStr = `${toNepaliNumber(today.bsDay)} ${getNepaliMonthName(today.bsMonth)} ${toNepaliNumber(today.bsYear)}, ${getNepaliDayOfWeek(today.bsWeekDay)}`;
+  const gregorianDateStr = `${getEnglishMonthName(today.adMonth)} ${today.adDay}, ${today.adYear}`;
 
   const nepaliTimeParts = timeString.split(/:| /);
   const nepaliTimeString = toNepaliNumber(`${nepaliTimeParts[0]}:${nepaliTimeParts[1]}`);
@@ -115,8 +90,8 @@ export default function CurrentDateTime({ country, onDateLoaded }: CurrentDateTi
   return (
     <div className="space-y-1 text-primary-foreground">
         <h1 className="text-3xl font-bold">{nepaliDateStr}</h1>
-        {dateInfo.tithi && <p className="text-lg">तिथि: {dateInfo.tithi}</p>}
-        {dateInfo.panchanga && <p className="text-lg">पञ्चाङ्ग: {dateInfo.panchanga}</p>}
+        {today.tithi && <p className="text-lg">तिथि: {today.tithi}</p>}
+        {today.panchanga && <p className="text-lg">पञ्चाङ्ग: {today.panchanga}</p>}
         {timeString && <p className="text-lg">{`${localizedTimePrefix} ${nepaliTimeString}`}</p>}
         <p className="text-base">{gregorianDateStr}</p>
     </div>

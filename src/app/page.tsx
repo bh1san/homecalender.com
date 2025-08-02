@@ -19,9 +19,9 @@ import FestivalList from "@/components/festival-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getNews } from "@/ai/flows/news-flow";
-import { NewsItem, Festival, CurrentDateInfoResponse, PatroDataResponse } from "@/ai/schemas";
+import { NewsItem, Festival, PatroDataResponse } from "@/ai/schemas";
 import CurrentDateTime from "@/components/current-date-time";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getFestivals } from "@/ai/flows/festival-flow";
 import { Calendar } from "@/components/ui/calendar";
 import LocationSelector from "@/components/location-selector";
@@ -51,7 +51,6 @@ export default function Home() {
   const [loadingPatroData, setLoadingPatroData] = useState(true);
   const [settings, setSettings] = useState<Settings>({ logoUrl: "https://placehold.co/200x50.png", navLinks: [] });
   const [loadingSettings, setLoadingSettings] = useState(true);
-  const [today, setToday] = useState<CurrentDateInfoResponse | null>(null);
   
   useEffect(() => {
     const fetchSettings = async () => {
@@ -116,6 +115,7 @@ export default function Home() {
             setPatroData(data);
         } catch (error) {
             console.error("Error fetching patro data:", error);
+            setPatroData(null);
         } finally {
             setLoadingPatroData(false);
         }
@@ -128,7 +128,7 @@ export default function Home() {
       <Header navLinks={settings.navLinks} logoUrl={settings.logoUrl} isLoading={loadingSettings} />
       <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 bg-primary text-primary-foreground p-4 rounded-lg shadow-md items-center">
-            <CurrentDateTime country={location.country} onDateLoaded={setToday} />
+            <CurrentDateTime country={location.country} today={patroData?.today} />
             <div className="hidden sm:flex justify-end">
                 <MotivationalQuote />
             </div>
@@ -194,7 +194,7 @@ export default function Home() {
                     <CardTitle className="text-lg font-semibold text-card-foreground">आउँदा दिनहरु</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
-                    {isNepal ? <UpcomingEventsWidget /> : <p className="text-sm text-center text-muted-foreground p-6">Upcoming events widget is only available for Nepal.</p>}
+                    {isNepal ? <UpcomingEventsWidget loading={loadingPatroData} events={patroData?.upcomingEvents} /> : <p className="text-sm text-center text-muted-foreground p-6">Upcoming events widget is only available for Nepal.</p>}
                 </CardContent>
             </Card>
 
@@ -260,7 +260,7 @@ export default function Home() {
           <div className="lg:col-span-3 space-y-8">
             <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
                 <CardContent className="p-2 sm:p-4">
-                     {isNepal ? <NepaliCalendar today={today} /> : <Calendar mode="single" className="w-full rounded-md bg-card/90 flex justify-center" />}
+                     {isNepal ? <NepaliCalendar today={patroData?.today} /> : <Calendar mode="single" className="w-full rounded-md bg-card/90 flex justify-center" />}
                 </CardContent>
               </Card>
 
