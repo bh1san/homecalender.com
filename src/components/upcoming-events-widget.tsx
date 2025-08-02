@@ -27,7 +27,7 @@ export default function UpcomingEventsWidget() {
   }, []);
 
   const formatDate = (dateStr: string) => {
-    // The date from iCal is in YYYYMMDD format, but JS needs separators.
+    // The date from API is in YYYY-MM-DD format
     const date = new Date(dateStr);
     const bsDate = toBS(date);
     const monthName = getNepaliMonthName(bsDate.month);
@@ -52,7 +52,7 @@ export default function UpcomingEventsWidget() {
   }
 
   if (events.length === 0) {
-    return <p className="text-center text-muted-foreground p-6">No upcoming events found.</p>;
+    return <p className="text-center text-muted-foreground p-6">No upcoming events found for today.</p>;
   }
 
   return (

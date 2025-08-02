@@ -1,42 +1,19 @@
 
 'use server';
 /**
- * @fileOverview A flow for parsing iCalendar data to get upcoming Nepali holidays.
+ * @fileOverview A flow for getting upcoming Nepali holidays from the API.
  *
- * - getUpcomingEvents - A function that fetches and parses events from an iCalendar file.
+ * - getUpcomingEvents - A function that fetches events from the API.
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
 import {
   UpcomingEventsResponse,
   UpcomingEventsResponseSchema,
 } from '@/ai/schemas';
-import fs from 'fs/promises';
-import path from 'path';
+import { getTodaysInfoFromApi } from '@/services/nepali-date';
+import { z } from 'zod';
 
-const UpcomingEventsInputSchema = z.object({
-  icalData: z.string().describe('The raw iCalendar data as a string.'),
-  currentDate: z.string().describe('The current date in YYYY-MM-DD format.'),
-});
-
-const upcomingEventsPrompt = ai.definePrompt({
-  name: 'upcomingEventsPrompt',
-  input: {schema: UpcomingEventsInputSchema},
-  output: {schema: UpcomingEventsResponseSchema},
-  prompt: `You are an expert iCalendar parser. Parse the provided iCalendar data and extract all events that occur on or after the specified current date.
-
-Return a list of the next 8 upcoming events, sorted by date in ascending order.
-
-For each event, provide:
-1.  'summary': The event's summary or title.
-2.  'startDate': The event's start date in strict YYYY-MM-DD format.
-
-iCalendar Data:
-{{{icalData}}}
-
-Current Date: {{currentDate}}`,
-});
 
 const upcomingEventsFlow = ai.defineFlow(
   {
@@ -45,23 +22,18 @@ const upcomingEventsFlow = ai.defineFlow(
     outputSchema: UpcomingEventsResponseSchema,
   },
   async () => {
-    const icalFilePath = path.join(process.cwd(), 'data', 'nepal-holidays.ics');
-    const icalData = await fs.readFile(icalFilePath, 'utf-8');
+    const apiData = await getTodaysInfoFromApi();
 
-    const currentDate = new Date().toISOString().split('T')[0];
+    const upcomingEvents = apiData.events
+      .filter((e): e is { event_title_np: string; event_title_en: string } => !!e.event_title_np && !!e.event_title_en)
+      .map(e => ({
+        summary: e.event_title_np,
+        // The API doesn't provide a specific date for these events in the daily view,
+        // so we'll use today's date as a placeholder for display purposes.
+        startDate: `${apiData.ad_year_en}-${String(apiData.ad_month_code_en).padStart(2, '0')}-${String(apiData.ad_day_en).padStart(2, '0')}`
+      }));
 
-    console.log(`Getting upcoming events from ${currentDate}`);
-
-    const {output} = await upcomingEventsPrompt({
-      icalData,
-      currentDate,
-    });
-
-    if (!output) {
-      throw new Error('Failed to parse upcoming events.');
-    }
-
-    return output;
+    return { events: upcomingEvents.slice(0, 8) }; // Return up to 8 events
   }
 );
 

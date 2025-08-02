@@ -16,9 +16,8 @@ import {
   CurrentDateInfoResponse,
   CurrentDateInfoResponseSchema,
 } from '@/ai/schemas';
-import {toAD, toBS} from '@/lib/nepali-date-converter';
+import {toAD} from '@/lib/nepali-date-converter';
 import { getTodaysInfoFromApi } from '@/services/nepali-date';
-import {z} from 'zod';
 
 export async function getCalendarEvents(
   input: CalendarEventsRequest
@@ -88,19 +87,20 @@ const currentDateInfoFlow = ai.defineFlow(
   async () => {
     const apiData = await getTodaysInfoFromApi();
     
-    const adDate = new Date(apiData.ad_year_en, apiData.ad_month_code_en - 1, apiData.ad_day_en);
+    // The API returns the AD weekday, where Sunday is 1. JS Date is 0-indexed (Sun=0).
+    const adWeekDay = apiData.ad_day_of_week_en - 1;
 
     return {
       bsYear: apiData.bs_year_en,
       bsMonth: apiData.bs_month_code_en,
       bsDay: apiData.bs_day_en,
-      bsWeekDay: adDate.getDay(),
+      bsWeekDay: adWeekDay,
       adYear: apiData.ad_year_en,
       adMonth: apiData.ad_month_code_en - 1, // Their API is 1-12, JS is 0-11
       adDay: apiData.ad_day_en,
       day: apiData.bs_day_en,
       tithi: apiData.tithi.tithi_name_np,
-      events: apiData.events.map(e => e.event_title_np).filter(e => e), // Filter out nulls/empty
+      events: apiData.events.map(e => e.event_title_np).filter((e): e is string => !!e),
       is_holiday: apiData.is_holiday,
       panchanga: apiData.panchanga.panchanga_np,
     };

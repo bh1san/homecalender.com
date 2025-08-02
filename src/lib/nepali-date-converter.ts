@@ -5,8 +5,9 @@ import NepaliDate from 'nepali-date-converter';
 // new NepaliDate().setLanguage('en');
 
 const getDaysInMonthBS = (year: number, month: number): number => {
-    // Nepali months are 1-based index.
-    return new NepaliDate(new Date(year, month, 1)).getDaysInMonth();
+    // The library's constructor takes (year, month, day). Month is 0-indexed for the constructor.
+    const nepaliDate = new NepaliDate(year, month - 1, 1);
+    return nepaliDate.getDaysInMonth();
 }
 
 const toBS = (adDate: Date): { year: number; month: number; day: number; weekDay: number; } => {
@@ -20,7 +21,7 @@ const toBS = (adDate: Date): { year: number; month: number; day: number; weekDay
 };
 
 const toAD = (bsDate: {year: number, month: number, day: number}): Date => {
-  // Library uses 1-based month, so no adjustment needed here.
+  // Library uses 0-based month in the constructor.
   const nepaliDate = new NepaliDate(bsDate.year, bsDate.month - 1, bsDate.day);
   return nepaliDate.toJsDate();
 }
