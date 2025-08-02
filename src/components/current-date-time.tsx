@@ -2,12 +2,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { toBS, getNepaliMonthName, getNepaliDayOfWeek } from '@/lib/nepali-date-converter';
-import { getCalendarEvents } from '@/ai/flows/calendar-events-flow';
-import { CalendarEvent } from '@/ai/schemas';
+import { getNepaliMonthName, getNepaliDayOfWeek, getEnglishMonthName } from '@/lib/nepali-date-converter';
+import { getCurrentDateInfo } from '@/ai/flows/calendar-events-flow';
+import { CurrentDateInfoResponse } from '@/ai/schemas';
 
 interface CurrentDateTimeProps {
   country: string | null;
+  onDateLoaded?: (date: CurrentDateInfoResponse) => void;
 }
 
 const toNepaliNumber = (num: number | string) => {
@@ -20,37 +21,9 @@ const toNepaliNumber = (num: number | string) => {
     }).join("");
 }
 
-interface NepaliDate {
-    year: number;
-    month: number;
-    day: number;
-    weekDay: number;
-}
-
-interface DateTimeInfo {
-    timeString: string;
-    gregorianDateString: string;
-    nepaliDate: NepaliDate;
-    dayEvent: CalendarEvent | null;
-}
-
-const countryToTimezoneMap: { [key: string]: string } = {
-    "Nepal": "Asia/Kathmandu",
-    "United States": "America/New_York",
-    "United Kingdom": "Europe/London",
-    "India": "Asia/Kolkata",
-    // Add other countries as needed
-};
-
-const countryToTimezone = (country: string | null): string => {
-    if (country && countryToTimezoneMap[country]) {
-        return countryToTimezoneMap[country];
-    }
-    return "Asia/Kathmandu"; // Default
-}
-
-export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
-  const [dateTime, setDateTime] = useState<DateTimeInfo | null>(null);
+export default function CurrentDateTime({ country, onDateLoaded }: CurrentDateTimeProps) {
+  const [dateInfo, setDateInfo] = useState<CurrentDateInfoResponse | null>(null);
+  const [timeString, setTimeString] = useState("");
   const [loading, setLoading] = useState(true);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -59,70 +32,57 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
   }, []);
 
   const fetchDateAndTime = useCallback(async () => {
+    if (country !== "Nepal") {
+        setLoading(false);
+        return;
+    }
     setLoading(true);
     try {
-        const effectiveCountry = country || "Nepal";
-        const timezone = countryToTimezone(effectiveCountry);
-        
-        // Use a reliable public API for time
-        const worldTimeResponse = await fetch(`https://worldtimeapi.org/api/timezone/${timezone}`);
-        if (!worldTimeResponse.ok) {
-            throw new Error(`Failed to fetch time for ${timezone}`);
+        const info = await getCurrentDateInfo();
+        setDateInfo(info);
+        if(onDateLoaded) {
+            onDateLoaded(info);
         }
-        const timeData = await worldTimeResponse.json();
-        const now = new Date(timeData.utc_datetime);
-
-        const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true, timeZone: timezone });
-        const gregorianDateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: timezone });
-        
-        let dayEvent: CalendarEvent | null = null;
-        const bsDate = toBS(now);
-
-        if (effectiveCountry === 'Nepal') {
-            const monthEventsData = await getCalendarEvents({ year: bsDate.year, month: bsDate.month });
-            dayEvent = monthEventsData.month_events.find(e => e.day === bsDate.day) || null;
-        }
-
-        setDateTime({ timeString, gregorianDateString, nepaliDate: bsDate, dayEvent });
-
     } catch (error) {
         console.error("Failed to fetch date and time", error);
-        // Fallback to local client time on error, though this can cause hydration issues.
-        const localNow = new Date();
-        const bsDate = toBS(localNow);
-        const localTimeString = localNow.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
-        const localGregorianDateString = localNow.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-        setDateTime({ timeString: localTimeString, gregorianDateString: localGregorianDateString, nepaliDate: bsDate, dayEvent: null });
+        setDateInfo(null);
     } finally {
         setLoading(false);
     }
-  }, [country]);
+  }, [country, onDateLoaded]);
 
   useEffect(() => {
     if (!isMounted) return;
     
     fetchDateAndTime();
-    const intervalId = setInterval(fetchDateAndTime, 60000); // Refresh every minute
     
-    return () => clearInterval(intervalId);
-  }, [isMounted, fetchDateAndTime]);
+    // Time updater runs every second
+    const intervalId = setInterval(() => {
+        const timezone = country === "Nepal" ? "Asia/Kathmandu" : undefined;
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true, timeZone: timezone });
+        setTimeString(timeStr);
+    }, 1000);
 
-  if (loading || !dateTime) {
+    return () => clearInterval(intervalId);
+  }, [isMounted, fetchDateAndTime, country]);
+
+
+  if (loading) {
     return (
-        <div className="space-y-2">
-            <div className="h-9 w-64 bg-black/20 animate-pulse rounded-md" />
-            <div className="h-5 w-48 bg-black/20 animate-pulse rounded-md" />
-            <div className="h-5 w-56 bg-black/20 animate-pulse rounded-md" />
-            <div className="h-5 w-32 bg-black/20 animate-pulse rounded-md" />
-            <div className="h-5 w-40 bg-black/20 animate-pulse rounded-md" />
+        <div className="space-y-2 text-white">
+            <div className="h-9 w-64 bg-white/20 animate-pulse rounded-md" />
+            <div className="h-5 w-48 bg-white/20 animate-pulse rounded-md" />
+            <div className="h-5 w-56 bg-white/20 animate-pulse rounded-md" />
+            <div className="h-5 w-32 bg-white/20 animate-pulse rounded-md" />
+            <div className="h-5 w-40 bg-white/20 animate-pulse rounded-md" />
         </div>
     );
   }
 
-  const { timeString, gregorianDateString, nepaliDate, dayEvent } = dateTime;
-  const isNepal = country === 'Nepal' || country === null;
-
-  if (!isNepal) {
+  if (country !== "Nepal" || !dateInfo) {
+      const now = new Date();
+      const gregorianDateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
       return (
         <div>
             <h1 className="text-3xl font-bold">{gregorianDateString}</h1>
@@ -130,21 +90,23 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
         </div>
       )
   }
-
-  const nepaliDateString = `${toNepaliNumber(nepaliDate.day)} ${getNepaliMonthName(nepaliDate.month)} ${toNepaliNumber(nepaliDate.year)}, ${getNepaliDayOfWeek(nepaliDate.weekDay)}`;
     
+  const nepaliDateString = `${toNepaliNumber(dateInfo.bsDay)} ${getNepaliMonthName(dateInfo.bsMonth)} ${toNepaliNumber(dateInfo.bsYear)}, ${getNepaliDayOfWeek(dateInfo.bsWeekDay)}`;
+  const gregorianDateString = `${getEnglishMonthName(dateInfo.adMonth)} ${dateInfo.adDay}, ${dateInfo.adYear}`;
+
   const nepaliTimeParts = timeString.split(/:| /);
   const nepaliTimeString = toNepaliNumber(`${nepaliTimeParts[0]}:${nepaliTimeParts[1]}`);
   const timeSuffix = timeString.slice(-2);
   const localizedTimePrefix = timeSuffix === 'AM' ? 'बिहानको' : 'बेलुकीको';
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1 text-primary-foreground">
         <h1 className="text-3xl font-bold">{nepaliDateString}</h1>
-        {dayEvent?.tithi && <p className="text-lg">तिथि: {dayEvent.tithi}</p>}
-        {dayEvent?.panchanga && <p className="text-lg">पञ्चाङ्ग: {dayEvent.panchanga}</p>}
+        {dateInfo.tithi && <p className="text-lg">तिथि: {dateInfo.tithi}</p>}
+        {dateInfo.panchanga && <p className="text-lg">पञ्चाङ्ग: {dateInfo.panchanga}</p>}
         <p className="text-lg">{`${localizedTimePrefix} ${nepaliTimeString}`}</p>
         <p className="text-base">{gregorianDateString}</p>
     </div>
   );
 }
+

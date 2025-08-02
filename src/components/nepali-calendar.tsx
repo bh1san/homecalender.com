@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getCalendarEvents } from '@/ai/flows/calendar-events-flow';
-import { CalendarEvent } from '@/ai/schemas';
-import { toBS, toAD, getDaysInMonthBS, getFirstDayOfMonthBS } from '@/lib/nepali-date-converter';
+import { CalendarEvent, CurrentDateInfoResponse } from '@/ai/schemas';
+import { toAD, getDaysInMonthBS, getFirstDayOfMonthBS } from '@/lib/nepali-date-converter';
 import FlagLoader from './flag-loader';
 
 const nepaliMonths = [
@@ -23,14 +23,11 @@ const gregorianMonths = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 ];
 
-type NepaliDate = {
-  year: number;
-  month: number; // 0-indexed
-  day: number;
+interface NepaliCalendarProps {
+    today?: CurrentDateInfoResponse | null;
 }
 
-export default function NepaliCalendar() {
-  const [currentDate, setCurrentDate] = useState<NepaliDate | null>(null);
+export default function NepaliCalendar({ today }: NepaliCalendarProps) {
   const [displayDate, setDisplayDate] = useState<{ year: number; month: number } | null>(null);
   const [monthEvents, setMonthEvents] = useState<CalendarEvent[]>([]);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
@@ -62,16 +59,11 @@ export default function NepaliCalendar() {
   }, []);
 
   useEffect(() => {
-    if (isMounted) {
-      const now = new Date();
-      const bsDate = toBS(now);
-      const today: NepaliDate = { year: bsDate.year, month: bsDate.month - 1, day: bsDate.day };
-      
-      setCurrentDate(today);
-      setDisplayDate({ year: today.year, month: today.month });
-      setSelectedDay(today.day);
+    if (isMounted && today) {
+      setDisplayDate({ year: today.bsYear, month: today.bsMonth - 1 });
+      setSelectedDay(today.bsDay);
     }
-  }, [isMounted]);
+  }, [isMounted, today]);
 
   useEffect(() => {
     if (displayDate) {
@@ -99,16 +91,20 @@ export default function NepaliCalendar() {
   };
   
   const goToToday = () => {
-    if (currentDate) {
-        changeDisplayedMonth(currentDate.year, currentDate.month);
-        setSelectedDay(currentDate.day);
+    if (today) {
+        changeDisplayedMonth(today.bsYear, today.bsMonth - 1);
+        setSelectedDay(today.bsDay);
     }
   }
 
   const handleDateChange = (type: 'year' | 'month', value: string) => {
       if (!displayDate) return;
       const newDisplayDate = {...displayDate, [type]: Number(value)};
-      changeDisplayedMonth(newDisplayDate.year, newDisplayDate.month);
+      if (type === 'month') {
+        changeDisplayedMonth(newDisplayDate.year, newDisplayDate.month);
+      } else {
+        changeDisplayedMonth(newDisplayDate.year, newDisplayDate.month);
+      }
   }
 
   const calendarGrid = useMemo(() => {
@@ -149,7 +145,7 @@ export default function NepaliCalendar() {
     return `${startMonth}/${endMonth} ${startYear}`;
 };
 
-  const initialLoading = !displayDate || !currentDate;
+  const initialLoading = !displayDate || !today;
   
   if (initialLoading) {
     return (
@@ -221,7 +217,7 @@ export default function NepaliCalendar() {
                 if (!day) return <div key={`blank-${index}`} className="bg-gray-50"></div>;
 
                 const eventInfo = getEventForDay(day);
-                const isToday = day === currentDate.day && displayDate.month === currentDate.month && displayDate.year === currentDate.year;
+                const isToday = day === today.bsDay && displayDate.month === (today.bsMonth - 1) && displayDate.year === today.bsYear;
                 const isHoliday = eventInfo?.is_holiday || weekDays[index % 7] === 'शनिवार';
                 
                 return (

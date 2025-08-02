@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview Defines the Zod schemas and TypeScript types for the AI flows.
  */
@@ -27,36 +26,52 @@ export type NewsResponse = z.infer<typeof NewsResponseSchema>;
 
 // Festival Schemas
 export const FestivalSchema = z.object({
-  name: z.string().describe("The name of the festival."),
-  displayDate: z.string().describe("The human-readable date or date range of the festival."),
-  gregorianStartDate: z.string().describe("The Gregorian start date in YYYY-MM-DD format."),
-  description: z.string().describe("A brief description of the festival."),
+  name: z.string().describe('The name of the festival.'),
+  displayDate: z.string().describe('The human-readable date or date range of the festival.'),
+  gregorianStartDate: z.string().describe('The Gregorian start date in YYYY-MM-DD format.'),
+  description: z.string().describe('A brief description of the festival.'),
 });
 export type Festival = z.infer<typeof FestivalSchema>;
 
 export const FestivalResponseSchema = z.object({
-  festivals: z.array(FestivalSchema).describe("A list of major festivals for the country."),
+  festivals: z.array(FestivalSchema).describe('A list of major festivals for the country.'),
 });
 export type FestivalResponse = z.infer<typeof FestivalResponseSchema>;
 
-
 // Calendar Events Schemas
 export const CalendarEventSchema = z.object({
-    day: z.number().describe("The day of the month."),
-    tithi: z.string().describe("The lunar phase (Tithi) of the day, in Nepali script."),
-    gregorian_day: z.number().optional().describe("The corresponding Gregorian day of the month."),
-    events: z.array(z.string()).describe("A list of events or festivals on this day, in Nepali script."),
-    is_holiday: z.boolean().describe("Whether the day is a public holiday."),
+  day: z.number().describe('The day of the month.'),
+  tithi: z.string().describe('The lunar phase (Tithi) of the day, in Nepali script.'),
+  gregorian_day: z.number().optional().describe('The corresponding Gregorian day of the month.'),
+  events: z
+    .array(z.string())
+    .describe('A list of events or festivals on this day, in Nepali script.'),
+  is_holiday: z.boolean().describe('Whether the day is a public holiday.'),
+  panchanga: z.string().optional().describe("Astrological details for the day, if available."),
 });
 export type CalendarEvent = z.infer<typeof CalendarEventSchema>;
 
 export const CalendarEventsRequestSchema = z.object({
-    year: z.number().describe("The Nepali year (Bikram Sambat)."),
-    month: z.number().describe("The Nepali month (1-12)."),
+  year: z.number().describe('The Nepali year (Bikram Sambat).'),
+  month: z.number().describe('The Nepali month (1-12).'),
 });
 export type CalendarEventsRequest = z.infer<typeof CalendarEventsRequestSchema>;
 
 export const CalendarEventsResponseSchema = z.object({
-    month_events: z.array(CalendarEventSchema).describe("A list of all events for the given month."),
+  month_events: z
+    .array(CalendarEventSchema)
+    .describe('A list of all events for the given month.'),
 });
 export type CalendarEventsResponse = z.infer<typeof CalendarEventsResponseSchema>;
+
+// Current Date Info Schema
+export const CurrentDateInfoResponseSchema = CalendarEventSchema.extend({
+  bsYear: z.number(),
+  bsMonth: z.number(),
+  bsDay: z.number(),
+  bsWeekDay: z.number(),
+  adYear: z.number(),
+  adMonth: z.number(), // 0-indexed
+  adDay: z.number(),
+});
+export type CurrentDateInfoResponse = z.infer<typeof CurrentDateInfoResponseSchema>;

@@ -19,7 +19,7 @@ import FestivalList from "@/components/festival-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getNews } from "@/ai/flows/news-flow";
-import { NewsItem, Festival } from "@/ai/schemas";
+import { NewsItem, Festival, CurrentDateInfoResponse } from "@/ai/schemas";
 import CurrentDateTime from "@/components/current-date-time";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { getFestivals } from "@/ai/flows/festival-flow";
@@ -72,20 +72,18 @@ export default function Home() {
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
   const [isMounted, setIsMounted] = useState(false);
+  const [today, setToday] = useState<CurrentDateInfoResponse | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  const processFestivals = useCallback((festivalData: Festival[]) => {
-      const now = new Date();
-       const today = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-
+  const processFestivals = useCallback((festivalData: Festival[], todayDate: Date) => {
       const events = festivalData
           .map(festival => ({ ...festival, parsedDate: parseFestivalDate(festival.gregorianStartDate) }))
           .filter(event => {
               if (!event.parsedDate) return false;
-              const diff = differenceInDays(event.parsedDate, today);
+              const diff = differenceInDays(event.parsedDate, todayDate);
               return diff >= 0;
           })
           .sort((a, b) => a.parsedDate!.getTime() - b.parsedDate!.getTime())
@@ -137,7 +135,11 @@ export default function Home() {
         
         const festivalData = await festivalPromise;
         setFestivals(festivalData.festivals);
-        processFestivals(festivalData.festivals);
+        // We can process festivals immediately after fetching if we have today's date
+        if (today) {
+           const todayAdDate = new Date(today.adYear, today.adMonth, today.adDay);
+           processFestivals(festivalData.festivals, todayAdDate);
+        }
         
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -150,14 +152,23 @@ export default function Home() {
     const countryToFetch = location.country || "Nepal";
     fetchNewsAndFestivals(countryToFetch);
     
-  }, [location.country, isMounted, processFestivals]);
+  }, [location.country, isMounted, processFestivals, today]);
+
+  const handleDateLoaded = useCallback((date: CurrentDateInfoResponse) => {
+      setToday(date);
+      // Once we have the accurate date, if we have festivals, process them
+      if (festivals.length > 0) {
+          const todayAdDate = new Date(date.adYear, date.adMonth, date.adDay);
+          processFestivals(festivals, todayAdDate);
+      }
+  }, [festivals, processFestivals]);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-muted/40">
       <Header navLinks={settings.navLinks} logoUrl={settings.logoUrl} isLoading={loadingSettings} />
       <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 bg-primary text-primary-foreground p-4 rounded-lg shadow-md items-center">
-            <CurrentDateTime country={location.country} />
+            <CurrentDateTime country={location.country} onDateLoaded={handleDateLoaded} />
             <div className="hidden sm:flex justify-end">
                 <MotivationalQuote />
             </div>
@@ -316,7 +327,7 @@ export default function Home() {
           <div className="lg:col-span-3 space-y-8">
             <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
                 <CardContent className="p-2 sm:p-4">
-                     {isNepal ? <NepaliCalendar /> : <Calendar mode="single" className="w-full rounded-md bg-card/90" />}
+                     {isNepal ? <NepaliCalendar today={today} /> : <Calendar mode="single" className="w-full rounded-md bg-card/90" />}
                 </CardContent>
               </Card>
           </div>
