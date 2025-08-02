@@ -40,24 +40,6 @@ export const FestivalResponseSchema = z.object({
 export type FestivalResponse = z.infer<typeof FestivalResponseSchema>;
 
 
-// Date Conversion Schemas
-export const DateConversionInputSchema = z.object({
-  source: z.enum(['ad_to_bs', 'bs_to_ad']),
-  year: z.number(),
-  month: z.number(),
-  day: z.number(),
-});
-export type DateConversionInput = z.infer<typeof DateConversionInputSchema>;
-
-export const DateConversionOutputSchema = z.object({
-  year: z.number(),
-  month: z.string().describe("The name of the converted month, in English or Nepali script depending on the target."),
-  day: z.number(),
-  weekday: z.string().describe("The name of the weekday, in English or Nepali script."),
-  fullDate: z.string().describe("The full converted date in 'Month Day, Year' format."),
-});
-export type DateConversionOutput = z.infer<typeof DateConversionOutputSchema>;
-
 // Calendar Events Schemas
 export const CalendarEventSchema = z.object({
     day: z.number().describe("The day of the month."),

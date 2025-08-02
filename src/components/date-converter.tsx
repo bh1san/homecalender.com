@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -15,11 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { convertDate } from "@/ai/flows/date-conversion-flow";
-import {
-  DateConversionInput,
-  DateConversionOutput,
-} from "@/ai/schemas";
+import { toBS, toAD, getNepaliMonthName, getEnglishMonthName } from '@/lib/nepali-date-converter';
 import {
   Select,
   SelectContent,
@@ -39,16 +36,22 @@ const gregorianMonths = [
   "July", "August", "September", "October", "November", "December"
 ];
 
+interface NepaliDate {
+    year: number;
+    month: number;
+    day: number;
+    weekDay: number;
+}
 
 export default function DateConverter() {
   const { toast } = useToast();
   
   const [gregorianDate, setGregorianDate] = useState({ year: "2024", month: "7", day: "15" });
-  const [nepaliResult, setNepaliResult] = useState<DateConversionOutput | null>(null);
+  const [nepaliResult, setNepaliResult] = useState<string | null>(null);
   const [isConvertingAD, setIsConvertingAD] = useState(false);
 
   const [nepaliDate, setNepaliDate] = useState({ year: "2081", month: "4", day: "1" });
-  const [gregorianResult, setGregorianResult] = useState<DateConversionOutput | null>(null);
+  const [gregorianResult, setGregorianResult] = useState<string | null>(null);
   const [isConvertingBS, setIsConvertingBS] = useState(false);
 
   const handleGregorianToNepali = async () => {
@@ -63,21 +66,29 @@ export default function DateConverter() {
 
     setIsConvertingAD(true);
     setNepaliResult(null);
+    // Simulate a short delay for UX, conversion is instant
+    await new Promise(resolve => setTimeout(resolve, 300));
     try {
-      const input: DateConversionInput = {
-        source: "ad_to_bs",
-        year: parseInt(gregorianDate.year),
-        month: parseInt(gregorianDate.month),
-        day: parseInt(gregorianDate.day),
-      };
-      const result = await convertDate(input);
-      setNepaliResult(result);
+      const year = parseInt(gregorianDate.year);
+      const month = parseInt(gregorianDate.month) -1; // Month is 0-indexed in JS Date
+      const day = parseInt(gregorianDate.day);
+      
+      const date = new Date(year, month, day);
+      if (isNaN(date.getTime())) {
+          throw new Error("Invalid Gregorian date.");
+      }
+
+      const bsDate: NepaliDate = toBS(date);
+      const fullDate = `${getNepaliMonthName(bsDate.month)} ${bsDate.day}, ${bsDate.year}`;
+      setNepaliResult(fullDate);
+
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       console.error("Conversion failed:", error);
       toast({
         variant: "destructive",
         title: "Conversion Failed",
-        description: "Could not convert the Gregorian date. Please try again.",
+        description: `Could not convert the Gregorian date. ${errorMessage}`,
       });
     } finally {
       setIsConvertingAD(false);
@@ -96,21 +107,24 @@ export default function DateConverter() {
     
     setIsConvertingBS(true);
     setGregorianResult(null);
+    // Simulate a short delay for UX, conversion is instant
+    await new Promise(resolve => setTimeout(resolve, 300));
     try {
-      const input: DateConversionInput = {
-        source: "bs_to_ad",
-        year: parseInt(nepaliDate.year),
-        month: parseInt(nepaliDate.month),
-        day: parseInt(nepaliDate.day),
-      };
-      const result = await convertDate(input);
-      setGregorianResult(result);
+      const year = parseInt(nepaliDate.year);
+      const month = parseInt(nepaliDate.month);
+      const day = parseInt(nepaliDate.day);
+      
+      const adDate = toAD({ year, month, day });
+
+      const fullDate = `${getEnglishMonthName(adDate.getMonth())} ${adDate.getDate()}, ${adDate.getFullYear()}`;
+      setGregorianResult(fullDate);
     } catch (error) {
+       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
       console.error("Conversion failed:", error);
       toast({
         variant: "destructive",
         title: "Conversion Failed",
-        description: "Could not convert the Nepali date. Please try again.",
+        description: `Could not convert the Nepali date. ${errorMessage}`,
       });
     } finally {
       setIsConvertingBS(false);
@@ -156,7 +170,7 @@ export default function DateConverter() {
           </Button>
           {nepaliResult && (
             <div className="rounded-md bg-accent/20 p-3 text-center font-medium text-primary">
-              <p>Nepali Date: <span className="font-bold">{nepaliResult.fullDate}</span></p>
+              <p>Nepali Date: <span className="font-bold">{nepaliResult}</span></p>
             </div>
           )}
         </CardFooter>
@@ -206,7 +220,7 @@ export default function DateConverter() {
           </Button>
           {gregorianResult && (
             <div className="rounded-md bg-accent/20 p-3 text-center font-medium text-primary">
-               <p>Gregorian Date: <span className="font-bold">{gregorianResult.fullDate}</span></p>
+               <p>Gregorian Date: <span className="font-bold">{gregorianResult}</span></p>
             </div>
           )}
         </CardFooter>

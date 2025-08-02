@@ -6,19 +6,20 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { convertDate } from '@/ai/flows/date-conversion-flow';
 import { getCalendarEvents } from '@/ai/flows/calendar-events-flow';
-import { CalendarEvent, DateConversionOutput } from '@/ai/schemas';
+import { CalendarEvent } from '@/ai/schemas';
+import { toBS, toAD, getDaysInMonthBS, getFirstDayOfMonthBS } from '@/lib/nepali-date-converter';
 import FlagLoader from './flag-loader';
 
 const nepaliMonths = [
   "बैशाख", "जेठ", "असार", "श्रावण", "भदौ", "आश्विन", "कार्तिक", "मंसिर", "पौष", "माघ", "फाल्गुन", "चैत्र"
 ];
-
 const years = Array.from({ length: 20 }, (_, i) => 2070 + i);
-
-const daysInMonthBS = [31, 32, 31, 32, 31, 30, 30, 29, 30, 29, 30, 31]; 
 const weekDays = ["आइतवार", "सोमवार", "मङ्गलवार", "बुधवार", "बिहिवार", "शुक्रवार", "शनिवार"];
+const gregorianMonths = [
+  "January", "February", "March", "April", "May", "June", 
+  "July", "August", "September", "October", "November", "December"
+];
 
 type CalendarData = {
   currentDate: { year: number; month: number; day: number };
@@ -37,11 +38,8 @@ export default function NepaliCalendar() {
     setIsLoading(true);
     try {
       const eventsPromise = getCalendarEvents({ year, month: month + 1 });
+      const firstDay = getFirstDayOfMonthBS(year, month + 1);
       
-      const bsToAdResponse = await convertDate({ source: 'bs_to_ad', year, month: month + 1, day: 1 });
-      const firstDayDate = new Date(bsToAdResponse.year, gregorianMonths.indexOf(bsToAdResponse.month), bsToAdResponse.day);
-      const firstDay = firstDayDate.getDay();
-
       const monthEvents = await eventsPromise;
       
       setCalendarData(prevData => ({...(prevData as CalendarData), monthEvents: monthEvents.month_events}));
@@ -60,31 +58,20 @@ export default function NepaliCalendar() {
       setIsLoading(true);
       try {
         const now = new Date();
-        const bsDate: DateConversionOutput = await convertDate({
-          source: 'ad_to_bs',
-          year: now.getFullYear(),
-          month: now.getMonth() + 1,
-          day: now.getDate()
+        const bsDate = toBS(now);
+        
+        const today = { year: bsDate.year, month: bsDate.month - 1, day: bsDate.day };
+        
+        setCalendarData({
+          currentDate: today,
+          gregorianDate: now,
+          monthEvents: [],
         });
-
-        const nepaliMonthIndex = nepaliMonths.indexOf(bsDate.month);
-
-        if (nepaliMonthIndex !== -1) {
-          const today = { year: bsDate.year, month: nepaliMonthIndex, day: bsDate.day };
-          
-          setCalendarData({
-            currentDate: today,
-            gregorianDate: now,
-            monthEvents: [],
-          });
-          setSelectedDay(today.day);
-          await fetchMonthData(today.year, today.month);
-        } else {
-            throw new Error("Could not find Nepali month index");
-        }
+        setSelectedDay(today.day);
+        await fetchMonthData(today.year, today.month);
       } catch (error) {
         console.error("Failed to initialize calendar", error);
-        setCalendarData(null); // Explicitly set to null on error
+        setCalendarData(null); 
         setIsLoading(false);
       }
     };
@@ -120,7 +107,7 @@ export default function NepaliCalendar() {
   const calendarGrid = useMemo(() => {
     if (!displayDate || !calendarData) return [];
     
-    const daysInMonth = calendarData.monthEvents.length > 0 ? calendarData.monthEvents.length : daysInMonthBS[displayDate.month];
+    const daysInMonth = getDaysInMonthBS(displayDate.year, displayDate.month + 1);
     const blanks = Array(firstDayOfMonth).fill(null);
     const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
     return [...blanks, ...days];
@@ -133,11 +120,7 @@ export default function NepaliCalendar() {
   }
 
   const initialLoading = isLoading && !calendarData;
-  const gregorianMonths = [
-    "January", "February", "March", "April", "May", "June", 
-    "July", "August", "September", "October", "November", "December"
-  ];
-
+  
   if (initialLoading) {
     return (
         <div className="w-full flex items-center justify-center p-8">
@@ -155,9 +138,10 @@ export default function NepaliCalendar() {
     );
   }
 
-  const { currentDate, gregorianDate, monthEvents } = calendarData;
+  const { currentDate, monthEvents } = calendarData;
   const getEventForDay = (day: number) => monthEvents.find(e => e.day === day);
   const currentMonthName = nepaliMonths[displayDate.month];
+  const correspondingADDate = toAD({year: displayDate.year, month: displayDate.month + 1, day: 1});
 
   return (
     <div className="w-full">
@@ -188,7 +172,7 @@ export default function NepaliCalendar() {
         </div>
         <div className="font-bold text-lg text-gray-700 text-right">
           {toNepaliNumber(displayDate.year)} {currentMonthName}
-          <div className="text-sm font-normal text-muted-foreground">{gregorianDate.toLocaleString('en-US', { month: 'long' })} / {new Date(gregorianDate.getFullYear(), gregorianDate.getMonth() + 1, 0).toLocaleString('en-US', { month: 'long' })} {gregorianDate.getFullYear()}</div>
+          <div className="text-sm font-normal text-muted-foreground">{gregorianMonths[correspondingADDate.getMonth()]} / {gregorianMonths[(correspondingADDate.getMonth() + 1) % 12]} {correspondingADDate.getFullYear()}</div>
         </div>
       </div>
       <div className="relative">
@@ -211,7 +195,7 @@ export default function NepaliCalendar() {
                 const isToday = day === currentDate.day && displayDate.month === currentDate.month && displayDate.year === currentDate.year;
                 const isHoliday = eventInfo?.is_holiday || weekDays[index % 7] === 'शनिवार';
                 
-                const approxGregorianDay = new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), day - currentDate.day + gregorianDate.getDate()).getDate();
+                const approxGregorianDay = toAD({year: displayDate.year, month: displayDate.month + 1, day}).getDate();
 
                 return (
                 <div key={index} className="flex flex-col items-start justify-start p-1 bg-white min-h-[100px] text-left">

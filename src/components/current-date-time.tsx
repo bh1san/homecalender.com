@@ -2,8 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { convertDate } from '@/ai/flows/date-conversion-flow';
-import { DateConversionOutput } from '@/ai/schemas';
+import { toBS, toAD, getNepaliDateParts, getNepaliNumber, getNepaliMonthName, getNepaliDayOfWeek } from '@/lib/nepali-date-converter';
 
 interface CurrentDateTimeProps {
   country: string | null;
@@ -19,11 +18,18 @@ const toNepaliNumber = (num: number | string) => {
     }).join("");
 }
 
+interface NepaliDate {
+    year: number;
+    month: number;
+    day: number;
+    weekDay: number;
+}
+
 export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
   const [dateTime, setDateTime] = useState<{
       timeString: string, 
       dateString: string,
-      nepaliDate: DateConversionOutput | null,
+      nepaliDate: NepaliDate | null,
     } | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -49,13 +55,8 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
             const dateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: timezone });
 
             if (effectiveCountry === 'Nepal') {
-                const result = await convertDate({
-                    source: 'ad_to_bs',
-                    year: now.getFullYear(),
-                    month: now.getMonth() + 1,
-                    day: now.getDate()
-                });
-                if (isMounted) setDateTime({ timeString, dateString, nepaliDate: result });
+                const bsDate = toBS(now);
+                if (isMounted) setDateTime({ timeString, dateString, nepaliDate: bsDate });
             } else {
                  if (isMounted) setDateTime({ timeString, dateString, nepaliDate: null });
             }
@@ -65,7 +66,7 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
             const now = new Date();
             const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
             const dateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            if (isMounted) setDateTime({ timeString, dateString, nepaliDate: null });
+             if (isMounted) setDateTime({ timeString, dateString, nepaliDate: null });
         } finally {
             if (isMounted) setLoading(false);
         }
@@ -136,7 +137,7 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
   const isNepal = country === 'Nepal' || country === null;
 
   const nepaliDateString = nepaliDate 
-    ? `${nepaliDate.weekday}, ${nepaliDate.month} ${toNepaliNumber(nepaliDate.day)}, ${toNepaliNumber(nepaliDate.year)}`
+    ? `${getNepaliDayOfWeek(nepaliDate.weekDay)}, ${getNepaliMonthName(nepaliDate.month)} ${toNepaliNumber(nepaliDate.day)}, ${toNepaliNumber(nepaliDate.year)}`
     : '';
     
   const nepaliTimeParts = timeString.split(/:| /); // split by colon or space
