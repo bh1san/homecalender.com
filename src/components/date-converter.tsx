@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -45,8 +44,10 @@ export default function DateConverter() {
   const [nepaliDate, setNepaliDate] = useState({ year: "", month: "", day: "" });
   const [gregorianResult, setGregorianResult] = useState<string | null>(null);
   const [isConvertingBS, setIsConvertingBS] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     // Set default dates on client-side to avoid hydration mismatch
     const today = new Date();
     setGregorianDate({
@@ -69,6 +70,19 @@ export default function DateConverter() {
         description: "Date conversion requires an API key which has not been configured.",
       });
   }
+  
+  if (!isMounted) {
+    return (
+        <div className="space-y-8">
+            <Card className="h-52 w-full animate-pulse bg-muted/50" />
+            <div className="relative flex justify-center">
+                <Separator className="absolute inset-x-0 top-1/2" />
+            </div>
+            <Card className="h-52 w-full animate-pulse bg-muted/50" />
+        </div>
+    )
+  }
+
 
   return (
     <div className="space-y-8">

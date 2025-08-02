@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -24,25 +23,28 @@ export default function MotivationalQuote() {
 
   useEffect(() => {
     setIsMounted(true);
+    // Set initial quote on client
     setCurrentQuote(quotes[Math.floor(Math.random() * quotes.length)]);
 
     const intervalId = setInterval(() => {
       setIsFading(true);
       setTimeout(() => {
         let nextQuote = currentQuote;
+        // Ensure the next quote is different
         while (nextQuote === currentQuote) {
           const randomIndex = Math.floor(Math.random() * quotes.length);
           nextQuote = quotes[randomIndex];
         }
         setCurrentQuote(nextQuote);
         setIsFading(false);
-      }, 1000); 
-    }, 15000);
+      }, 1000); // Fade transition duration
+    }, 15000); // Change quote every 15 seconds
 
     return () => clearInterval(intervalId);
-  }, []);
+  }, []); // Empty dependency array ensures this runs only once on the client after mount
 
   if (!isMounted) {
+    // Render a placeholder on the server and during initial client render
     return (
         <div className="w-[400px] h-[100px] flex items-center justify-center bg-black/20 rounded-lg p-4 text-center overflow-hidden" />
     );

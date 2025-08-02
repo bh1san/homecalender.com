@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -27,10 +26,6 @@ export default function CurrentDateTime({ country, today }: CurrentDateTimeProps
   
   useEffect(() => {
     setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isMounted) return;
 
     const intervalId = setInterval(() => {
       const timezone = country === "Nepal" ? "Asia/Kathmandu" : undefined;
@@ -46,21 +41,9 @@ export default function CurrentDateTime({ country, today }: CurrentDateTimeProps
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [isMounted, country]);
+  }, [country]);
 
 
-  if (!today && country === 'Nepal') {
-    return (
-        <div className="space-y-2 text-white">
-            <div className="h-9 w-64 bg-white/20 animate-pulse rounded-md" />
-            <div className="h-5 w-48 bg-white/20 animate-pulse rounded-md" />
-            <div className="h-5 w-56 bg-white/20 animate-pulse rounded-md" />
-            <div className="h-5 w-32 bg-white/20 animate-pulse rounded-md" />
-            <div className="h-5 w-40 bg-white/20 animate-pulse rounded-md" />
-        </div>
-    );
-  }
-  
   if (!isMounted) {
       return (
          <div className="space-y-2 text-white">
