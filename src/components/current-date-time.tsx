@@ -17,6 +17,7 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
   const isMounted = useIsMounted();
   
   useEffect(() => {
+    // This effect runs only on the client, ensuring no hydration mismatch.
     const intervalId = setInterval(() => {
       const timezone = "Asia/Kathmandu";
       const now = new Date();
@@ -26,7 +27,7 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
 
     // Use the library on the client-side to get the most accurate date
     try {
-        const cal = new NepaliCalendar();
+        const cal = new NepaliCalendar(); // Instantiate only on client
         const bsDate = cal.toBS(new Date());
         
         setClientToday({

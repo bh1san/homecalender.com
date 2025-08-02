@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface RashifalProps {
     loading: boolean;
@@ -18,6 +18,13 @@ interface RashifalProps {
 
 export default function Rashifal({ loading, horoscope }: RashifalProps) {
     const [selectedRashi, setSelectedRashi] = useState<Horoscope | null>(null);
+
+    useEffect(() => {
+        // Set the default rashi on the client side to avoid hydration mismatch
+        if (horoscope && horoscope.length > 0 && !selectedRashi) {
+            setSelectedRashi(horoscope[0]);
+        }
+    }, [horoscope, selectedRashi]);
 
     if (loading) {
         return (
@@ -37,12 +44,11 @@ export default function Rashifal({ loading, horoscope }: RashifalProps) {
         setSelectedRashi(rashi);
     };
     
-    // Set a default if none is selected
     const displayRashi = selectedRashi || horoscope[0];
 
     return (
         <div className="space-y-3">
-             <Select onValueChange={handleRashiChange} defaultValue={displayRashi.name}>
+             <Select onValueChange={handleRashiChange} value={displayRashi?.name}>
                 <SelectTrigger className="w-full font-semibold">
                     <SelectValue placeholder="Select your Rashi..." />
                 </SelectTrigger>
@@ -54,9 +60,13 @@ export default function Rashifal({ loading, horoscope }: RashifalProps) {
                     ))}
                 </SelectContent>
             </Select>
-            <p className="text-sm text-muted-foreground p-3 bg-muted/40 rounded-md min-h-[100px]">
-                {displayRashi.text}
-            </p>
+            {displayRashi ? (
+                <p className="text-sm text-muted-foreground p-3 bg-muted/40 rounded-md min-h-[100px]">
+                    {displayRashi.text}
+                </p>
+            ) : (
+                 <div className="h-20 w-full bg-muted/50 animate-pulse rounded-md" />
+            )}
         </div>
     )
 }
