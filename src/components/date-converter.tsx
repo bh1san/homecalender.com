@@ -50,7 +50,6 @@ export default function DateConverter() {
   const [isConvertingBS, setIsConvertingBS] = useState(false);
 
   useEffect(() => {
-    // This effect runs only on the client to avoid hydration errors
     if (isMounted) {
       const today = new Date();
       setGregorianDate({

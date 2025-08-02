@@ -22,7 +22,6 @@ export default function Rashifal({ loading, horoscope }: RashifalProps) {
     const isMounted = useIsMounted();
 
     useEffect(() => {
-        // Set the default rashi on the client side to avoid hydration mismatch
         if (isMounted && horoscope && horoscope.length > 0 && !selectedRashi) {
             setSelectedRashi(horoscope[0]);
         }
@@ -45,12 +44,10 @@ export default function Rashifal({ loading, horoscope }: RashifalProps) {
         const rashi = horoscope.find(r => r.name === name) || null;
         setSelectedRashi(rashi);
     };
-    
-    const displayRashi = selectedRashi;
 
     return (
         <div className="space-y-3">
-             <Select onValueChange={handleRashiChange} value={displayRashi?.name}>
+             <Select onValueChange={handleRashiChange} value={selectedRashi?.name}>
                 <SelectTrigger className="w-full font-semibold">
                     <SelectValue placeholder="Select your Rashi..." />
                 </SelectTrigger>
@@ -62,9 +59,9 @@ export default function Rashifal({ loading, horoscope }: RashifalProps) {
                     ))}
                 </SelectContent>
             </Select>
-            {displayRashi ? (
+            {selectedRashi ? (
                 <p className="text-sm text-muted-foreground p-3 bg-muted/40 rounded-md min-h-[100px]">
-                    {displayRashi.text}
+                    {selectedRashi.text}
                 </p>
             ) : (
                  <div className="h-20 w-full bg-muted/50 animate-pulse rounded-md" />

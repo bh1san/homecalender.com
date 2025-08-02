@@ -45,16 +45,17 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
         });
     } catch(e) {
         console.error("Failed to init nepali-calendar-js", e);
-        setClientToday(today ?? null); // Fallback to server-passed data
+        // Fallback to server-passed data only if library fails
+        if (today) setClientToday(today);
     }
 
 
     return () => clearInterval(intervalId);
   }, [isMounted, today]);
 
-  const displayDate = clientToday || today;
+  const displayDate = isMounted ? clientToday : null;
 
-  if (!isMounted || !displayDate) {
+  if (!displayDate) {
       return (
          <div className="space-y-2 text-white">
             <div className="h-9 w-64 bg-white/20 animate-pulse rounded-md" />

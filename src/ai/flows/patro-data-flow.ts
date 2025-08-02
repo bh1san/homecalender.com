@@ -91,6 +91,10 @@ const patroDataFlow = ai.defineFlow(
     // Generate all data from AI. The local calendar library will be used on the client-side
     // to ensure accuracy and avoid hydration issues.
     const aiData = await generateAllDataFromAI();
+    
+    // Do not supplement with library data on the server.
+    // Client components will handle this to prevent hydration mismatch.
+    
     setInCache(cacheKey, aiData);
     return aiData;
   }
