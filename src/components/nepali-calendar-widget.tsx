@@ -1,19 +1,24 @@
 
 "use client";
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 const NepaliCalendarWidget = () => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const isScriptLoaded = useRef(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    if (isScriptLoaded.current) return;
+      setIsMounted(true);
+  }, []);
 
+  useEffect(() => {
+    // Only run this effect on the client, after the component has mounted
+    if (!isMounted || !containerRef.current) {
+        return;
+    }
+    
+    // Clear the container to prevent script duplication on re-renders
     const container = containerRef.current;
-    if (!container) return;
-
-    // Clear any previous content
     container.innerHTML = '';
 
     // Set up configuration on the window object
@@ -26,39 +31,24 @@ const NepaliCalendarWidget = () => {
     script.type = 'text/javascript';
     script.src = 'https://www.ashesh.com.np/calendarlink/nc.js';
     script.async = true;
-
-    // Create the attribution link div
-    const linkDiv = document.createElement('div');
-    linkDiv.id = 'ncwidgetlink';
-    linkDiv.style.textAlign = 'center';
-    linkDiv.style.fontSize = '0.8em';
-    linkDiv.style.paddingTop = '4px';
-    linkDiv.innerHTML = 'Powered by © <a href="https://www.ashesh.com.np/nepali-calendar/" id="nclink" title="Nepali calendar" target="_blank">nepali calendar</a>';
-
-    // Append script and link to the container
-    container.appendChild(script);
     
-    // The external script might take a moment to load and render, 
-    // so we append the attribution link after a short delay.
-    const timer = setTimeout(() => {
-      if (container && !container.querySelector('#ncwidgetlink')) {
-        container.appendChild(linkDiv);
-      }
-    }, 500);
+    // Append script to the container
+    container.appendChild(script);
 
-    isScriptLoaded.current = true;
+    // The external script removes the container and replaces it.
+    // It also adds its own attribution link, so we don't need to manually add it.
 
-    // Cleanup function to remove the script and timer when the component unmounts
+    // Cleanup function to remove the script's side-effects
     return () => {
-      clearTimeout(timer);
-      if (container) {
-        container.innerHTML = '';
-      }
-      isScriptLoaded.current = false;
+        // The script might leave global variables or listeners, but a simple
+        // innerHTML clear on the container is the most direct cleanup we can do.
+        if (container) {
+            container.innerHTML = '';
+        }
     };
-  }, []);
+  }, [isMounted]);
 
-  // The container div that will hold the widget
+  // The container div that will hold the widget. It will be replaced by the script.
   return <div ref={containerRef} className="w-full" />;
 };
 

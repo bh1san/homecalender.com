@@ -90,8 +90,9 @@ export default function Home() {
       }
     };
 
-    const countryToFetch = location.country || "Nepal";
-    fetchNewsAndFestivals(countryToFetch);
+    if (location.country) {
+      fetchNewsAndFestivals(location.country);
+    }
     
   }, [location.country]);
 
@@ -165,8 +166,8 @@ export default function Home() {
                 <CardHeader>
                     <CardTitle className="text-lg font-semibold text-card-foreground">आउँदा दिनहरु</CardTitle>
                 </CardHeader>
-                <CardContent>
-                    {isNepal ? <UpcomingEventsWidget /> : <p className="text-sm text-center text-muted-foreground">Upcoming events widget is only available for Nepal.</p>}
+                <CardContent className="p-0">
+                    {isNepal ? <UpcomingEventsWidget /> : <p className="text-sm text-center text-muted-foreground p-6">Upcoming events widget is only available for Nepal.</p>}
                 </CardContent>
             </Card>
 
@@ -241,7 +242,10 @@ export default function Home() {
 }
 
 function Header({ navLinks, logoUrl, isLoading }: { navLinks: string[], logoUrl: string, isLoading: boolean }) {
-    if (isLoading) {
+    const [isMounted, setIsMounted] = useState(false);
+    useEffect(() => setIsMounted(true), []);
+
+    if (!isMounted || isLoading) {
         return (
              <header className="bg-white text-primary-foreground shadow-md backdrop-blur-sm sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -249,6 +253,8 @@ function Header({ navLinks, logoUrl, isLoading }: { navLinks: string[], logoUrl:
                         <div className="h-8 w-48 bg-gray-300/20 animate-pulse rounded-md" />
                         <div className="hidden md:flex items-center space-x-4">
                            <div className="h-5 w-64 bg-gray-300/20 animate-pulse rounded-md" />
+                           <div className="h-8 w-10 bg-gray-300/20 animate-pulse rounded-md" />
+                           <div className="h-8 w-8 bg-gray-300/20 animate-pulse rounded-full" />
                         </div>
                     </div>
                 </div>
