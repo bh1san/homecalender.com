@@ -51,34 +51,11 @@ const newsFlow = ai.defineFlow(
       throw new Error('Could not generate news headlines.');
     }
 
-    const headlinesWithImages = [];
-    const placeholderImage = 'https://placehold.co/192x128.png';
-    let generatedImageCount = 0;
-
-    for (const headline of output.headlines) {
-      let imageDataUri = placeholderImage;
-      if (generatedImageCount < 3) {
-        try {
-            const {media} = await ai.generate({
-                model: 'googleai/gemini-2.0-flash-preview-image-generation',
-                prompt: `Generate a photorealistic image for a news headline about: ${headline.title}. Hint: ${headline.imageHint}`,
-                config: {
-                responseModalities: ['TEXT', 'IMAGE'],
-                },
-            });
-            imageDataUri = media.url;
-            generatedImageCount++;
-        } catch (error) {
-            console.error(`Failed to generate image for "${headline.title}", using placeholder.`, error);
-        }
-      }
-
-      headlinesWithImages.push({
+    const headlinesWithImages = output.headlines.map(headline => ({
         id: headline.id,
         title: headline.title,
-        imageDataUri: imageDataUri,
-      });
-    }
+        imageDataUri: `https://placehold.co/192x128.png?text=${encodeURIComponent(headline.imageHint)}`
+    }));
 
     return {headlines: headlinesWithImages};
   }
@@ -87,5 +64,3 @@ const newsFlow = ai.defineFlow(
 export async function getNews(country: string): Promise<NewsResponse> {
   return newsFlow({ country });
 }
-
-    

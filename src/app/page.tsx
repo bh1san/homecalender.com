@@ -29,7 +29,7 @@ import MotivationalQuote from "@/components/motivational-quote";
 import { format, differenceInDays } from 'date-fns';
 
 const initialNavLinks = [
-    "Remit", "Mart", "Gifts", "Recharge", "Health", "Bank Rates", "Jyotish", 
+    "Mart", "Bank Rates", "Jyotish", 
     "Rashifal", "Podcasts", "News", "Blog", "Gold/Silver", "Forex", "Converter"
 ];
 
@@ -58,9 +58,10 @@ const parseFestivalDate = (dateString: string) => {
 
 const formatRelativeTime = (date: Date) => {
     const diff = differenceInDays(date, new Date());
+    if (diff < 0) return format(date, "do MMMM yyyy"); // Show past events with year
     if (diff === 0) return "Today";
     if (diff === 1) return "Tomorrow";
-    if (diff > 1 && diff <= 7) return `${diff} days later`;
+    if (diff > 1 && diff <= 7) return `In ${diff} days`;
     return format(date, "do MMMM");
 };
 
@@ -83,8 +84,9 @@ export default function Home() {
             ...festival,
             parsedDate: parseFestivalDate(festival.date),
         }))
-        .filter(event => event.parsedDate && event.parsedDate >= new Date())
+        .filter(event => event.parsedDate) // Keep all events with a parseable date
         .sort((a, b) => a.parsedDate!.getTime() - b.parsedDate!.getTime())
+        .filter(event => differenceInDays(event.parsedDate!, new Date()) >= 0) // Filter for today or future events
         .slice(0, 5)
         .map(event => ({
             day: format(event.parsedDate!, 'dd'),
@@ -100,6 +102,9 @@ export default function Home() {
     const fetchNewsAndFestivals = async (country: string) => {
       setLoadingNews(true);
       setLoadingFestivals(true);
+      setNewsItems([]);
+      setFestivals([]);
+
       try {
         const newsPromise = getNews(country);
         const festivalPromise = getFestivals(country);
@@ -121,9 +126,6 @@ export default function Home() {
 
     if (location.country) {
       fetchNewsAndFestivals(location.country);
-    } else {
-      setLoadingNews(false);
-      setLoadingFestivals(false);
     }
   }, [location.country]);
 
@@ -150,7 +152,7 @@ export default function Home() {
           <h3 className="text-lg font-semibold mb-3 text-white dark:text-gray-200 bg-black/50 p-2 rounded">
             News Bulletin {location.country ? `from ${location.country}` : 'Headlines'}
           </h3>
-            {loadingNews && !newsItems.length ? (
+            {loadingNews ? (
                 <div className="flex space-x-4 overflow-x-auto pb-4">
                     {[...Array(8)].map((_, index) => (
                         <div key={index} className="flex-shrink-0 w-48 bg-card/80 rounded-lg shadow-md overflow-hidden animate-pulse">
@@ -228,9 +230,9 @@ export default function Home() {
                     <CardTitle className="text-lg font-semibold text-card-foreground">Upcoming Events</CardTitle>
                 </CardHeader>
                 <CardContent>
-                     {loadingFestivals && upcomingEvents.length === 0 ? (
+                     {loadingFestivals ? (
                         <div className="space-y-4">
-                            {[...Array(2)].map((_, i) => (
+                            {[...Array(3)].map((_, i) => (
                                 <div key={i} className="flex items-start gap-4 p-2">
                                     <div className="flex-shrink-0">
                                         <div className="w-12 h-8 bg-muted rounded-t-md animate-pulse" />
