@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { cn } from "@/lib/utils";
+import { useIsMounted } from '@/hooks/use-is-mounted';
 
 const quotes = [
   "The only way to do great work is to love what you do.",
@@ -19,32 +20,30 @@ const quotes = [
 export default function MotivationalQuote() {
   const [currentQuote, setCurrentQuote] = useState("");
   const [isFading, setIsFading] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useIsMounted();
 
   useEffect(() => {
-    setIsMounted(true);
-    // Set initial quote on client
+    if (!isMounted) return;
+
     setCurrentQuote(quotes[Math.floor(Math.random() * quotes.length)]);
 
     const intervalId = setInterval(() => {
       setIsFading(true);
       setTimeout(() => {
         let nextQuote = currentQuote;
-        // Ensure the next quote is different
         while (nextQuote === currentQuote) {
           const randomIndex = Math.floor(Math.random() * quotes.length);
           nextQuote = quotes[randomIndex];
         }
         setCurrentQuote(nextQuote);
         setIsFading(false);
-      }, 1000); // Fade transition duration
-    }, 15000); // Change quote every 15 seconds
+      }, 1000); 
+    }, 15000); 
 
     return () => clearInterval(intervalId);
-  }, []); // Empty dependency array ensures this runs only once on the client after mount
+  }, [isMounted, currentQuote]);
 
   if (!isMounted) {
-    // Render a placeholder on the server and during initial client render
     return (
         <div className="w-[400px] h-[100px] flex items-center justify-center bg-black/20 rounded-lg p-4 text-center overflow-hidden" />
     );

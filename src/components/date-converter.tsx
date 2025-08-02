@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "./ui/select";
 import FlagLoader from "./flag-loader";
+import { useIsMounted } from "@/hooks/use-is-mounted";
 
 const nepaliMonths = [
   "Baisakh", "Jestha", "Ashadh", "Shrawan", "Bhadra",
@@ -44,24 +45,22 @@ export default function DateConverter() {
   const [nepaliDate, setNepaliDate] = useState({ year: "", month: "", day: "" });
   const [gregorianResult, setGregorianResult] = useState<string | null>(null);
   const [isConvertingBS, setIsConvertingBS] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useIsMounted();
 
   useEffect(() => {
-    setIsMounted(true);
-    // Set default dates on client-side to avoid hydration mismatch
+    if (!isMounted) return;
     const today = new Date();
     setGregorianDate({
       year: String(today.getFullYear()),
       month: String(today.getMonth() + 1),
       day: String(today.getDate())
     });
-    // Placeholder for BS date
     setNepaliDate({
         year: "2081",
         month: "4",
         day: "1"
     });
-  }, []);
+  }, [isMounted]);
 
   const handleConversion = () => {
      toast({

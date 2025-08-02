@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -12,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from './ui/button';
 import FlagLoader from './flag-loader';
+import { useIsMounted } from '@/hooks/use-is-mounted';
 
 interface LocationSelectorProps {
   onLocationChange: (country: string | null) => void;
@@ -28,19 +28,18 @@ const countries = [
 ];
 
 export default function LocationSelector({ onLocationChange }: LocationSelectorProps) {
-  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState<string>("Nepal");
   const [isLocating, setIsLocating] = useState(false); 
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useIsMounted();
 
   useEffect(() => {
-    setIsMounted(true);
-    // Set Nepal as default on initial load, but don't trigger location detection automatically
-    handleCountryChange("Nepal");
-  }, []);
+    if (isMounted) {
+      onLocationChange(selectedCountry);
+    }
+  }, [selectedCountry, onLocationChange, isMounted]);
 
   const handleCountryChange = (country: string) => {
     setSelectedCountry(country);
-    onLocationChange(country);
   };
 
   const handleDetectLocation = () => {

@@ -33,6 +33,7 @@ import { getPatroData } from "@/ai/flows/patro-data-flow";
 import Rashifal from "@/components/rashifal";
 import GoldSilver from "@/components/gold-silver";
 import Forex from "@/components/forex";
+import { useIsMounted } from "@/hooks/use-is-mounted";
 
 
 type Settings = {
@@ -283,8 +284,7 @@ export default function Home() {
 }
 
 function Header({ navLinks, logoUrl, isLoading }: { navLinks: string[], logoUrl: string, isLoading: boolean }) {
-    const [isMounted, setIsMounted] = useState(false);
-    useEffect(() => setIsMounted(true), []);
+    const isMounted = useIsMounted();
 
     if (!isMounted || isLoading) {
         return (

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { getNepaliMonthName, getNepaliDayOfWeek, getEnglishMonthName } from '@/lib/nepali-date-converter';
 import { CurrentDateInfoResponse } from '@/ai/schemas';
+import { useIsMounted } from '@/hooks/use-is-mounted';
 
 interface CurrentDateTimeProps {
   country: string | null;
@@ -22,10 +23,11 @@ const toNepaliNumber = (num: number | string) => {
 export default function CurrentDateTime({ country, today }: CurrentDateTimeProps) {
   const [timeString, setTimeString] = useState("");
   const [gregorianDateString, setGregorianDateString] = useState("");
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useIsMounted();
   
   useEffect(() => {
-    setIsMounted(true);
+    if (!isMounted) return;
+
     const intervalId = setInterval(() => {
       const timezone = country === "Nepal" ? "Asia/Kathmandu" : undefined;
       const now = new Date();
@@ -40,7 +42,7 @@ export default function CurrentDateTime({ country, today }: CurrentDateTimeProps
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [country]);
+  }, [country, isMounted]);
 
 
   if (!isMounted) {
