@@ -244,7 +244,14 @@ export default function AdminPage() {
                      {settings.logoUrl && (
                         <div className="mt-4">
                             <p className="text-sm font-medium mb-2">Current Logo:</p>
-                            <Image src={settings.logoUrl} alt="Current Logo" width={200} height={50} className="rounded-md object-contain border p-2" />
+                            <Image 
+                                src={settings.logoUrl} 
+                                alt="Current Logo" 
+                                width={200} 
+                                height={50} 
+                                className="rounded-md object-contain border p-2"
+                                data-ai-hint="logo"
+                            />
                         </div>
                      )}
                 </CardContent>

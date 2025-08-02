@@ -14,6 +14,7 @@ export const NewsItemSchema = z.object({
     .describe(
       "A generated image for the news article, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
+  imageHint: z.string().optional().describe('A hint for image generation.'),
 });
 export type NewsItem = z.infer<typeof NewsItemSchema>;
 
@@ -76,5 +77,3 @@ export const CalendarEventsResponseSchema = z.object({
     month_events: z.array(CalendarEventSchema).describe("A list of all events for the given month."),
 });
 export type CalendarEventsResponse = z.infer<typeof CalendarEventsResponseSchema>;
-
-    

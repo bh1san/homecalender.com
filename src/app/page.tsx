@@ -112,14 +112,14 @@ export default function Home() {
 
         const newsData = await newsPromise;
         setNewsItems(newsData.headlines);
-        setLoadingNews(false);
+        
 
         const festivalData = await festivalPromise;
         setFestivals(festivalData.festivals);
-        setLoadingFestivals(false);
         
       } catch (error) {
         console.error("Error fetching data:", error);
+      } finally {
         setLoadingNews(false);
         setLoadingFestivals(false);
       }
@@ -176,7 +176,14 @@ export default function Home() {
                                 rel="noopener noreferrer"
                                 className="flex-shrink-0 w-48 bg-card/80 rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105"
                             >
-                                <Image src={item.imageDataUri} alt={item.title} width={192} height={128} className="w-full h-32 object-cover" />
+                                <Image 
+                                    src={item.imageDataUri} 
+                                    alt={item.title} 
+                                    width={192} 
+                                    height={128} 
+                                    className="w-full h-32 object-cover" 
+                                    data-ai-hint={item.imageHint}
+                                />
                                 <div className="p-3">
                                     <p className="text-sm font-medium text-card-foreground leading-tight">{item.title}</p>
                                 </div>
@@ -295,7 +302,7 @@ function Header({ navLinks, logoUrl, isLoading }: { navLinks: string[], logoUrl:
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
                     <Link href="/">
-                        <Image src={logoUrl} alt="HomeCalender Logo" width={200} height={40} className="object-contain" priority />
+                        <Image src={logoUrl} alt="HomeCalender Logo" width={200} height={40} className="object-contain" priority data-ai-hint="logo" />
                     </Link>
                     <nav className="hidden md:flex items-center space-x-4">
                         {navLinks.map(link => (

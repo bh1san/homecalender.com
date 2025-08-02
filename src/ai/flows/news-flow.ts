@@ -54,7 +54,8 @@ const newsFlow = ai.defineFlow(
     const headlinesWithImages = output.headlines.map(headline => ({
         id: headline.id,
         title: headline.title,
-        imageDataUri: `https://placehold.co/192x128.png?text=${encodeURIComponent(headline.imageHint)}`
+        imageDataUri: `https://placehold.co/192x128.png`,
+        imageHint: headline.imageHint,
     }));
 
     return {headlines: headlinesWithImages};
