@@ -81,11 +81,22 @@ const patroDataFlow = ai.defineFlow(
     
     let mappedGoldSilver: GoldSilver | null = null;
     if (goldSilverData) {
-        const findPrice = (item: string) => goldSilverData.find(p => p.item.toLowerCase().includes(item.toLowerCase())) || { item, price: 'N/A', unit: 'Tola' };
         mappedGoldSilver = {
-            fineGold: findPrice('fine gold'),
-            tejabiGold: findPrice('tejabi gold'),
-            silver: findPrice('silver'),
+            fineGold: { 
+                item: 'Fine Gold', 
+                price: goldSilverData.fineGold || 'N/A', 
+                unit: 'Tola' 
+            },
+            tejabiGold: { 
+                item: 'Tejabi Gold', 
+                price: goldSilverData.tejabiGold || 'N/A', 
+                unit: 'Tola' 
+            },
+            silver: { 
+                item: 'Silver', 
+                price: goldSilverData.silver || 'N/A', 
+                unit: 'Tola' 
+            },
         }
     }
 
