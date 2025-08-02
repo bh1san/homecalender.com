@@ -30,11 +30,18 @@ const upcomingEvents = [
     { day: "17", month: "Jul", title: "First day of Shrawan", relativeTime: "2 days later" },
 ]
 
+const initialNavLinks = [
+    "Remit", "Mart", "Gifts", "Recharge", "Health", "Bank Rates", "Jyotish", 
+    "Rashifal", "Podcasts", "News", "Blog", "Gold/Silver", "Forex", "Converter"
+];
+
+
 export default function Home() {
   const [location, setLocation] = useState<{ country: string | null }>({ country: null });
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [festivals, setFestivals] = useState<Festival[]>([]);
   const [loading, setLoading] = useState(true);
+  const [navLinks, setNavLinks] = useState<string[]>(initialNavLinks);
 
   const isNepal = useMemo(() => location.country === 'Nepal', [location.country]);
 
@@ -64,7 +71,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      <Header />
+      <Header navLinks={navLinks} />
       <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-4">
             <LocationSelector onLocationChange={(country) => setLocation({ country })} />
@@ -193,12 +200,7 @@ export default function Home() {
   );
 }
 
-function Header() {
-    const navLinks = [
-        "Remit", "Mart", "Gifts", "Recharge", "Health", "Bank Rates", "Jyotish", 
-        "Rashifal", "Podcasts", "News", "Blog", "Gold/Silver", "Forex", "Converter"
-    ];
-
+function Header({ navLinks }: { navLinks: string[] }) {
     return (
         <header className="bg-accent/90 text-white shadow-md backdrop-blur-sm sticky top-0 z-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

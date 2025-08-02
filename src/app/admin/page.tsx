@@ -45,6 +45,12 @@ const mockNews = [
   },
 ];
 
+const initialNavLinks = [
+    "Remit", "Mart", "Gifts", "Recharge", "Health", "Bank Rates", "Jyotish", 
+    "Rashifal", "Podcasts", "News", "Blog", "Gold/Silver", "Forex", "Converter"
+];
+
+
 type NewsArticle = {
   id?: number;
   title: string;
@@ -58,6 +64,8 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [news, setNews] = useState<NewsArticle[]>(mockNews);
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
+  const [navLinks, setNavLinks] = useState<string[]>(initialNavLinks);
+  const [newNavLink, setNewNavLink] = useState("");
 
   const handleLogin = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -90,6 +98,18 @@ export default function AdminPage() {
     // Logic to delete will go here
     console.log("Deleting article with id:", id);
   };
+
+  const handleAddNavLink = () => {
+    if (newNavLink && !navLinks.includes(newNavLink)) {
+        setNavLinks([...navLinks, newNavLink]);
+        setNewNavLink("");
+    }
+  };
+
+  const handleDeleteNavLink = (linkToDelete: string) => {
+    setNavLinks(navLinks.filter(link => link !== linkToDelete));
+  }
+
 
   if (!isAuthenticated) {
     return (
@@ -138,7 +158,7 @@ export default function AdminPage() {
         </div>
       </header>
       <main className="container mx-auto p-4 sm:p-6 lg:p-8 grid gap-8 md:grid-cols-3">
-        <div className="md:col-span-2">
+        <div className="md:col-span-2 space-y-8">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
@@ -179,6 +199,32 @@ export default function AdminPage() {
                             ))}
                         </TableBody>
                     </Table>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Header Navigation</CardTitle>
+                    <CardDescription>Add or remove links from the main header.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex space-x-2 mb-4">
+                        <Input 
+                            value={newNavLink} 
+                            onChange={(e) => setNewNavLink(e.target.value)}
+                            placeholder="New link name"
+                        />
+                        <Button onClick={handleAddNavLink}><PlusCircle className="mr-2" /> Add Link</Button>
+                    </div>
+                    <div className="space-y-2">
+                        {navLinks.map(link => (
+                            <div key={link} className="flex items-center justify-between p-2 rounded-md bg-muted">
+                                <span className="font-medium">{link}</span>
+                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteNavLink(link)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
                 </CardContent>
             </Card>
         </div>
