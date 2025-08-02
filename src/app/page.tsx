@@ -1,3 +1,4 @@
+
 "use client";
 
 import { ArrowRightLeft, CalendarDays, PartyPopper, Search, Menu, Plus, MessageSquare } from "lucide-react";
@@ -20,10 +21,9 @@ import { Input } from "@/components/ui/input";
 import { getNews } from "@/ai/flows/news-flow";
 import { NewsItem, Festival, PatroDataResponse } from "@/ai/schemas";
 import CurrentDateTime from "@/components/current-date-time";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { getFestivals } from "@/ai/flows/festival-flow";
 import { Calendar } from "@/components/ui/calendar";
-import LocationSelector from "@/components/location-selector";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import MotivationalQuote from "@/components/motivational-quote";
 import { User } from "lucide-react";
@@ -42,13 +42,10 @@ type Settings = {
 }
 
 export default function Home() {
-  const [location, setLocation] = useState<{ country: string | null }>({ country: "Nepal" });
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [festivals, setFestivals] = useState<Festival[]>([]);
   const [patroData, setPatroData] = useState<PatroDataResponse | null>(null);
-  const [loadingNews, setLoadingNews] = useState(true);
-  const [loadingFestivals, setLoadingFestivals] = useState(true);
-  const [loadingPatroData, setLoadingPatroData] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<Settings>({ logoUrl: "https://placehold.co/200x50.png", navLinks: [] });
   const [loadingSettings, setLoadingSettings] = useState(true);
   
@@ -69,73 +66,47 @@ export default function Home() {
     fetchSettings();
   }, []);
   
-  const isNepal = useMemo(() => location.country === 'Nepal', [location.country]);
 
   useEffect(() => {
-    const fetchNewsAndFestivals = async (country: string) => {
-      setLoadingNews(true);
-      setLoadingFestivals(true);
-      setNewsItems([]);
-      setFestivals([]);
-
+    const fetchAllData = async () => {
+      setLoading(true);
       try {
+        const country = "Nepal";
+        
+        const patroPromise = getPatroData();
         const newsPromise = getNews(country);
         const festivalPromise = getFestivals(country);
 
-        const newsData = await newsPromise;
+        const [patroData, newsData, festivalData] = await Promise.all([patroPromise, newsPromise, festivalPromise]);
+
+        setPatroData(patroData);
         setNewsItems(newsData.headlines);
-        
-        const festivalData = await festivalPromise;
         setFestivals(festivalData.festivals);
         
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
-        setLoadingNews(false);
-        setLoadingFestivals(false);
+        setLoading(false);
       }
     };
 
-    if (location.country) {
-      fetchNewsAndFestivals(location.country);
-    }
-    
-  }, [location.country]);
+    fetchAllData();
+  }, []);
 
-  useEffect(() => {
-    const fetchPatroData = async () => {
-        if (!isNepal) {
-            setPatroData(null);
-            setLoadingPatroData(false);
-            return;
-        }
-        setLoadingPatroData(true);
-        try {
-            const data = await getPatroData();
-            setPatroData(data);
-        } catch (error) {
-            console.error("Error fetching patro data:", error);
-            setPatroData(null);
-        } finally {
-            setLoadingPatroData(false);
-        }
-    }
-    fetchPatroData();
-  }, [isNepal]);
 
   return (
     <>
       <Header navLinks={settings.navLinks} logoUrl={settings.logoUrl} isLoading={loadingSettings} />
       <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 bg-primary text-primary-foreground p-4 rounded-lg shadow-md items-center">
-            <CurrentDateTime country={location.country} today={patroData?.today} />
+            <CurrentDateTime today={patroData?.today} />
             <div className="hidden sm:flex justify-end">
                 <MotivationalQuote />
             </div>
         </div>
 
         <div className="flex items-center justify-between mb-4">
-            <LocationSelector onLocationChange={(country) => setLocation({ country })} />
+            <h2 className="text-xl font-bold text-foreground">Nepal</h2>
             <div className="relative w-full max-w-xs">
                 <Input type="search" placeholder="Search events" className="pl-10 bg-white/80"/>
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400"/>
@@ -144,9 +115,9 @@ export default function Home() {
 
         <section className="mb-8">
           <h3 className="text-lg font-semibold mb-3 text-accent-foreground dark:text-gray-200 bg-accent/20 p-2 rounded">
-            News Bulletin {location.country ? `from ${location.country}` : 'Headlines'}
+            News Bulletin from Nepal
           </h3>
-            {loadingNews ? (
+            {loading ? (
                 <div className="flex space-x-4 overflow-x-auto pb-4">
                     {[...Array(8)].map((_, index) => (
                         <div key={index} className="flex-shrink-0 w-48 bg-card/80 rounded-lg shadow-md overflow-hidden animate-pulse">
@@ -194,7 +165,7 @@ export default function Home() {
                     <CardTitle className="text-lg font-semibold text-card-foreground">आउँदा दिनहरु</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
-                    {isNepal ? <UpcomingEventsWidget loading={loadingPatroData} events={patroData?.upcomingEvents} /> : <p className="text-sm text-center text-muted-foreground p-6">Upcoming events widget is only available for Nepal.</p>}
+                    <UpcomingEventsWidget loading={loading} events={patroData?.upcomingEvents} />
                 </CardContent>
             </Card>
 
@@ -213,7 +184,7 @@ export default function Home() {
                     <CardTitle className="text-lg font-semibold text-card-foreground">राशीफल</CardTitle>
                 </CardHeader>
                 <CardContent>
-                     {isNepal ? <Rashifal loading={loadingPatroData} horoscope={patroData?.horoscope} /> : <p className="text-sm text-center text-muted-foreground p-6">Horoscope is only available for Nepal.</p>}
+                     <Rashifal loading={loading} horoscope={patroData?.horoscope} />
                 </CardContent>
             </Card>
 
@@ -238,18 +209,18 @@ export default function Home() {
                       <DateConverter />
                     </TabsContent>
                     <TabsContent value="festivals" className="mt-6">
-                      {loadingFestivals ? (
+                      {loading ? (
                          <div className="space-y-2">
                             {[...Array(5)].map((_, i) => (
                                <div key={i} className="h-16 bg-muted/50 rounded animate-pulse" />
                             ))}
                          </div>
                       ) : (
-                         festivals.length > 0 ? <FestivalList festivals={festivals} /> : <p className="text-center text-muted-foreground p-4 bg-background/80 rounded">No festivals found for the selected country.</p>
+                         festivals.length > 0 ? <FestivalList festivals={festivals} /> : <p className="text-center text-muted-foreground p-4 bg-background/80 rounded">No festivals found for Nepal.</p>
                       )}
                     </TabsContent>
                      <TabsContent value="gold" className="mt-6">
-                         {isNepal ? <GoldSilver loading={loadingPatroData} prices={patroData?.goldSilver} /> : <p className="text-sm text-center text-muted-foreground p-6">Gold/Silver prices are only available for Nepal.</p>}
+                         <GoldSilver loading={loading} prices={patroData?.goldSilver} />
                     </TabsContent>
                   </Tabs>
                 </CardContent>
@@ -260,21 +231,19 @@ export default function Home() {
           <div className="lg:col-span-3 space-y-8">
             <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
                 <CardContent className="p-2 sm:p-4">
-                     {isNepal ? <NepaliCalendar today={patroData?.today} /> : <Calendar mode="single" className="w-full rounded-md bg-card/90 flex justify-center" />}
+                     <NepaliCalendar today={patroData?.today} />
                 </CardContent>
               </Card>
 
-              {isNepal && (
-                <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle>Foreign Exchange Rates</CardTitle>
-                    <CardDescription>Rates are against NPR and provided by Nepal Rastra Bank.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Forex loading={loadingPatroData} rates={patroData?.forex} />
-                  </CardContent>
-                </Card>
-              )}
+              <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle>Foreign Exchange Rates</CardTitle>
+                  <CardDescription>Rates are against NPR and provided by Nepal Rastra Bank.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Forex loading={loading} rates={patroData?.forex} />
+                </CardContent>
+              </Card>
           </div>
 
         </div>
@@ -344,3 +313,5 @@ function Header({ navLinks, logoUrl, isLoading }: { navLinks: string[], logoUrl:
         </header>
     )
 }
+
+    

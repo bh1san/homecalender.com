@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -6,7 +7,6 @@ import { CurrentDateInfoResponse } from '@/ai/schemas';
 import { useIsMounted } from '@/hooks/use-is-mounted';
 
 interface CurrentDateTimeProps {
-  country: string | null;
   today: CurrentDateInfoResponse | null | undefined;
 }
 
@@ -20,47 +20,32 @@ const toNepaliNumber = (num: number | string) => {
     }).join("");
 }
 
-export default function CurrentDateTime({ country, today }: CurrentDateTimeProps) {
+export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
   const [timeString, setTimeString] = useState("");
-  const [gregorianDateString, setGregorianDateString] = useState("");
   const isMounted = useIsMounted();
   
   useEffect(() => {
     if (!isMounted) return;
 
     const intervalId = setInterval(() => {
-      const timezone = country === "Nepal" ? "Asia/Kathmandu" : undefined;
+      const timezone = "Asia/Kathmandu";
       const now = new Date();
-      if (timezone) {
-        const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true, timeZone: timezone });
-        setTimeString(timeStr);
-      } else {
-        const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true });
-        setTimeString(timeStr);
-        setGregorianDateString(now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
-      }
+      const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true, timeZone: timezone });
+      setTimeString(timeStr);
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [country, isMounted]);
+  }, [isMounted]);
 
 
-  if (!isMounted) {
+  if (!isMounted || !today) {
       return (
          <div className="space-y-2 text-white">
             <div className="h-9 w-64 bg-white/20 animate-pulse rounded-md" />
+            <div className="h-5 w-48 bg-white/20 animate-pulse rounded-md" />
             <div className="h-5 w-32 bg-white/20 animate-pulse rounded-md" />
         </div>
       );
-  }
-
-  if (country !== "Nepal" || !today) {
-      return (
-        <div>
-            <h1 className="text-3xl font-bold">{gregorianDateString || 'Loading date...'}</h1>
-            <p className="text-sm mt-1">{timeString || '...'}</p>
-        </div>
-      )
   }
     
   const nepaliDateStr = `${toNepaliNumber(today.bsDay)} ${getNepaliMonthName(today.bsMonth)} ${toNepaliNumber(today.bsYear)}, ${getNepaliDayOfWeek(today.bsWeekDay)}`;
@@ -81,3 +66,5 @@ export default function CurrentDateTime({ country, today }: CurrentDateTimeProps
     </div>
   );
 }
+
+    

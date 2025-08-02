@@ -9,6 +9,7 @@ import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight, Loader, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { useIsMounted } from '@/hooks/use-is-mounted';
 
 interface NepaliCalendarProps {
     today: CurrentDateInfoResponse | null | undefined;
@@ -17,33 +18,15 @@ interface NepaliCalendarProps {
 const WEEK_DAYS_NP = ["आइत", "सोम", "मंगल", "बुध", "बिहि", "शुक्र", "शनि"];
 
 export default function NepaliCalendar({ today }: NepaliCalendarProps) {
+    const isMounted = useIsMounted();
     const [currentBSDate, setCurrentBSDate] = useState({
-        year: today?.bsYear || new Date().getFullYear() + 57,
-        month: today?.bsMonth || new Date().getMonth() + 1,
+        year: new Date().getFullYear() + 57,
+        month: new Date().getMonth() + 1,
     });
     
     const [monthData, setMonthData] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
-    
-    // This logic needs to be robust. The API must provide the first day of the week,
-    // or we must calculate it accurately. Assuming the API for month events is ordered.
-    const firstDayOfWeek = useMemo(() => {
-        if (!monthData || monthData.length === 0 || !today) return 0;
-        
-        // Find the day of the week for the 1st of the current month.
-        if (today.bsYear === currentBSDate.year && today.bsMonth === currentBSDate.month) {
-            // We are in the current month, calculate offset from today's date
-            const dayOfWeekOfFirst = (today.bsWeekDay - (today.bsDay - 1)) % 7;
-            return dayOfWeekOfFirst < 0 ? dayOfWeekOfFirst + 7 : dayOfWeekOfFirst;
-        }
-        
-        // For other months, we'd need a more reliable way to get the start day.
-        // A robust solution would be an API endpoint for this.
-        // As a fallback, we'll try to estimate, but this can be inaccurate.
-        // Let's assume a default for now if not current month.
-        return 1; // Fallback to Monday, this is a known limitation.
-
-    }, [monthData, today, currentBSDate]);
+    const [firstDayOfWeek, setFirstDayOfWeek] = useState(0);
 
     const fetchMonthData = useCallback(async (year: number, month: number) => {
         setLoading(true);
@@ -51,6 +34,19 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
             const data = await getCalendarEvents({ year, month });
             if (data.month_events && data.month_events.length > 0) {
                 setMonthData(data.month_events);
+                 // The API should give us the full date info for the first day.
+                 // We need to calculate the day of the week for the 1st day of the Nepali month.
+                 // Let's assume we need an API for this or a robust library.
+                 // For now, let's derive it from today's info if it's the current month.
+                 if (today && year === today.bsYear && month === today.bsMonth) {
+                     const dayOfWeekOfFirst = (today.bsWeekDay - (today.bsDay - 1)) % 7;
+                     setFirstDayOfWeek(dayOfWeekOfFirst < 0 ? dayOfWeekOfFirst + 7 : dayOfWeekOfFirst);
+                 } else {
+                     // This is a placeholder. A proper implementation would need to fetch
+                     // the day of the week for the 1st of the given month.
+                     // A simple workaround could be to fetch day 1 of any month.
+                     setFirstDayOfWeek(1); // Defaulting to Monday as a fallback
+                 }
             } else {
                 setMonthData([]);
             }
@@ -60,21 +56,12 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [today]);
     
     useEffect(() => {
         if (today) {
-            const newCurrentBSDate = { year: today.bsYear, month: today.bsMonth };
-            if(currentBSDate.year !== newCurrentBSDate.year || currentBSDate.month !== newCurrentBSDate.month) {
-                setCurrentBSDate(newCurrentBSDate);
-            }
-            fetchMonthData(newCurrentBSDate.year, newCurrentBSDate.month);
-        } else if (!today) {
-             // When location changes away from Nepal, we might get `undefined` for `today`
-             // In this case, we can either clear the calendar or show a placeholder.
-             // For now, lets just show loading.
-             setLoading(true);
-             setMonthData([]);
+            setCurrentBSDate({ year: today.bsYear, month: today.bsMonth });
+            fetchMonthData(today.bsYear, today.bsMonth);
         }
     }, [today, fetchMonthData]);
     
@@ -104,14 +91,18 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
         });
     };
     
-    if (!today) {
+    if (!isMounted || !today) {
         return (
-             <div className="relative grid grid-cols-7 gap-2 min-h-[600px]">
-                {Array.from({ length: 35 }).map((_, i) => (
-                    <div key={i} className="rounded-md bg-muted/50 animate-pulse min-h-[100px]" />
-                ))}
-                 <div className="absolute inset-0 flex items-center justify-center bg-card/80 backdrop-blur-sm">
-                    <Loader className="animate-spin text-primary h-8 w-8" />
+             <div className="relative p-0 sm:p-2 bg-card rounded-lg w-full">
+                <div className="flex items-center justify-between mb-4">
+                    <div className="h-10 w-10 bg-muted rounded-md animate-pulse" />
+                    <div className="h-8 w-48 bg-muted rounded-md animate-pulse" />
+                    <div className="h-10 w-10 bg-muted rounded-md animate-pulse" />
+                </div>
+                 <div className="grid grid-cols-7 gap-2 min-h-[600px]">
+                    {Array.from({ length: 35 }).map((_, i) => (
+                        <div key={i} className="rounded-md bg-muted/50 animate-pulse min-h-[100px]" />
+                    ))}
                  </div>
              </div>
         );
@@ -228,3 +219,5 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
         </div>
     );
 }
+
+    
