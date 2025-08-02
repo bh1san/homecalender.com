@@ -27,14 +27,16 @@ const prompt = ai.definePrompt({
 
 For each day of the month, provide the following details:
 1.  'day': The numeric day of the month.
-2.  'tithi': The official lunar phase (Tithi) for that day, in Nepali script.
-3.  'events': A list of all festivals, observances, or special events occurring on that day, in Nepali script. If there are no events, provide an empty list.
-4.  'is_holiday': A boolean value indicating if the day is a public holiday in Nepal. Mark major festival days and Saturdays as holidays.
+2.  'tithi': The official lunar phase (Tithi) for that day, in Nepali script. Include the Paksha (e.g., शुक्ल अष्टमी).
+3.  'panchanga': Other astrological details for the day, such as Nakshatra, Yoga, and Karana. Format it as a single string, like "शुभ बव विशाखा". If not available, provide an empty string.
+4.  'events': A list of all festivals, observances, or special events occurring on that day, in Nepali script. If there are no events, provide an empty list.
+5.  'is_holiday': A boolean value indicating if the day is a public holiday in Nepal. Mark major festival days and Saturdays as holidays.
 
 Example for a single day's output:
 {
   "day": 1,
   "tithi": "श्रावण कृष्ण प्रतिपदा",
+  "panchanga": "अतिगण्ड बालव श्रवण",
   "events": ["साउने संक्रान्ति", "लुतो फाल्ने दिन"],
   "is_holiday": true
 }

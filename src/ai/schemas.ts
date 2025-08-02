@@ -43,7 +43,8 @@ export type FestivalResponse = z.infer<typeof FestivalResponseSchema>;
 // Calendar Events Schemas
 export const CalendarEventSchema = z.object({
     day: z.number().describe("The day of the month."),
-    tithi: z.string().describe("The lunar phase (Tithi) of the day, in Nepali script."),
+    tithi: z.string().describe("The lunar phase (Tithi) of the day, including Paksha, in Nepali script."),
+    panchanga: z.string().describe("Other astrological details (Nakshatra, Karana, etc.) as a single string in Nepali script."),
     events: z.array(z.string()).describe("A list of events or festivals on this day, in Nepali script."),
     is_holiday: z.boolean().describe("Whether the day is a public holiday."),
 });

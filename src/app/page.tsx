@@ -33,7 +33,7 @@ type Settings = {
     navLinks: string[];
 }
 
-const parseFestivalDate = (dateString: string) => {
+const parseFestivalDate = (dateString: string): Date | null => {
     try {
         const date = parseISO(dateString);
         return isNaN(date.getTime()) ? null : date;
@@ -42,7 +42,7 @@ const parseFestivalDate = (dateString: string) => {
     }
 };
 
-const formatUpcomingEventDate = (date: Date) => {
+const formatUpcomingEventDate = (date: Date): string => {
     return format(date, "do MMMM");
 };
 
@@ -54,7 +54,7 @@ type UpcomingEvent = {
 };
 
 export default function Home() {
-  const [location, setLocation] = useState<{ country: string | null }>({ country: null });
+  const [location, setLocation] = useState<{ country: string | null }>({ country: "Nepal" });
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [festivals, setFestivals] = useState<Festival[]>([]);
   const [loadingNews, setLoadingNews] = useState(true);
@@ -85,17 +85,12 @@ export default function Home() {
     fetchSettings();
   }, []);
 
-  const isNepal = useMemo(() => location.country === 'Nepal' || location.country === null, [location.country]);
+  const isNepal = useMemo(() => location.country === 'Nepal', [location.country]);
 
   const processFestivals = useCallback((festivalData: Festival[]) => {
-      if (!isMounted) return;
       const now = new Date();
-      
       const events = festivalData
-          .map(festival => {
-              const parsedDate = parseFestivalDate(festival.gregorianStartDate);
-              return { ...festival, parsedDate };
-          })
+          .map(festival => ({ ...festival, parsedDate: parseFestivalDate(festival.gregorianStartDate) }))
           .filter(event => event.parsedDate && differenceInDays(event.parsedDate, now) >= 0)
           .sort((a, b) => a.parsedDate!.getTime() - b.parsedDate!.getTime())
           .slice(0, 5)
@@ -105,11 +100,12 @@ export default function Home() {
               title: event.name,
               fullDate: formatUpcomingEventDate(event.parsedDate!),
           }));
-        
       setUpcomingEvents(events);
-  }, [isMounted]);
+  }, []);
 
   useEffect(() => {
+    if (!isMounted) return;
+
     const fetchNewsAndFestivals = async (country: string) => {
       setLoadingNews(true);
       setLoadingFestivals(true);
@@ -136,10 +132,9 @@ export default function Home() {
       }
     };
 
-    if (isMounted) {
-      const countryToFetch = location.country || "Nepal";
-      fetchNewsAndFestivals(countryToFetch);
-    }
+    const countryToFetch = location.country || "Nepal";
+    fetchNewsAndFestivals(countryToFetch);
+    
   }, [location.country, isMounted, processFestivals]);
 
   return (
@@ -162,7 +157,7 @@ export default function Home() {
         </div>
 
         <section className="mb-8">
-          <h3 className="text-lg font-semibold mb-3 text-accent-foreground dark:text-gray-200 bg-accent p-2 rounded">
+          <h3 className="text-lg font-semibold mb-3 text-accent-foreground dark:text-gray-200 bg-accent/20 p-2 rounded">
             News Bulletin {location.country ? `from ${location.country}` : 'Headlines'}
           </h3>
             {loadingNews ? (
@@ -350,5 +345,3 @@ function Header({ navLinks, logoUrl, isLoading }: { navLinks: string[], logoUrl:
         </header>
     )
 }
-
-    
