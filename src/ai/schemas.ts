@@ -52,3 +52,23 @@ export const DateConversionOutputSchema = z.object({
   fullDate: z.string().describe("The full converted date in 'Month Day, Year' format."),
 });
 export type DateConversionOutput = z.infer<typeof DateConversionOutputSchema>;
+
+// Calendar Events Schemas
+export const CalendarEventSchema = z.object({
+    day: z.number().describe("The day of the month."),
+    tithi: z.string().describe("The lunar phase (Tithi) of the day."),
+    events: z.array(z.string()).describe("A list of events or festivals on this day."),
+    is_holiday: z.boolean().describe("Whether the day is a public holiday."),
+});
+export type CalendarEvent = z.infer<typeof CalendarEventSchema>;
+
+export const CalendarEventsRequestSchema = z.object({
+    year: z.number().describe("The Nepali year (Bikram Sambat)."),
+    month: z.number().describe("The Nepali month (1-12)."),
+});
+export type CalendarEventsRequest = z.infer<typeof CalendarEventsRequestSchema>;
+
+export const CalendarEventsResponseSchema = z.object({
+    month_events: z.array(CalendarEventSchema).describe("A list of all events for the given month."),
+});
+export type CalendarEventsResponse = z.infer<typeof CalendarEventsResponseSchema>;

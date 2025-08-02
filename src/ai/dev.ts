@@ -2,3 +2,4 @@
 import './flows/news-flow';
 import './flows/date-conversion-flow';
 import './flows/festival-flow';
+import './flows/calendar-events-flow';
