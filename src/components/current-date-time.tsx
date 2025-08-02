@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { toBS, toAD, getNepaliMonthName, getNepaliDayOfWeek } from '@/lib/nepali-date-converter';
+import { toBS, getNepaliMonthName, getNepaliDayOfWeek } from '@/lib/nepali-date-converter';
 import { getCalendarEvents } from '@/ai/flows/calendar-events-flow';
 import { CalendarEvent } from '@/ai/schemas';
 
@@ -43,52 +43,44 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
     setIsMounted(true);
   }, []);
 
-  const countryToTimezone = (countryName: string | null): string => {
-      if (!countryName) return 'Asia/Kathmandu';
-      const map: { [key: string]: string } = {
-          'United States': 'America/New_York', 'United Kingdom': 'Europe/London', 'India': 'Asia/Kolkata', 'Australia': 'Australia/Sydney', 'Canada': 'America/Toronto', 'Japan': 'Asia/Tokyo', 'China': 'Asia/Shanghai', 'Germany': 'Europe/Berlin', 'France': 'Europe/Paris', 'Brazil': 'America/Sao_Paulo', 'South Africa': 'Africa/Johannesburg', 'Nigeria': 'Africa/Lagos', 'Egypt': 'Africa/Cairo', 'Russia': 'Europe/Moscow', 'United Arab Emirates': 'Asia/Dubai', 'Saudi Arabia': 'Asia/Riyadh', 'Argentina': 'America/Argentina/Buenos_Aires', 'Bahrain': 'Asia/Bahrain', 'Bangladesh': 'Asia/Dhaka', 'Indonesia': 'Asia/Jakarta', 'Italy': 'Europe/Rome', 'Kuwait': 'Asia/Kuwait', 'Mexico': 'America/Mexico_City', 'Netherlands': 'Europe/Amsterdam', 'Oman': 'Asia/Muscat', 'Pakistan': 'Asia/Karachi', 'Philippines': 'Asia/Manila', 'Qatar': 'Asia/Qatar', 'South Korea': 'Asia/Seoul', 'Spain': 'Europe/Madrid', 'Thailand': 'Asia/Bangkok', 'Turkey': 'Europe/Istanbul', 'Vietnam': 'Asia/Ho_Chi_Minh', 'Nepal': 'Asia/Kathmandu'
-      };
-      return map[countryName] || 'Etc/UTC';
-  }
-
   const fetchDateAndTime = async () => {
     setLoading(true);
     try {
-        const timezone = countryToTimezone(country);
-        // Using a reliable public API to get timezone-accurate date, as client-side date can be unreliable.
-        const response = await fetch(`https://worldtimeapi.org/api/timezone/${timezone}`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch time data');
-        }
-        const data = await response.json();
-        const now = new Date(data.utc_datetime);
+      const now = new Date();
+      const isNepal = country === 'Nepal' || country === null;
 
-        const isNepal = country === 'Nepal' || country === null;
+      if (isNepal) {
+        // For Nepal, we always get the Nepal time and detailed events.
+        const nepaliTimeZone = 'Asia/Kathmandu';
+        const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true, timeZone: nepaliTimeZone });
+        
+        // We need the accurate date in Nepal to fetch correct events.
+        const dateInNepal = new Date(now.toLocaleString('en-US', { timeZone: nepaliTimeZone }));
+        
+        const gregorianDateString = dateInNepal.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        
+        const bsDate = toBS(dateInNepal);
 
-        if (isNepal) {
-            const bsDate = toBS(now);
-            const gregorianDateString = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-            const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
+        const monthEventsData = await getCalendarEvents({ year: bsDate.year, month: bsDate.month });
+        const dayEvent = monthEventsData.month_events.find(e => e.day === bsDate.day) || null;
+        
+        setDateTime({ timeString, gregorianDateString, nepaliDate: bsDate, dayEvent });
 
-            const monthEventsData = await getCalendarEvents({ year: bsDate.year, month: bsDate.month });
-            const dayEvent = monthEventsData.month_events.find(e => e.day === bsDate.day) || null;
-            
-            setDateTime({ timeString, gregorianDateString, nepaliDate: bsDate, dayEvent });
-
-        } else {
-             const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
-             const gregorianDateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-             setDateTime({ 
-                 timeString: timeString, 
-                 gregorianDateString: gregorianDateString, 
-                 nepaliDate: toBS(new Date()), // Keep nepali date as a fallback, won't be displayed
-                 dayEvent: null 
-            });
-        }
+      } else {
+        // For other countries, just format the local time.
+        const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
+        const gregorianDateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        setDateTime({ 
+            timeString: timeString, 
+            gregorianDateString: gregorianDateString, 
+            nepaliDate: toBS(new Date()), // Keep nepali date as a fallback, won't be displayed
+            dayEvent: null 
+        });
+      }
 
     } catch (error) {
         console.error("Failed to fetch date and time", error);
-        // Fallback to local client time on error, though it may be inaccurate.
+        // Fallback to local client time on error.
         const localNow = new Date();
         const bsDate = toBS(localNow);
         const localTimeString = localNow.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
@@ -103,7 +95,9 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
     if (!isMounted) return;
     
     fetchDateAndTime();
-    // No need for interval since we are displaying a static date
+    const intervalId = setInterval(fetchDateAndTime, 60000); // Refresh every minute
+    
+    return () => clearInterval(intervalId);
   }, [country, isMounted]);
 
   if (loading || !dateTime) {
@@ -140,7 +134,7 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
   return (
     <div className="space-y-1">
         <h1 className="text-3xl font-bold">{nepaliDateString}</h1>
-        {dayEvent?.tithi && <p className="text-lg">{dayEvent.tithi}</p>}
+        {dayEvent?.tithi && <p className="text-lg">तिथि: {dayEvent.tithi}</p>}
         {dayEvent?.panchanga && <p className="text-lg">पञ्चाङ्ग: {dayEvent.panchanga}</p>}
         <p className="text-lg">{`${localizedTimePrefix} ${nepaliTimeString}`}</p>
         <p className="text-base">{gregorianDateString}</p>

@@ -42,7 +42,6 @@ const parseFestivalDate = (dateString: string): Date | null => {
         if (isNaN(date.getTime())) {
             return null;
         }
-        // Adjust for timezone offset by creating date in UTC
         return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
     } catch {
         return null;
@@ -50,7 +49,10 @@ const parseFestivalDate = (dateString: string): Date | null => {
 };
 
 const formatUpcomingEventDate = (date: Date): string => {
-    return `in ${differenceInDays(date, new Date())} days`;
+    const diff = differenceInDays(date, new Date());
+     if (diff === 0) return "Today";
+    if (diff === 1) return "Tomorrow";
+    return `in ${diff} days`;
 };
 
 type UpcomingEvent = {
@@ -75,28 +77,9 @@ export default function Home() {
     setIsMounted(true);
   }, []);
 
-  useEffect(() => {
-    const fetchSettings = async () => {
-        try {
-            const response = await fetch('/api/settings');
-            if (response.ok) {
-                const data = await response.json();
-                setSettings(data);
-            }
-        } catch (error) {
-            console.error("Failed to fetch settings, using defaults.", error);
-        } finally {
-            setLoadingSettings(false);
-        }
-    }
-    fetchSettings();
-  }, []);
-
-  const isNepal = useMemo(() => location.country === 'Nepal', [location.country]);
-
   const processFestivals = useCallback((festivalData: Festival[]) => {
       const now = new Date();
-       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+       const today = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
 
       const events = festivalData
           .map(festival => ({ ...festival, parsedDate: parseFestivalDate(festival.gregorianStartDate) }))
@@ -115,6 +98,25 @@ export default function Home() {
           }));
       setUpcomingEvents(events);
   }, []);
+  
+  useEffect(() => {
+    const fetchSettings = async () => {
+        try {
+            const response = await fetch('/api/settings');
+            if (response.ok) {
+                const data = await response.json();
+                setSettings(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch settings, using defaults.", error);
+        } finally {
+            setLoadingSettings(false);
+        }
+    }
+    fetchSettings();
+  }, []);
+
+  const isNepal = useMemo(() => location.country === 'Nepal', [location.country]);
 
   useEffect(() => {
     if (!isMounted) return;
