@@ -17,6 +17,7 @@ import {
   CurrentDateInfoResponseSchema,
 } from '@/ai/schemas';
 import {toAD, toBS} from '@/lib/nepali-date-converter';
+import { getTodaysInfoFromApi } from '@/services/nepali-date';
 import {z} from 'zod';
 
 export async function getCalendarEvents(
@@ -78,63 +79,30 @@ const calendarEventsFlow = ai.defineFlow(
   }
 );
 
-// New flow to get only the current day's information
+// This flow now uses the dedicated RapidAPI service for accuracy
 const currentDateInfoFlow = ai.defineFlow(
   {
     name: 'currentDateInfoFlow',
     outputSchema: CurrentDateInfoResponseSchema,
   },
   async () => {
-    // 1. Get current time in Nepal
-    const nowInKathmandu = new Date(new Date().toLocaleString('en-US', {timeZone: 'Asia/Kathmandu'}));
-
-    // 2. Convert to BS date
-    const bsDate = toBS(nowInKathmandu);
-
-    // 3. Prepare prompt input
-    const request = {
-      year: bsDate.year,
-      month: bsDate.month,
-    };
-
-    // 4. Call the existing prompt to get events for the whole month
-    const {output: monthOutput} = await calendarEventsPrompt(request);
-    if (!monthOutput) {
-      throw new Error('Failed to get calendar events for current month.');
-    }
-
-    // 5. Find today's event from the list
-    const todayEvent = monthOutput.month_events.find(e => e.day === bsDate.day);
-    if (!todayEvent) {
-      // This should ideally not happen if the prompt returns data for all days
-      // For now, let's create a minimal response to avoid crashing the client
-      console.warn(`Could not find event info for the current date: ${bsDate.day}/${bsDate.month}/${bsDate.year}`);
-       return {
-        bsYear: bsDate.year,
-        bsMonth: bsDate.month,
-        bsDay: bsDate.day,
-        bsWeekDay: bsDate.weekDay,
-        adYear: nowInKathmandu.getFullYear(),
-        adMonth: nowInKathmandu.getMonth(),
-        adDay: nowInKathmandu.getDate(),
-        day: bsDate.day,
-        tithi: 'अज्ञात',
-        events: [],
-        is_holiday: false,
-        panchanga: ''
-      };
-    }
+    const apiData = await getTodaysInfoFromApi();
     
-    // 6. Return today's complete information
+    // The API provides most of what we need. We can augment it if necessary.
+    // For now, we map it directly to our schema.
     return {
-      bsYear: bsDate.year,
-      bsMonth: bsDate.month,
-      bsDay: bsDate.day,
-      bsWeekDay: bsDate.weekDay,
-      adYear: nowInKathmandu.getFullYear(),
-      adMonth: nowInKathmandu.getMonth(),
-      adDay: nowInKathmandu.getDate(),
-      ...todayEvent,
+      bsYear: apiData.bs_year_en,
+      bsMonth: apiData.bs_month_code_en,
+      bsDay: apiData.bs_day_en,
+      bsWeekDay: apiData.ad_day_of_week_en - 1, // Their API is 1-7, JS is 0-6
+      adYear: apiData.ad_year_en,
+      adMonth: apiData.ad_month_code_en -1, // Their API is 1-12, JS is 0-11
+      adDay: apiData.ad_day_en,
+      day: apiData.bs_day_en,
+      tithi: apiData.tithi.tithi_name_np,
+      events: apiData.events.map(e => e.event_title_np).filter(e => e), // Filter out nulls/empty
+      is_holiday: apiData.is_holiday,
+      panchanga: apiData.panchanga.panchanga_np,
     };
   }
 );
