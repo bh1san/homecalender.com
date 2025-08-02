@@ -15,7 +15,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
 import {
   Select,
   SelectContent,
@@ -25,6 +24,8 @@ import {
 } from "./ui/select";
 import FlagLoader from "./flag-loader";
 import { useIsMounted } from "@/hooks/use-is-mounted";
+import NepaliCalendar from "nepali-calendar-js";
+import { useToast } from "@/hooks/use-toast";
 
 const nepaliMonths = [
   "Baisakh", "Jestha", "Ashadh", "Shrawan", "Bhadra",
@@ -38,7 +39,8 @@ const gregorianMonths = [
 
 export default function DateConverter() {
   const { toast } = useToast();
-  
+  const isMounted = useIsMounted();
+
   const [gregorianDate, setGregorianDate] = useState({ year: "", month: "", day: "" });
   const [nepaliResult, setNepaliResult] = useState<string | null>(null);
   const [isConvertingAD, setIsConvertingAD] = useState(false);
@@ -46,31 +48,68 @@ export default function DateConverter() {
   const [nepaliDate, setNepaliDate] = useState({ year: "", month: "", day: "" });
   const [gregorianResult, setGregorianResult] = useState<string | null>(null);
   const [isConvertingBS, setIsConvertingBS] = useState(false);
-  const isMounted = useIsMounted();
 
   useEffect(() => {
-    // This effect runs only on the client, after hydration
-    const today = new Date();
-    setGregorianDate({
-      year: String(today.getFullYear()),
-      month: String(today.getMonth() + 1),
-      day: String(today.getDate())
-    });
-    setNepaliDate({
-        year: "2081",
-        month: "4",
-        day: "1"
-    });
-  }, []); // Empty dependency array ensures this runs once on mount
-
-  const handleConversion = () => {
-     toast({
-        variant: "destructive",
-        title: "Feature Unavailable",
-        description: "Date conversion requires an API key which has not been configured.",
+    if (isMounted) {
+      const today = new Date();
+      setGregorianDate({
+        year: String(today.getFullYear()),
+        month: String(today.getMonth() + 1),
+        day: String(today.getDate())
       });
+
+      const cal = new NepaliCalendar();
+      const todayBS = cal.toBS(today);
+      setNepaliDate({
+          year: String(todayBS.bs_year),
+          month: String(todayBS.bs_month),
+          day: String(todayBS.bs_date)
+      });
+    }
+  }, [isMounted]);
+
+  const handleADToBS = () => {
+    const { year, month, day } = gregorianDate;
+    if (!year || !month || !day) {
+        toast({ variant: "destructive", title: "Missing Fields", description: "Please fill all Gregorian date fields." });
+        return;
+    }
+    setIsConvertingAD(true);
+    try {
+        const cal = new NepaliCalendar();
+        const bsDate = cal.adToBs(parseInt(year), parseInt(month), parseInt(day));
+        const monthName = nepaliMonths[bsDate.bs_month - 1];
+        setNepaliResult(`${bsDate.bs_date} ${monthName}, ${bsDate.bs_year}`);
+    } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : "Invalid date provided.";
+        toast({ variant: "destructive", title: "Conversion Error", description: errorMessage });
+        setNepaliResult(null);
+    } finally {
+        setIsConvertingAD(false);
+    }
   }
-  
+
+  const handleBSToAD = () => {
+    const { year, month, day } = nepaliDate;
+    if (!year || !month || !day) {
+        toast({ variant: "destructive", title: "Missing Fields", description: "Please fill all Nepali date fields." });
+        return;
+    }
+    setIsConvertingBS(true);
+    try {
+        const cal = new NepaliCalendar();
+        const adDate = cal.bsToAd(parseInt(year), parseInt(month), parseInt(day));
+        const monthName = gregorianMonths[adDate.ad_month - 1];
+        setGregorianResult(`${adDate.ad_date} ${monthName}, ${adDate.ad_year}`);
+    } catch (e) {
+        const errorMessage = e instanceof Error ? e.message : "Invalid date provided.";
+        toast({ variant: "destructive", title: "Conversion Error", description: errorMessage });
+        setGregorianResult(null);
+    } finally {
+        setIsConvertingBS(false);
+    }
+  }
+
   if (!isMounted) {
     return (
         <div className="space-y-8">
@@ -112,9 +151,9 @@ export default function DateConverter() {
           </div>
         </CardContent>
         <CardFooter className="flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <Button onClick={handleConversion} disabled={true}>
+          <Button onClick={handleADToBS} disabled={isConvertingAD}>
             <ArrowRightLeft className="mr-2 h-4 w-4" />
-             Convert to Nepali
+             {isConvertingAD ? "Converting..." : "Convert to Nepali"}
           </Button>
           {isConvertingAD && <FlagLoader />}
           {nepaliResult && (
@@ -159,9 +198,9 @@ export default function DateConverter() {
           </div>
         </CardContent>
         <CardFooter className="flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <Button onClick={handleConversion} disabled={true}>
+          <Button onClick={handleBSToAD} disabled={isConvertingBS}>
             <ArrowRightLeft className="mr-2 h-4 w-4" />
-            Convert to Gregorian
+            {isConvertingBS ? "Converting..." : "Convert to Gregorian"}
           </Button>
           {isConvertingBS && <FlagLoader />}
           {gregorianResult && (

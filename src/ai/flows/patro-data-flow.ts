@@ -20,8 +20,8 @@ import {
   CalendarEventSchema,
   UpcomingEventSchema,
 } from '@/ai/schemas';
-import { getTodaysInfoFromApi, getEventsForMonthFromApi } from '@/services/nepali-date';
 import { getFromCache, setInCache } from '@/ai/cache';
+import NepaliCalendar from 'nepali-calendar-js';
 
 const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -86,56 +86,41 @@ const patroDataFlow = ai.defineFlow(
         return cachedData;
     }
 
-    console.log("Attempting to fetch data from RapidAPI...");
+    console.log("Generating data using nepali-calendar-js and AI...");
     
-    let todayFromApi: CurrentDateInfoResponse | null = null;
-    let monthEventsFromApi: z.infer<typeof CalendarEventSchema>[] = [];
+    let todayData: CurrentDateInfoResponse | null = null;
     
     try {
-        const todayApiData = await getTodaysInfoFromApi();
-        const adWeekDay = todayApiData.ad_day_of_week_en - 1;
-        todayFromApi = {
-            bsYear: todayApiData.bs_year_en,
-            bsMonth: todayApiData.bs_month_code_en,
-            bsDay: todayApiData.bs_day_en,
-            bsWeekDay: adWeekDay < 0 ? 6 : adWeekDay,
-            adYear: todayApiData.ad_year_en,
-            adMonth: todayApiData.ad_month_code_en - 1,
-            adDay: todayApiData.ad_day_en,
-            day: todayApiData.bs_day_en,
-            tithi: todayApiData.tithi.tithi_name_np,
-            events: todayApiData.events.map(e => e.event_title_np).filter((e): e is string => !!e),
-            is_holiday: todayApiData.is_holiday,
-            panchanga: todayApiData.panchanga.panchanga_np,
+        const cal = new NepaliCalendar();
+        const bsDate = cal.toBS(new Date());
+
+        todayData = {
+            bsYear: bsDate.bs_year,
+            bsMonth: bsDate.bs_month,
+            bsDay: bsDate.bs_date,
+            bsWeekDay: bsDate.bs_day_of_week - 1, // Theirs is 1-7, we use 0-6
+            adYear: bsDate.ad_year,
+            adMonth: bsDate.ad_month - 1, // Theirs is 1-12, we use 0-11
+            adDay: bsDate.ad_date,
+            day: bsDate.bs_date,
+            tithi: 'N/A', // Library does not provide this
+            events: [], // Library does not provide this
+            is_holiday: false, // Library does not provide this
+            panchanga: '', // Library does not provide this
         };
-
-        const monthApiData = await getEventsForMonthFromApi(todayFromApi.bsYear, todayFromApi.bsMonth);
-        monthEventsFromApi = monthApiData.map(day => ({
-            day: day.bs_day_en,
-            gregorian_day: day.ad_day_en,
-            tithi: day.tithi.tithi_name_np,
-            events: day.events.map(e => e.event_title_np).filter((e): e is string => !!e),
-            is_holiday: day.is_holiday,
-            panchanga: day.panchanga.panchanga_np,
-        }));
-        
-        console.log("Successfully fetched calendar data from RapidAPI.");
-
-    } catch (apiError) {
-        console.warn("RapidAPI call failed. Full AI fallback will be used.", apiError instanceof Error ? apiError.message : apiError);
-        todayFromApi = null; // Nullify to ensure we trigger AI fallback
-        monthEventsFromApi = [];
+    } catch (error) {
+         console.warn("nepali-calendar-js failed. Full AI fallback will be used.", error instanceof Error ? error.message : error);
     }
     
-    // If API failed for either today or month, use AI for everything.
-    if (!todayFromApi || monthEventsFromApi.length === 0) {
+    // If local calendar failed, or we need other data, use AI.
+    if (!todayData) {
         const aiData = await generateAllDataFromAI();
         setInCache(cacheKey, aiData);
         return aiData;
     }
     
-    // If API was successful, generate only the remaining data from AI.
-    console.log("API calendar data successful, generating remaining data from AI...");
+    // Generate only the remaining data from AI.
+    console.log("Local calendar data successful, generating remaining data from AI...");
     const aiResponse = await scraperPrompt().then(r => r.output).catch(e => {
         console.error("AI call to scraperPrompt failed:", e);
         return null;
@@ -145,8 +130,14 @@ const patroDataFlow = ai.defineFlow(
         horoscope: aiResponse?.horoscope || [],
         goldSilver: aiResponse?.goldSilver || null,
         forex: aiResponse?.forex || [],
-        today: todayFromApi, // From API
-        monthEvents: monthEventsFromApi, // From API
+        today: { // Mix local and AI data for today
+            ...todayData,
+            tithi: aiResponse?.today?.tithi ?? 'N/A',
+            events: aiResponse?.today?.events ?? [],
+            is_holiday: aiResponse?.today?.is_holiday ?? false,
+            panchanga: aiResponse?.today?.panchanga ?? '',
+        },
+        monthEvents: aiResponse?.monthEvents || [], // AI still needed for full month events
         upcomingEvents: aiResponse?.upcomingEvents || [],
     };
 
