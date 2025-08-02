@@ -6,7 +6,7 @@ const NepaliCalendarWidget = () => {
   return (
     <div className="w-full h-full">
       <iframe
-        src="https://nepalicalendar.com/widgets/full"
+        src="https://www.nepalicalendar.com/widgets/full"
         frameBorder="0"
         scrolling="no"
         marginWidth={0}
