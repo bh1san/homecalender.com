@@ -42,7 +42,7 @@ export default function MotivationalQuote() {
     return () => clearInterval(intervalId);
   }, []);
 
-  if (!isMounted || !currentQuote) {
+  if (!isMounted) {
     return (
         <div className="w-[400px] h-[100px] flex items-center justify-center bg-black/20 rounded-lg p-4 text-center overflow-hidden" />
     );

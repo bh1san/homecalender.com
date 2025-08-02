@@ -13,14 +13,24 @@ const flags = [
 
 const FlagLoader = ({ className }: { className?: string }) => {
   const [currentFlagIndex, setCurrentFlagIndex] = useState(0);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     const interval = setInterval(() => {
       setCurrentFlagIndex((prevIndex) => (prevIndex + 1) % flags.length);
     }, 2000); // Change flag every 2 seconds
 
     return () => clearInterval(interval);
   }, []);
+
+  if (!isMounted) {
+      return (
+        <div className={cn("relative w-8 h-8 flex items-center justify-center font-sans", className)}>
+            <span className="text-2xl"></span>
+        </div>
+      )
+  }
 
   return (
     <div className={cn("relative w-8 h-8 flex items-center justify-center font-sans", className)}>
