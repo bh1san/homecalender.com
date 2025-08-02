@@ -13,7 +13,7 @@ import {
   CardFooter
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import NepaliCalendarWidget from "@/components/nepali-calendar-widget";
+import NepaliCalendar from "@/components/nepali-calendar";
 import DateConverter from "@/components/date-converter";
 import FestivalList from "@/components/festival-list";
 import { Button } from "@/components/ui/button";
@@ -229,8 +229,8 @@ export default function Home() {
 
           <div className="lg:col-span-3 space-y-8">
             <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
-                <CardContent className="p-0 sm:p-0">
-                     {isNepal ? <NepaliCalendarWidget /> : <Calendar mode="single" className="w-full rounded-md bg-card/90 flex justify-center" />}
+                <CardContent className="p-2 sm:p-4">
+                     {isNepal ? <NepaliCalendar today={today} /> : <Calendar mode="single" className="w-full rounded-md bg-card/90 flex justify-center" />}
                 </CardContent>
               </Card>
           </div>
@@ -303,5 +303,3 @@ function Header({ navLinks, logoUrl, isLoading }: { navLinks: string[], logoUrl:
         </header>
     )
 }
-
-    
