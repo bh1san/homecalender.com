@@ -1,7 +1,8 @@
+
 "use client";
 
-import { useState } from "react";
-import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { PlusCircle, Edit, Trash2, LoaderCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,9 +20,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import Image from "next/image";
+import { useToast } from "@/hooks/use-toast";
 
 // Mock data for now
 const mockNews = [
@@ -45,12 +46,6 @@ const mockNews = [
   },
 ];
 
-const initialNavLinks = [
-    "Remit", "Mart", "Gifts", "Recharge", "Health", "Bank Rates", "Jyotish", 
-    "Rashifal", "Podcasts", "News", "Blog", "Gold/Silver", "Forex", "Converter"
-];
-
-
 type NewsArticle = {
   id?: number;
   title: string;
@@ -58,15 +53,61 @@ type NewsArticle = {
   category: string;
 };
 
+type Settings = {
+    logoUrl: string;
+    navLinks: string[];
+}
+
 export default function AdminPage() {
+  const { toast } = useToast();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
+  const [isLoading, setIsLoading] = useState(true);
   const [news, setNews] = useState<NewsArticle[]>(mockNews);
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
-  const [navLinks, setNavLinks] = useState<string[]>(initialNavLinks);
+
+  const [settings, setSettings] = useState<Settings>({ logoUrl: "", navLinks: [] });
   const [newNavLink, setNewNavLink] = useState("");
-  const [logoUrl, setLogoUrl] = useState("https://placehold.co/200x50.png");
+
+  useEffect(() => {
+      if (isAuthenticated) {
+          fetchSettings();
+      }
+  }, [isAuthenticated]);
+
+  const fetchSettings = async () => {
+      setIsLoading(true);
+      try {
+          const response = await fetch('/api/settings');
+          if (!response.ok) throw new Error("Failed to fetch settings.");
+          const data = await response.json();
+          setSettings(data);
+      } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
+          toast({ variant: "destructive", title: "Error", description: errorMessage });
+      } finally {
+          setIsLoading(false);
+      }
+  }
+
+  const saveSettings = async (newSettings: Settings) => {
+      try {
+          const response = await fetch('/api/settings', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(newSettings),
+          });
+          if (!response.ok) throw new Error("Failed to save settings.");
+          toast({ title: "Success", description: "Settings updated successfully."});
+          return true;
+      } catch (err) {
+          const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
+          toast({ variant: "destructive", title: "Error", description: `Failed to save: ${errorMessage}` });
+          return false;
+      }
+  }
 
   const handleLogin = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -89,27 +130,43 @@ export default function AdminPage() {
   const handleSave = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selectedArticle) return;
-    // Logic to save the new/updated article will go here
+    // This is still mock functionality. Replace with actual save logic.
     console.log("Saving:", selectedArticle);
-    // For now, let's just close the form
     setSelectedArticle(null);
   };
   
   const handleDelete = (id: number) => {
-    // Logic to delete will go here
+    // This is still mock functionality. Replace with actual delete logic.
     console.log("Deleting article with id:", id);
   };
 
-  const handleAddNavLink = () => {
-    if (newNavLink && !navLinks.includes(newNavLink)) {
-        setNavLinks([...navLinks, newNavLink]);
-        setNewNavLink("");
+  const handleAddNavLink = async () => {
+    if (newNavLink && !settings.navLinks.includes(newNavLink)) {
+        const newLinks = [...settings.navLinks, newNavLink];
+        const newSettings = { ...settings, navLinks: newLinks };
+        const success = await saveSettings(newSettings);
+        if (success) {
+            setSettings(newSettings);
+            setNewNavLink("");
+        }
     }
   };
 
-  const handleDeleteNavLink = (linkToDelete: string) => {
-    setNavLinks(navLinks.filter(link => link !== linkToDelete));
+  const handleDeleteNavLink = async (linkToDelete: string) => {
+    const newLinks = settings.navLinks.filter(link => link !== linkToDelete);
+    const newSettings = { ...settings, navLinks: newLinks };
+    const success = await saveSettings(newSettings);
+    if (success) {
+        setSettings(newSettings);
+    }
   }
+
+  const handleLogoUrlChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newLogoUrl = e.target.value;
+    // Debounce or save on blur in a real app might be better
+    setSettings(prev => ({...prev, logoUrl: newLogoUrl}));
+    await saveSettings({ ...settings, logoUrl: newLogoUrl });
+  };
 
 
   if (!isAuthenticated) {
@@ -148,6 +205,15 @@ export default function AdminPage() {
     );
   }
 
+  if (isLoading) {
+      return (
+          <div className="flex items-center justify-center min-h-screen">
+              <LoaderCircle className="w-8 h-8 animate-spin" />
+              <span className="ml-2">Loading Settings...</span>
+          </div>
+      )
+  }
+
   return (
     <div className="min-h-screen bg-muted/40">
       <header className="bg-background border-b">
@@ -161,10 +227,59 @@ export default function AdminPage() {
       <main className="container mx-auto p-4 sm:p-6 lg:p-8 grid gap-8 md:grid-cols-3">
         <div className="md:col-span-2 space-y-8">
             <Card>
+                <CardHeader>
+                    <CardTitle>Logo Management</CardTitle>
+                    <CardDescription>Update the site logo by providing a URL. Changes are saved automatically.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                     <div className="space-y-2">
+                        <Label htmlFor="logo-url">Logo Image URL</Label>
+                        <Input 
+                            id="logo-url"
+                            value={settings.logoUrl} 
+                            onChange={handleLogoUrlChange}
+                            placeholder="https://example.com/logo.png"
+                        />
+                     </div>
+                     {settings.logoUrl && (
+                        <div className="mt-4">
+                            <p className="text-sm font-medium mb-2">Current Logo:</p>
+                            <Image src={settings.logoUrl} alt="Current Logo" width={200} height={50} className="rounded-md object-contain border p-2" />
+                        </div>
+                     )}
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Header Navigation</CardTitle>
+                    <CardDescription>Add or remove links from the main header.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex space-x-2 mb-4">
+                        <Input 
+                            value={newNavLink} 
+                            onChange={(e) => setNewNavLink(e.target.value)}
+                            placeholder="New link name"
+                        />
+                        <Button onClick={handleAddNavLink}><PlusCircle className="mr-2" /> Add Link</Button>
+                    </div>
+                    <div className="space-y-2">
+                        {settings.navLinks.map(link => (
+                            <div key={link} className="flex items-center justify-between p-2 rounded-md bg-muted hover:bg-muted/80 transition-colors">
+                                <span className="font-medium">{link}</span>
+                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteNavLink(link)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+            <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
-                        <CardTitle>News Management</CardTitle>
-                        <CardDescription>Add, edit, or remove news articles.</CardDescription>
+                        <CardTitle>News Management (Mock)</CardTitle>
+                        <CardDescription>This section is a placeholder.</CardDescription>
                     </div>
                     <Button onClick={handleAddNew}>
                         <PlusCircle className="mr-2" /> Add New
@@ -200,53 +315,6 @@ export default function AdminPage() {
                             ))}
                         </TableBody>
                     </Table>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                    <CardTitle>Header Navigation</CardTitle>
-                    <CardDescription>Add or remove links from the main header.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex space-x-2 mb-4">
-                        <Input 
-                            value={newNavLink} 
-                            onChange={(e) => setNewNavLink(e.target.value)}
-                            placeholder="New link name"
-                        />
-                        <Button onClick={handleAddNavLink}><PlusCircle className="mr-2" /> Add Link</Button>
-                    </div>
-                    <div className="space-y-2">
-                        {navLinks.map(link => (
-                            <div key={link} className="flex items-center justify-between p-2 rounded-md bg-muted hover:bg-muted/80 transition-colors">
-                                <span className="font-medium">{link}</span>
-                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteNavLink(link)}>
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
-             <Card>
-                <CardHeader>
-                    <CardTitle>Logo Management</CardTitle>
-                    <CardDescription>Update the site logo by providing a URL.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                     <div className="space-y-2">
-                        <Label htmlFor="logo-url">Logo Image URL</Label>
-                        <Input 
-                            id="logo-url"
-                            value={logoUrl} 
-                            onChange={(e) => setLogoUrl(e.target.value)}
-                            placeholder="https://example.com/logo.png"
-                        />
-                     </div>
-                     <div className="mt-4">
-                        <p className="text-sm font-medium mb-2">Current Logo:</p>
-                        <Image src={logoUrl} alt="Current Logo" width={200} height={50} className="rounded-md object-contain border p-2" />
-                     </div>
                 </CardContent>
             </Card>
         </div>

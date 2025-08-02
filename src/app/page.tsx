@@ -1,13 +1,12 @@
 
 "use client";
 
-import { ArrowRightLeft, CalendarDays, PartyPopper, Search, Gift, History, Heart, User, MapPin, Menu } from "lucide-react";
+import { ArrowRightLeft, CalendarDays, PartyPopper, Search, Menu, LoaderCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -27,11 +26,12 @@ import LocationSelector from "@/components/location-selector";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import MotivationalQuote from "@/components/motivational-quote";
 import { format, differenceInDays } from 'date-fns';
+import { User } from "lucide-react";
 
-const initialNavLinks = [
-    "Mart", "Bank Rates", "Jyotish", 
-    "Rashifal", "Podcasts", "News", "Blog", "Gold/Silver", "Forex", "Converter"
-];
+type Settings = {
+    logoUrl: string;
+    navLinks: string[];
+}
 
 const parseFestivalDate = (dateString: string) => {
     try {
@@ -71,8 +71,25 @@ export default function Home() {
   const [festivals, setFestivals] = useState<Festival[]>([]);
   const [loadingNews, setLoadingNews] = useState(true);
   const [loadingFestivals, setLoadingFestivals] = useState(true);
-  const [navLinks, setNavLinks] = useState<string[]>(initialNavLinks);
-  const [logoUrl, setLogoUrl] = useState("https://placehold.co/200x50.png");
+  const [settings, setSettings] = useState<Settings>({ logoUrl: "https://placehold.co/200x50.png", navLinks: [] });
+  const [loadingSettings, setLoadingSettings] = useState(true);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+        try {
+            const response = await fetch('/api/settings');
+            if (response.ok) {
+                const data = await response.json();
+                setSettings(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch settings, using defaults.", error);
+        } finally {
+            setLoadingSettings(false);
+        }
+    }
+    fetchSettings();
+  }, []);
 
   const isNepal = useMemo(() => location.country === 'Nepal', [location.country]);
   
@@ -131,7 +148,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      <Header navLinks={navLinks} logoUrl={logoUrl} />
+      <Header navLinks={settings.navLinks} logoUrl={settings.logoUrl} isLoading={loadingSettings} />
       <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 bg-accent/90 text-white p-4 rounded-lg shadow-md items-center">
             <CurrentDateTime country={location.country} />
@@ -273,7 +290,22 @@ export default function Home() {
   );
 }
 
-function Header({ navLinks, logoUrl }: { navLinks: string[], logoUrl: string }) {
+function Header({ navLinks, logoUrl, isLoading }: { navLinks: string[], logoUrl: string, isLoading: boolean }) {
+    if (isLoading) {
+        return (
+             <header className="bg-accent/90 text-white shadow-md backdrop-blur-sm sticky top-0 z-50">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex items-center justify-between h-16">
+                        <div className="h-8 w-48 bg-gray-300/20 animate-pulse rounded-md" />
+                        <div className="hidden md:flex items-center space-x-4">
+                           <div className="h-5 w-64 bg-gray-300/20 animate-pulse rounded-md" />
+                        </div>
+                    </div>
+                </div>
+            </header>
+        )
+    }
+    
     return (
         <header className="bg-accent/90 text-white shadow-md backdrop-blur-sm sticky top-0 z-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
