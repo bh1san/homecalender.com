@@ -15,7 +15,6 @@ const toNepaliNumber = (num: number) => {
 }
 
 const nepaliWeekdays = ["आइतवार", "सोमवार", "मङ्गलवार", "बुधवार", "बिहिवार", "शुक्रवार", "शनिवार"];
-const gregorianWeekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
   const [dateTime, setDateTime] = useState<{
@@ -23,20 +22,29 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
       dateString: string,
       nepaliDate: DateConversionOutput | null,
       nepaliWeekday: string,
-      gregorianWeekday: string,
     } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const now = new Date();
-    const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
-    const dateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    const nepaliWeekday = nepaliWeekdays[now.getDay()];
-    const gregorianWeekday = gregorianWeekdays[now.getDay()];
+    if (!country) {
+      setLoading(false);
+      return;
+    }
 
-    const fetchDate = async () => {
+    const fetchDateAndTime = async () => {
         setLoading(true);
         try {
+            // Using a public timezone API. In a real app, this might be a paid service or a more comprehensive library.
+            const tzResponse = await fetch(`https://worldtimeapi.org/api/timezone/${countryToTimezone(country)}`);
+            if (!tzResponse.ok) throw new Error('Failed to fetch timezone.');
+            
+            const timeData = await tzResponse.json();
+            const now = new Date(timeData.utc_datetime);
+
+            const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
+            const dateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            const nepaliWeekday = nepaliWeekdays[now.getDay()];
+
             if (country === 'Nepal') {
                 const result = await convertDate({
                     source: 'ad_to_bs',
@@ -44,20 +52,39 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
                     month: now.getMonth() + 1,
                     day: now.getDate()
                 });
-                setDateTime({ timeString, dateString, nepaliDate: result, nepaliWeekday, gregorianWeekday });
+                setDateTime({ timeString, dateString, nepaliDate: result, nepaliWeekday });
             } else {
-                 setDateTime({ timeString, dateString, nepaliDate: null, nepaliWeekday, gregorianWeekday });
+                 setDateTime({ timeString, dateString, nepaliDate: null, nepaliWeekday });
             }
         } catch (error) {
-            console.error("Failed to fetch date", error);
-            setDateTime({ timeString, dateString, nepaliDate: null, nepaliWeekday, gregorianWeekday });
+            console.error("Failed to fetch date and time", error);
+            // Fallback to local time if API fails
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
+            const dateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            setDateTime({ timeString, dateString, nepaliDate: null, nepaliWeekday: '' });
         } finally {
             setLoading(false);
         }
     };
     
-    fetchDate();
+    fetchDateAndTime();
   }, [country]);
+
+  // A helper to map country to a major timezone. Not exhaustive.
+  const countryToTimezone = (countryName: string) => {
+      const map: { [key: string]: string } = {
+          'Nepal': 'Asia/Kathmandu',
+          'United States': 'America/New_York',
+          'United Kingdom': 'Europe/London',
+          'India': 'Asia/Kolkata',
+          'Australia': 'Australia/Sydney',
+          'Canada': 'America/Toronto',
+          'Japan': 'Asia/Tokyo',
+      };
+      return map[countryName] || 'Etc/UTC'; // Default to UTC
+  }
+
 
   if (loading || !dateTime) {
     return (

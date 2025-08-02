@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { convertDate } from '@/ai/flows/date-conversion-flow';
+import { DateConversionOutput } from '@/ai/schemas';
 
 const nepaliMonths = [
   "बैशाख", "जेठ", "असार", "श्रावण", "भदौ", "आश्विन", "कार्तिक", "मंसिर", "पौष", "माघ", "फाल्गुन", "चैत्र"
@@ -19,9 +20,10 @@ const daysInMonthBS = [30, 32, 31, 32, 31, 30, 29, 30, 29, 30, 30, 31];
 const weekDays = ["आइतवार", "सोमवार", "मङ्गलवार", "बुधवार", "बिहिवार", "शुक्रवार", "शनिवार"];
 
 export default function NepaliCalendar() {
-  const [currentDate, setCurrentDate] = useState({ year: 2081, month: 3, day: 1 }); // Shrawan 1, 2081
+  const [currentDate, setCurrentDate] = useState<{ year: number; month: number; day: number } | null>(null);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [gregorianDate, setGregorianDate] = useState<Date | null>(null);
+  const [displayDate, setDisplayDate] = useState<{ year: number, month: number}>({ year: 2081, month: 3 });
 
   useEffect(() => {
     const fetchCurrentNepaliDate = async () => {
@@ -35,8 +37,10 @@ export default function NepaliCalendar() {
         });
         const nepaliMonthIndex = nepaliMonths.indexOf(result.month);
         if (nepaliMonthIndex !== -1) {
-            setCurrentDate({ year: result.year, month: nepaliMonthIndex, day: result.day });
-            setSelectedDay(result.day);
+            const today = { year: result.year, month: nepaliMonthIndex, day: result.day };
+            setCurrentDate(today);
+            setDisplayDate({ year: today.year, month: today.month });
+            setSelectedDay(today.day);
         }
         setGregorianDate(now);
       } catch (error) {
@@ -48,8 +52,8 @@ export default function NepaliCalendar() {
     fetchCurrentNepaliDate();
   }, []);
 
-  const currentMonthName = useMemo(() => nepaliMonths[currentDate.month], [currentDate.month]);
-  const currentDaysInMonth = useMemo(() => daysInMonthBS[currentDate.month], [currentDate.month]);
+  const currentMonthName = useMemo(() => nepaliMonths[displayDate.month], [displayDate.month]);
+  const currentDaysInMonth = useMemo(() => daysInMonthBS[displayDate.month], [displayDate.month]);
   
   // Note: This is a mock starting day. Real-world Nepali calendar logic is far more complex.
   const startDayOfMonth = useMemo(() => {
@@ -57,28 +61,28 @@ export default function NepaliCalendar() {
       // Calculate a pseudo-start day. This is not accurate but provides a visual layout.
       const firstDayOfGregorianMonth = new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), 1);
       return firstDayOfGregorianMonth.getDay();
-  }, [currentDate, gregorianDate]);
+  }, [displayDate, gregorianDate]);
 
   const handlePrevMonth = () => {
-    setCurrentDate(prev => {
+    setDisplayDate(prev => {
       const newMonth = prev.month === 0 ? 11 : prev.month - 1;
       const newYear = prev.month === 0 ? prev.year - 1 : prev.year;
-      return { ...prev, year: newYear, month: newMonth };
+      return { year: newYear, month: newMonth };
     });
     setSelectedDay(null);
   };
 
   const handleNextMonth = () => {
-    setCurrentDate(prev => {
+    setDisplayDate(prev => {
       const newMonth = prev.month === 11 ? 0 : prev.month + 1;
       const newYear = prev.month === 11 ? prev.year + 1 : prev.year;
-      return { ...prev, year: newYear, month: newMonth };
+      return { year: newYear, month: newMonth };
     });
     setSelectedDay(null);
   };
   
   const handleDateChange = (type: 'year' | 'month', value: string) => {
-      setCurrentDate(prev => ({...prev, [type]: Number(value)}));
+      setDisplayDate(prev => ({...prev, [type]: Number(value)}));
       setSelectedDay(null);
   }
 
@@ -94,6 +98,14 @@ export default function NepaliCalendar() {
     return String(num).split("").map(digit => nepaliDigits[parseInt(digit)]).join("");
   }
 
+  if (!currentDate) {
+    return (
+        <div className="w-full flex items-center justify-center p-8">
+            <div className="animate-pulse">Loading Calendar...</div>
+        </div>
+    );
+  }
+
   return (
     <div className="w-full">
       <div className="flex flex-col sm:flex-row items-center justify-between mb-4 px-2 gap-4">
@@ -101,7 +113,7 @@ export default function NepaliCalendar() {
            <Button variant="ghost" size="icon" onClick={handlePrevMonth} aria-label="Previous month" className="transition-transform hover:scale-110">
             <ChevronLeft className="h-5 w-5" />
           </Button>
-            <Select value={String(currentDate.month)} onValueChange={(value) => handleDateChange('month', value)}>
+            <Select value={String(displayDate.month)} onValueChange={(value) => handleDateChange('month', value)}>
                 <SelectTrigger className="w-[120px] font-bold">
                     <SelectValue placeholder="Month" />
                 </SelectTrigger>
@@ -109,7 +121,7 @@ export default function NepaliCalendar() {
                     {nepaliMonths.map((m, i) => <SelectItem key={i} value={String(i)}>{m}</SelectItem>)}
                 </SelectContent>
             </Select>
-            <Select value={String(currentDate.year)} onValueChange={(value) => handleDateChange('year', value)}>
+            <Select value={String(displayDate.year)} onValueChange={(value) => handleDateChange('year', value)}>
                 <SelectTrigger className="w-[100px] font-bold">
                     <SelectValue placeholder="Year" />
                 </SelectTrigger>
@@ -122,8 +134,8 @@ export default function NepaliCalendar() {
           </Button>
         </div>
         <div className="font-bold text-lg text-gray-700 text-right">
-          {toNepaliNumber(currentDate.year)} {currentMonthName}
-          {gregorianDate && <div className="text-sm font-normal text-muted-foreground">{gregorianDate.toLocaleString('en-US', { month: 'long' })} / {new Date(gregorianDate.getFullYear(), gregorianDate.getMonth() + 1, 1).toLocaleString('en-US', { month: 'long' })} {gregorianDate.getFullYear()}</div>}
+          {toNepaliNumber(displayDate.year)} {currentMonthName}
+          {gregorianDate && <div className="text-sm font-normal text-muted-foreground">{gregorianDate.toLocaleString('en-US', { month: 'long' })} / {new Date(gregorianDate.getFullYear(), gregorianDate.getMonth() + 1, 0).toLocaleString('en-US', { month: 'long' })} {gregorianDate.getFullYear()}</div>}
         </div>
       </div>
       <div className="animate-in fade-in duration-500">
@@ -140,7 +152,7 @@ export default function NepaliCalendar() {
                   onClick={() => setSelectedDay(day)}
                   className={cn(
                     "flex flex-col items-center justify-center w-full h-full rounded-md transition-all duration-300 ease-in-out transform hover:scale-105",
-                    day === selectedDay ? "bg-red-600 text-white shadow-lg" : "hover:bg-gray-100",
+                    day === selectedDay && displayDate.year === currentDate.year && displayDate.month === currentDate.month ? "bg-red-600 text-white shadow-lg" : "hover:bg-gray-100",
                     "focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
                   )}
                 >
