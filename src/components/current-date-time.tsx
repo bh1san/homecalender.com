@@ -30,15 +30,12 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
   useEffect(() => {
     let isMounted = true;
 
-    if (!country) {
-      setLoading(false);
-      return;
-    }
+    const effectiveCountry = country || 'Nepal';
 
     const fetchDateAndTime = async () => {
         setLoading(true);
         try {
-            const timezone = countryToTimezone(country);
+            const timezone = countryToTimezone(effectiveCountry);
             // Use a public proxy for WorldTimeAPI if direct access fails or for CORS issues in some environments
             const tzResponse = await fetch(`https://worldtimeapi.org/api/timezone/${timezone}`);
             if (!tzResponse.ok) throw new Error(`Failed to fetch timezone data for ${timezone}.`);
@@ -51,7 +48,7 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
             const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true, timeZone: timezone });
             const dateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: timezone });
 
-            if (country === 'Nepal') {
+            if (effectiveCountry === 'Nepal') {
                 const result = await convertDate({
                     source: 'ad_to_bs',
                     year: now.getFullYear(),
@@ -136,7 +133,7 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
 
   const { timeString, dateString, nepaliDate } = dateTime;
   
-  const isNepal = country === 'Nepal';
+  const isNepal = country === 'Nepal' || country === null;
 
   const nepaliDateString = nepaliDate 
     ? `${nepaliDate.weekday}, ${nepaliDate.month} ${toNepaliNumber(nepaliDate.day)}, ${toNepaliNumber(nepaliDate.year)}`

@@ -82,9 +82,10 @@ export default function Home() {
     fetchSettings();
   }, []);
 
-  const isNepal = useMemo(() => location.country === 'Nepal', [location.country]);
+  const isNepal = useMemo(() => location.country === 'Nepal' || location.country === null, [location.country]);
   
   useEffect(() => {
+    let isMounted = true;
     if (festivals.length > 0) {
       const now = new Date();
       
@@ -103,9 +104,16 @@ export default function Home() {
               fullDate: formatUpcomingEventDate(event.parsedDate!),
           }));
         
-        setUpcomingEvents(events);
+        if (isMounted) {
+            setUpcomingEvents(events);
+        }
     } else {
-        setUpcomingEvents([]);
+        if (isMounted) {
+            setUpcomingEvents([]);
+        }
+    }
+    return () => {
+      isMounted = false;
     }
   }, [festivals]);
 
@@ -138,6 +146,9 @@ export default function Home() {
 
     if (location.country) {
       fetchNewsAndFestivals(location.country);
+    } else {
+      // Load Nepal data by default
+      fetchNewsAndFestivals("Nepal");
     }
   }, [location.country]);
 

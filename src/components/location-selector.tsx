@@ -28,10 +28,11 @@ const countries = [
 
 export default function LocationSelector({ onLocationChange }: LocationSelectorProps) {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
-  const [isLocating, setIsLocating] = useState(true); // Start locating on initial load
+  const [isLocating, setIsLocating] = useState(false); 
 
   useEffect(() => {
-    handleDetectLocation();
+    // Set Nepal as default on initial load, but don't trigger location detection automatically
+    handleCountryChange("Nepal");
   }, []);
 
   const handleCountryChange = (country: string) => {
@@ -92,5 +93,3 @@ export default function LocationSelector({ onLocationChange }: LocationSelectorP
     </div>
   );
 }
-
-    
