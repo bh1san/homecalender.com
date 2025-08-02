@@ -35,18 +35,13 @@ export default function NepaliCalendar() {
   const fetchMonthData = useCallback(async (year: number, month: number) => {
     setIsLoading(true);
     try {
-      // month is 0-indexed in the component, but 1-indexed for the API
       const eventsPromise = getCalendarEvents({ year, month: month + 1 });
       
-      // Approximating the start day of the week for a better placeholder
-      // A more accurate method would require a BS to AD conversion for the 1st of the month.
-      const approxStartDate = new Date(year - 57, month, 1);
-      const firstDayPromise = convertDate({ source: 'bs_to_ad', year: year, month: month + 1, day: 1 }).then(res => {
-         // Fallback to approximation if AI fails
-         return res ? new Date(res.year, nepaliMonths.indexOf(res.month), res.day).getDay() : approxStartDate.getDay();
-      }).catch(() => approxStartDate.getDay());
+      const bsToAdResponse = await convertDate({ source: 'bs_to_ad', year, month: month + 1, day: 1 });
+      const firstDayDate = new Date(bsToAdResponse.year, gregorianMonths.indexOf(bsToAdResponse.month), bsToAdResponse.day);
+      const firstDay = firstDayDate.getDay();
 
-      const [monthEvents, firstDay] = await Promise.all([eventsPromise, firstDayPromise]);
+      const monthEvents = await eventsPromise;
       
       setCalendarData(prevData => ({...(prevData as CalendarData), monthEvents: monthEvents.month_events}));
       setFirstDayOfMonth(firstDay);
@@ -58,7 +53,6 @@ export default function NepaliCalendar() {
       setIsLoading(false);
     }
   }, []);
-
 
   useEffect(() => {
     const initializeCalendar = async () => {
@@ -84,20 +78,23 @@ export default function NepaliCalendar() {
           });
           setSelectedDay(today.day);
           await fetchMonthData(today.year, today.month);
+        } else {
+            throw new Error("Could not find Nepali month index");
         }
       } catch (error) {
         console.error("Failed to initialize calendar", error);
+        setCalendarData(null); // Explicitly set to null on error
         setIsLoading(false);
       }
     };
     initializeCalendar();
   }, [fetchMonthData]);
-
-  const changeDisplayedMonth = useCallback(async (year: number, month: number) => {
+  
+  const changeDisplayedMonth = (year: number, month: number) => {
       if (!calendarData) return;
       setSelectedDay(null);
-      await fetchMonthData(year, month);
-  }, [calendarData, fetchMonthData]);
+      fetchMonthData(year, month);
+  };
   
   const handlePrevMonth = () => {
     if (!displayDate) return;
@@ -135,6 +132,10 @@ export default function NepaliCalendar() {
   }
 
   const initialLoading = isLoading && !calendarData;
+  const gregorianMonths = [
+    "January", "February", "March", "April", "May", "June", 
+    "July", "August", "September", "October", "November", "December"
+  ];
 
   if (initialLoading) {
     return (
@@ -147,8 +148,8 @@ export default function NepaliCalendar() {
   
   if (!displayDate || !calendarData) {
      return (
-        <div className="w-full flex items-center justify-center p-8">
-            <span className="ml-2 text-red-500">Could not load calendar data.</span>
+        <div className="w-full flex items-center justify-center p-8 bg-red-50 text-red-600 rounded-lg">
+            <span>Could not load calendar data.</span>
         </div>
     );
   }
