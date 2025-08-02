@@ -138,9 +138,9 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
   
   const isNepal = country === 'Nepal';
 
-  const mainDateString = isNepal && nepaliDate 
-    ? `${toNepaliNumber(nepaliDate.day)} ${nepaliDate.month} ${toNepaliNumber(nepaliDate.year)}, ${nepaliDate.weekday}`
-    : dateString;
+  const nepaliDateString = nepaliDate 
+    ? `${nepaliDate.weekday}, ${nepaliDate.month} ${toNepaliNumber(nepaliDate.day)}, ${toNepaliNumber(nepaliDate.year)}`
+    : '';
     
   const nepaliTimeParts = timeString.split(/:| /); // split by colon or space
   const nepaliTimeString = toNepaliNumber(`${nepaliTimeParts[0]}:${nepaliTimeParts[1]}`);
@@ -149,15 +149,12 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
 
   return (
     <div>
-        <h1 className="text-3xl font-bold">{mainDateString}</h1>
-        {isNepal && nepaliDate && <p className="text-sm">साउन शुक्ल अष्टमी</p>}
-        {isNepal && nepaliDate && <p className="text-sm">पञ्चाङ्गः शुभ बव विशाखा</p>}
+        <h1 className="text-3xl font-bold">{isNepal ? nepaliDateString : dateString}</h1>
+        {isNepal && <p className="text-sm mt-1">{dateString}</p>}
+
         <p className="text-sm">
             {isNepal ? `${localizedTimePrefix} ${nepaliTimeString}` : timeString}
         </p>
-        {isNepal && <p className="text-sm mt-1">{dateString}</p>}
     </div>
   );
 }
-
-    
