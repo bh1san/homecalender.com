@@ -75,3 +75,15 @@ export const CurrentDateInfoResponseSchema = CalendarEventSchema.extend({
   adDay: z.number(),
 });
 export type CurrentDateInfoResponse = z.infer<typeof CurrentDateInfoResponseSchema>;
+
+// Upcoming Events Schemas
+export const UpcomingEventSchema = z.object({
+  summary: z.string().describe('The name or summary of the event.'),
+  startDate: z.string().describe('The start date of the event in YYYY-MM-DD format.'),
+});
+export type UpcomingEvent = z.infer<typeof UpcomingEventSchema>;
+
+export const UpcomingEventsResponseSchema = z.object({
+  events: z.array(UpcomingEventSchema).describe('A list of upcoming events.'),
+});
+export type UpcomingEventsResponse = z.infer<typeof UpcomingEventsResponseSchema>;

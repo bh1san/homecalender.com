@@ -1,50 +1,84 @@
+
 "use client";
 
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useState } from "react";
+import { getUpcomingEvents } from "@/ai/flows/upcoming-events-flow";
+import { UpcomingEvent } from "@/ai/schemas";
+import { toBS, getNepaliMonthName } from "@/lib/nepali-date-converter";
+import { Calendar } from "lucide-react";
 
-const UpcomingEventsWidget = () => {
-  const widgetContainerRef = useRef<HTMLDivElement>(null);
+const toNepaliNumber = (num: number | string) => {
+    const nepaliDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
+    return String(num).split("").map(char => {
+        if (!isNaN(parseInt(char))) {
+            return nepaliDigits[parseInt(char)];
+        }
+        return char;
+    }).join("");
+}
+
+export default function UpcomingEventsWidget() {
+  const [events, setEvents] = useState<UpcomingEvent[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!widgetContainerRef.current) return;
-
-    // Clear any previous widget content to avoid duplicates on re-renders
-    widgetContainerRef.current.innerHTML = '';
-
-    const script = document.createElement('script');
-    script.type = 'text/javascript';
-    // Using innerHTML to set the script content
-    script.innerHTML = `
-      var nc_ev_width = 'responsive';
-      var nc_ev_height = 303;
-      var nc_ev_def_lan = 'np';
-      var nc_ev_api_id = 2102025082274;
-    `;
-    
-    const widgetScript = document.createElement('script');
-    widgetScript.type = 'text/javascript';
-    widgetScript.src = 'https://www.ashesh.com.np/calendar-event/ev.js';
-    widgetScript.async = true;
-
-    const widgetLink = document.createElement('div');
-    widgetLink.id = 'ncwidgetlink';
-    // The HTML for the link can be set directly
-    widgetLink.innerHTML = 'Powered by © <a href="https://www.ashesh.com.np/nepali-calendar/" id="nclink" title="Nepali calendar" target="_blank">Nepali Calendar</a>';
-
-    // Append all parts to the container
-    widgetContainerRef.current.appendChild(script);
-    widgetContainerRef.current.appendChild(widgetScript);
-    widgetContainerRef.current.appendChild(widgetLink);
-
-    // Cleanup function to remove the scripts and link when the component unmounts
-    return () => {
-      if (widgetContainerRef.current) {
-        widgetContainerRef.current.innerHTML = '';
+    const fetchEvents = async () => {
+      try {
+        const upcomingEvents = await getUpcomingEvents();
+        setEvents(upcomingEvents.events);
+      } catch (error) {
+        console.error("Failed to fetch upcoming events:", error);
+      } finally {
+        setLoading(false);
       }
     };
-  }, []); // Empty dependency array ensures this runs only once on mount
+    fetchEvents();
+  }, []);
 
-  return <div ref={widgetContainerRef} className="w-full h-[303px]"></div>;
-};
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    const bsDate = toBS(date);
+    const monthName = getNepaliMonthName(bsDate.month);
+    const day = toNepaliNumber(bsDate.day);
+    return `${monthName} ${day}`;
+  }
 
-export default UpcomingEventsWidget;
+  if (loading) {
+    return (
+      <div className="space-y-4 p-4">
+        {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex items-center gap-4 animate-pulse">
+                <div className="h-12 w-12 rounded-md bg-muted" />
+                <div className="flex-1 space-y-2">
+                    <div className="h-4 w-3/4 rounded bg-muted" />
+                    <div className="h-4 w-1/2 rounded bg-muted" />
+                </div>
+            </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (events.length === 0) {
+    return <p className="text-center text-muted-foreground p-6">No upcoming events found.</p>;
+  }
+
+  return (
+    <div className="p-0">
+        <ul className="space-y-1">
+            {events.map((event, index) => (
+                <li key={index} className="flex items-center gap-4 p-3 hover:bg-muted/50 rounded-md transition-colors">
+                    <div className="flex-shrink-0 flex flex-col items-center justify-center w-16 h-16 rounded-lg bg-primary/10 text-primary">
+                       <span className="text-sm font-medium">{formatDate(event.startDate).split(' ')[0]}</span>
+                       <span className="text-2xl font-bold">{formatDate(event.startDate).split(' ')[1]}</span>
+                    </div>
+                    <div className="flex-grow">
+                        <p className="font-semibold text-card-foreground">{event.summary}</p>
+                         <p className="text-xs text-muted-foreground">{event.startDate}</p>
+                    </div>
+                </li>
+            ))}
+        </ul>
+    </div>
+  );
+}
