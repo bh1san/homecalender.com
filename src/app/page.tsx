@@ -75,6 +75,13 @@ export default function Home() {
     <div className="min-h-screen">
       <Header navLinks={navLinks} logoUrl={logoUrl} />
       <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 bg-accent/90 text-white p-4 rounded-lg shadow-md items-center">
+            <CurrentDateTime />
+            <div className="hidden sm:flex justify-end">
+                <Image src="https://placehold.co/400x100.png" alt="Ad Banner" width={400} height={100} data-ai-hint="game banner" className="rounded-md" />
+            </div>
+        </div>
+
         <div className="flex items-center justify-between mb-4">
             <LocationSelector onLocationChange={(country) => setLocation({ country })} />
             <div className="relative w-full max-w-xs">
@@ -238,14 +245,6 @@ function Header({ navLinks, logoUrl }: { navLinks: string[], logoUrl: string }) 
                                 </nav>
                             </SheetContent>
                         </Sheet>
-                    </div>
-                </div>
-            </div>
-            <div className="bg-accent/80">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-                    <CurrentDateTime />
-                    <div className="hidden sm:block">
-                        <Image src="https://placehold.co/400x100.png" alt="Ad Banner" width={400} height={100} data-ai-hint="game banner"/>
                     </div>
                 </div>
             </div>

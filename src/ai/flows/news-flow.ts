@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A flow for fetching recent news headlines with generated images based on location.
@@ -59,7 +60,7 @@ const newsFlow = ai.defineFlow(
         try {
             const {media} = await ai.generate({
                 model: 'googleai/gemini-2.0-flash-preview-image-generation',
-                prompt: `Generate an image for a news headline about: ${headline.title}. The style should be photorealistic. Hint: ${headline.imageHint}`,
+                prompt: `Generate a photorealistic image for a news headline about: ${headline.title}. Hint: ${headline.imageHint}`,
                 config: {
                 responseModalities: ['TEXT', 'IMAGE'],
                 },
