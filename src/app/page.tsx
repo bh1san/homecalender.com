@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { getNews } from "@/ai/flows/news-flow";
 import { NewsItem, Festival } from "@/ai/schemas";
 import CurrentDateTime from "@/components/current-date-time";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { getFestivals } from "@/ai/flows/festival-flow";
 import { Calendar } from "@/components/ui/calendar";
 import LocationSelector from "@/components/location-selector";
@@ -87,32 +87,28 @@ export default function Home() {
   }, []);
 
   const isNepal = useMemo(() => location.country === 'Nepal' || location.country === null, [location.country]);
-  
-  useEffect(() => {
-    if (isMounted && festivals.length > 0) {
-      const now = new Date();
-      
-      const events = festivals
-          .map(festival => ({
-              ...festival,
-              parsedDate: parseFestivalDate(festival.gregorianStartDate),
-          }))
-          .filter(event => event.parsedDate && differenceInDays(event.parsedDate, now) >= 0)
-          .sort((a, b) => a.parsedDate!.getTime() - b.parsedDate!.getTime())
-          .slice(0, 5)
-          .map(event => ({
-              day: format(event.parsedDate!, 'dd'),
-              month: format(event.parsedDate!, 'MMM'),
-              title: event.name,
-              fullDate: formatUpcomingEventDate(event.parsedDate!),
-          }));
-        
-      setUpcomingEvents(events);
-    } else {
-      setUpcomingEvents([]);
-    }
-  }, [festivals, isMounted]);
 
+  const processFestivals = useCallback((festivalData: Festival[]) => {
+    if (!isMounted) return;
+    const now = new Date();
+    
+    const events = festivalData
+        .map(festival => ({
+            ...festival,
+            parsedDate: parseFestivalDate(festival.gregorianStartDate),
+        }))
+        .filter(event => event.parsedDate && differenceInDays(event.parsedDate, now) >= 0)
+        .sort((a, b) => a.parsedDate!.getTime() - b.parsedDate!.getTime())
+        .slice(0, 5)
+        .map(event => ({
+            day: format(event.parsedDate!, 'dd'),
+            month: format(event.parsedDate!, 'MMM'),
+            title: event.name,
+            fullDate: formatUpcomingEventDate(event.parsedDate!),
+        }));
+      
+    setUpcomingEvents(events);
+  }, [isMounted]);
 
   useEffect(() => {
     const fetchNewsAndFestivals = async (country: string) => {
@@ -120,6 +116,7 @@ export default function Home() {
       setLoadingFestivals(true);
       setNewsItems([]);
       setFestivals([]);
+      setUpcomingEvents([]);
 
       try {
         const newsPromise = getNews(country);
@@ -128,9 +125,9 @@ export default function Home() {
         const newsData = await newsPromise;
         setNewsItems(newsData.headlines);
         
-
         const festivalData = await festivalPromise;
         setFestivals(festivalData.festivals);
+        processFestivals(festivalData.festivals);
         
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -143,10 +140,9 @@ export default function Home() {
     if (location.country) {
       fetchNewsAndFestivals(location.country);
     } else {
-      // Load Nepal data by default
       fetchNewsAndFestivals("Nepal");
     }
-  }, [location.country]);
+  }, [location.country, processFestivals]);
 
   return (
     <div className="min-h-screen">
@@ -242,7 +238,7 @@ export default function Home() {
                             ))}
                          </div>
                       ) : (
-                         festivals.length > 0 ? <FestivalList festivals={festivals} /> : <p className="text-center text-muted-foreground p-4 bg-background/80 rounded">Select a country to see its festivals.</p>
+                         festivals.length > 0 ? <FestivalList festivals={festivals} /> : <p className="text-center text-muted-foreground p-4 bg-background/80 rounded">No festivals found for the selected country.</p>
                       )}
                     </TabsContent>
                   </Tabs>
@@ -356,3 +352,5 @@ function Header({ navLinks, logoUrl, isLoading }: { navLinks: string[], logoUrl:
         </header>
     )
 }
+
+    
