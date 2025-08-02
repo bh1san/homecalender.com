@@ -98,7 +98,7 @@ export default function DateConverter() {
           <div className="space-y-2">
             <Label htmlFor="gregorian-month">Month</Label>
              <Select value={gregorianDate.month} onValueChange={(value) => setGregorianDate({...gregorianDate, month: value})}>
-                <SelectTrigger id="gregorian-month"><SelectValue placeholder="Select month..." /></SelectValue>
+                <SelectTrigger id="gregorian-month"><SelectValue placeholder="Select month..." /></SelectTrigger>
                 <SelectContent>
                   {gregorianMonths.map((month, index) => (
                     <SelectItem key={month} value={String(index + 1)}>{month}</SelectItem>
