@@ -19,23 +19,31 @@ const quotes = [
 
 export default function MotivationalQuote() {
   const [currentQuote, setCurrentQuote] = useState(quotes[0]);
+  const [isFading, setIsFading] = useState(false);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
-      let nextQuote = currentQuote;
-      while (nextQuote === currentQuote) {
-        const randomIndex = Math.floor(Math.random() * quotes.length);
-        nextQuote = quotes[randomIndex];
-      }
-      setCurrentQuote(nextQuote);
+      setIsFading(true);
+      setTimeout(() => {
+        let nextQuote = currentQuote;
+        while (nextQuote === currentQuote) {
+          const randomIndex = Math.floor(Math.random() * quotes.length);
+          nextQuote = quotes[randomIndex];
+        }
+        setCurrentQuote(nextQuote);
+        setIsFading(false);
+      }, 1000); // Corresponds to the fade-out duration
     }, 15000); // 15 seconds
 
     return () => clearInterval(intervalId);
   }, [currentQuote]);
 
   return (
-    <div className="w-[400px] h-[100px] flex items-center justify-center bg-black/20 rounded-lg p-4 text-center">
-        <p className="text-lg italic font-medium text-white/90 transition-opacity duration-1000">
+    <div className="w-[400px] h-[100px] flex items-center justify-center bg-black/20 rounded-lg p-4 text-center overflow-hidden">
+        <p className={cn(
+            "text-lg italic font-medium text-white/90 transition-opacity duration-1000",
+            isFading ? "opacity-0" : "opacity-100"
+        )}>
             &ldquo;{currentQuote}&rdquo;
         </p>
     </div>
