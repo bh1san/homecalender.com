@@ -60,7 +60,7 @@ const calendarEventsFlow = ai.defineFlow(
     outputSchema: CalendarEventsResponseSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const {output} = await calendarEventsPrompt(input);
     if (!output) {
       throw new Error('Failed to get calendar events');
     }
