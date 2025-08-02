@@ -3,10 +3,14 @@
 import React from 'react';
 
 const NepaliCalendarWidget = () => {
+  // Constructing the URL with theme parameters to match the site's aesthetic.
+  // The 'red' theme is selected to align with the primary color of the website.
+  const widgetUrl = "https://nepalicalendar.rat32.com/embed.php?theme=red&language=nepali&type=full";
+
   return (
     <div className="w-full h-full">
       <iframe
-        src="https://nepalicalendar.rat32.com/embed.php"
+        src={widgetUrl}
         frameBorder="0"
         scrolling="no"
         marginWidth={0}
