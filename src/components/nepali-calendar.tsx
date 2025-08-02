@@ -55,7 +55,6 @@ export default function NepaliCalendar() {
 
   useEffect(() => {
     const initializeCalendar = async () => {
-      setIsLoading(true);
       try {
         const now = new Date();
         const bsDate = toBS(now);
@@ -68,7 +67,10 @@ export default function NepaliCalendar() {
           monthEvents: [],
         });
         setSelectedDay(today.day);
-        await fetchMonthData(today.year, today.month);
+        
+        // This was the problematic part. Now `displayDate` is set before fetching.
+        setDisplayDate({ year: today.year, month: today.month });
+
       } catch (error) {
         console.error("Failed to initialize calendar", error);
         setCalendarData(null); 
@@ -76,12 +78,18 @@ export default function NepaliCalendar() {
       }
     };
     initializeCalendar();
-  }, [fetchMonthData]);
+  }, []);
+
+  useEffect(() => {
+      if (displayDate) {
+          fetchMonthData(displayDate.year, displayDate.month);
+      }
+  }, [displayDate, fetchMonthData]);
   
   const changeDisplayedMonth = (year: number, month: number) => {
       if (!calendarData) return;
       setSelectedDay(null);
-      fetchMonthData(year, month);
+      setDisplayDate({ year, month });
   };
   
   const handlePrevMonth = () => {
@@ -119,7 +127,7 @@ export default function NepaliCalendar() {
     return String(num).split("").map(digit => nepaliDigits[parseInt(digit)]).join("");
   }
 
-  const initialLoading = isLoading && !calendarData;
+  const initialLoading = isLoading && !calendarData?.monthEvents.length;
   
   if (initialLoading) {
     return (
