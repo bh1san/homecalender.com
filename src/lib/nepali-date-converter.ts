@@ -1,5 +1,7 @@
 // This file now contains only formatting helpers, as the core conversion logic
-// is handled by the more robust AI flow to prevent crashes.
+// is handled by the more robust API service.
+import { toAD as convertToAD, toBS as convertToBS } from 'nepali-date-converter-minimal';
+
 
 const getNepaliMonthName = (month: number) => {
     // Month is 1-indexed
@@ -29,13 +31,20 @@ const getNepaliNumber = (num: number | string) => {
     }).join("");
 };
 
-// These functions are no longer needed as the AI flow provides all the necessary data.
-// We keep the formatting functions above for UI rendering.
-const toBS = (adDate: Date) => ({ year: 2081, month: 4, day: 1, weekDay: 0 });
-const toAD = (bsDate: { year: number, month: number, day: number }) => new Date();
-const getDaysInMonthBS = (year: number, month: number) => 31;
-const getFirstDayOfMonthBS = (year: number, month: number) => 0;
-const getNepaliDateParts = (date: Date) => toBS(date);
+
+const toBS = (adDate: Date) => {
+    const bsDate = convertToBS(adDate);
+    const [year, month, day] = bsDate.split('-').map(Number);
+    return { year, month, day, weekDay: adDate.getDay() };
+};
+const toAD = (bsDate: { year: number, month: number, day: number }) => {
+    return convertToAD(new Date(`${bsDate.year}-${bsDate.month}-${bsDate.day}`));
+};
+
+const getFirstDayOfMonthBS = (year: number, month: number) => {
+    const adDate = convertToAD(new Date(`${year}-${month}-01`));
+    return adDate.getDay();
+};
 
 
-export { toBS, toAD, getDaysInMonthBS, getFirstDayOfMonthBS, getNepaliMonthName, getEnglishMonthName, getNepaliDayOfWeek, getNepaliNumber, getNepaliDateParts };
+export { getNepaliMonthName, getEnglishMonthName, getNepaliDayOfWeek, getNepaliNumber, getFirstDayOfMonthBS, toBS };

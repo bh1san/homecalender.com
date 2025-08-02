@@ -6,7 +6,22 @@ This is a NextJS starter in Firebase Studio.
 
 To get started, take a look at `src/app/page.tsx`.
 
-## Genkit AI
+## Features
+
+This project includes a native and interactive Nepali calendar. To enable the calendar and other date-related features, you must provide an API key for the Nepali Calendar API.
+
+### Nepali Calendar API Setup
+
+1.  Subscribe to the [Nepali Calendar API on RapidAPI](https://rapidapi.com/sishir/api/nepali-calendar-api). A free plan is available.
+2.  After subscribing, you will get an `X-RapidAPI-Key`.
+3.  Open the `.env` file in the project.
+4.  Set the `RAPIDAPI_KEY` with the key you obtained.
+
+```
+RAPIDAPI_KEY="YOUR_RAPIDAPI_KEY_HERE"
+```
+
+### Genkit AI
 
 This project uses Genkit to connect to Google's AI services. To enable AI features, you must provide a Gemini API key.
 

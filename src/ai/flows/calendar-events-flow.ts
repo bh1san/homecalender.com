@@ -1,9 +1,9 @@
 
 'use server';
 /**
- * @fileOverview A flow for fetching events for a specific month of the Nepali calendar.
+ * @fileOverview A flow for fetching events for the Nepali calendar from the API.
  *
- * - getCalendarEvents - A function that fetches events, tithis, and holidays.
+ * - getCalendarEvents - A function that fetches events, tithis, and holidays for a month.
  * - getCurrentDateInfo - A function that fetches the current date's full information.
  */
 
@@ -16,8 +16,7 @@ import {
   CurrentDateInfoResponse,
   CurrentDateInfoResponseSchema,
 } from '@/ai/schemas';
-import {toAD} from '@/lib/nepali-date-converter';
-import { getTodaysInfoFromApi } from '@/services/nepali-date';
+import { getTodaysInfoFromApi, getEventsForMonthFromApi } from '@/services/nepali-date';
 
 export async function getCalendarEvents(
   input: CalendarEventsRequest
@@ -29,52 +28,25 @@ export async function getCurrentDateInfo(): Promise<CurrentDateInfoResponse> {
   return currentDateInfoFlow();
 }
 
-const calendarEventsPrompt = ai.definePrompt({
-  name: 'calendarEventsPrompt',
-  input: {schema: CalendarEventsRequestSchema},
-  output: {schema: CalendarEventsResponseSchema},
-  prompt: `You are a Nepali calendar data expert. For the given Nepali calendar year ({{year}} BS) and month ({{month}}), generate a complete list of daily events. All text outputs should be in Nepali script.
-
-For each day of the month, you must provide the following details:
-1.  'day': The numeric day of the month.
-2.  'tithi': The official lunar phase (Tithi) for that day, in Nepali script. Keep it short (e.g., "प्रतिपदा", "अष्टमी"). This is a mandatory field.
-3.  'events': A list of all festivals, observances, or special events occurring on that day, in Nepali script. If there are no events, provide an empty list. Limit to max 2 events.
-4.  'is_holiday': A boolean value indicating if the day is a public holiday in Nepal. Mark major festival days and Saturdays as holidays.
-5.  'panchanga': Provide other astrological details for the day, such as 'nakshatra', 'yoga', 'karana', in Nepali script, if available.
-
-Example for a single day's output:
-{
-  "day": 1,
-  "tithi": "प्रतिपदा",
-  "events": ["साउने संक्रान्ति"],
-  "is_holiday": true,
-  "panchanga": "नक्षत्र: श्रवण, योग: आयुष्मान, करण: बव"
-}
-
-Provide this information for every single day of the specified month. The month is 1-indexed (1 = Baisakh, 4 = Shrawan, etc.). It is crucial that every day has a 'tithi' value.`,
-});
-
 const calendarEventsFlow = ai.defineFlow(
   {
     name: 'calendarEventsFlow',
     inputSchema: CalendarEventsRequestSchema,
     outputSchema: CalendarEventsResponseSchema,
   },
-  async input => {
-    const {output} = await calendarEventsPrompt(input);
-    if (!output) {
-      throw new Error('Failed to get calendar events');
-    }
-    // Add gregorian day to each event
-    const enrichedEvents = output.month_events.map(event => {
-      const adDate = toAD({year: input.year, month: input.month, day: event.day});
-      return {
-        ...event,
-        gregorian_day: adDate.getDate(),
-      };
-    });
+  async ({ year, month }) => {
+    const apiData = await getEventsForMonthFromApi(year, month);
+    
+    const mappedEvents = apiData.map(day => ({
+      day: day.bs_day_en,
+      gregorian_day: day.ad_day_en,
+      tithi: day.tithi.tithi_name_np,
+      events: day.events.map(e => e.event_title_np).filter((e): e is string => !!e),
+      is_holiday: day.is_holiday,
+      panchanga: day.panchanga.panchanga_np,
+    }));
 
-    return {month_events: enrichedEvents};
+    return { month_events: mappedEvents };
   }
 );
 

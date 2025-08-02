@@ -80,6 +80,7 @@ export type CurrentDateInfoResponse = z.infer<typeof CurrentDateInfoResponseSche
 export const UpcomingEventSchema = z.object({
   summary: z.string().describe('The name or summary of the event.'),
   startDate: z.string().describe('The start date of the event in YYYY-MM-DD format.'),
+  isHoliday: z.boolean().optional().describe('Whether the event is a public holiday.')
 });
 export type UpcomingEvent = z.infer<typeof UpcomingEventSchema>;
 

@@ -16,7 +16,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { getNepaliMonthName, getEnglishMonthName } from '@/lib/nepali-date-converter';
 import {
   Select,
   SelectContent,
@@ -25,24 +24,6 @@ import {
   SelectValue,
 } from "./ui/select";
 import FlagLoader from "./flag-loader";
-
-// Note: As we are removing the client-side conversion library to prevent crashes,
-// these conversion functions will need to be replaced with AI flow calls.
-// For now, they are placeholders.
-async function toBS(date: Date): Promise<{ year: number, month: number, day: number }> {
-    // This would need to be an AI call in a real scenario without a stable library.
-    // Returning a placeholder for now.
-    console.warn("AD to BS conversion is a placeholder.");
-    return { year: 2081, month: 4, day: 15 };
-}
-
-async function toAD(bsDate: { year: number, month: number, day: number }): Promise<Date> {
-    // This would need to be an AI call in a real scenario without a stable library.
-    // Returning a placeholder for now.
-    console.warn("BS to AD conversion is a placeholder.");
-    return new Date();
-}
-
 
 const nepaliMonths = [
   "Baisakh", "Jestha", "Ashadh", "Shrawan", "Bhadra",
@@ -81,78 +62,13 @@ export default function DateConverter() {
     });
   }, []);
 
-  const handleGregorianToNepali = async () => {
-    if (!gregorianDate.year || !gregorianDate.month || !gregorianDate.day) {
-      toast({
+  const handleConversion = () => {
+     toast({
         variant: "destructive",
-        title: "Error",
-        description: "Please fill all Gregorian date fields.",
+        title: "Feature Unavailable",
+        description: "Date conversion requires an API key which has not been configured.",
       });
-      return;
-    }
-
-    setIsConvertingAD(true);
-    setNepaliResult(null);
-    await new Promise(resolve => setTimeout(resolve, 300));
-    try {
-      const year = parseInt(gregorianDate.year);
-      const month = parseInt(gregorianDate.month) -1; 
-      const day = parseInt(gregorianDate.day);
-      
-      const date = new Date(year, month, day);
-      if (isNaN(date.getTime())) {
-          throw new Error("Invalid Gregorian date.");
-      }
-
-      const bsDate = await toBS(date);
-      const fullDate = `${getNepaliMonthName(bsDate.month)} ${bsDate.day}, ${bsDate.year}`;
-      setNepaliResult(fullDate);
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      toast({
-        variant: "destructive",
-        title: "Conversion Failed",
-        description: `Could not convert the Gregorian date. ${errorMessage}`,
-      });
-    } finally {
-      setIsConvertingAD(false);
-    }
-  };
-
-  const handleNepaliToGregorian = async () => {
-    if (!nepaliDate.year || !nepaliDate.month || !nepaliDate.day) {
-       toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Please fill all Nepali date fields.",
-      });
-      return;
-    }
-    
-    setIsConvertingBS(true);
-    setGregorianResult(null);
-    await new Promise(resolve => setTimeout(resolve, 300));
-    try {
-      const year = parseInt(nepaliDate.year);
-      const month = parseInt(nepaliDate.month);
-      const day = parseInt(nepaliDate.day);
-      
-      const adDate = await toAD({ year, month, day });
-
-      const fullDate = `${getEnglishMonthName(adDate.getMonth())} ${adDate.getDate()}, ${adDate.getFullYear()}`;
-      setGregorianResult(fullDate);
-    } catch (error) {
-       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      toast({
-        variant: "destructive",
-        title: "Conversion Failed",
-        description: `Could not convert the Nepali date. ${errorMessage}`,
-      });
-    } finally {
-      setIsConvertingBS(false);
-    }
-  };
+  }
 
   return (
     <div className="space-y-8">
@@ -183,12 +99,8 @@ export default function DateConverter() {
           </div>
         </CardContent>
         <CardFooter className="flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <Button onClick={handleGregorianToNepali} disabled={isConvertingAD}>
-            {isConvertingAD ? (
-              <FlagLoader />
-            ) : (
-              <ArrowRightLeft className="mr-2 h-4 w-4" />
-            )}
+          <Button onClick={handleConversion} disabled={true}>
+            <ArrowRightLeft className="mr-2 h-4 w-4" />
              Convert to Nepali
           </Button>
           {nepaliResult && (
@@ -233,12 +145,8 @@ export default function DateConverter() {
           </div>
         </CardContent>
         <CardFooter className="flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <Button onClick={handleNepaliToGregorian} disabled={isConvertingBS}>
-            {isConvertingBS ? (
-                <FlagLoader />
-              ) : (
-                <ArrowRightLeft className="mr-2 h-4 w-4" />
-            )}
+          <Button onClick={handleConversion} disabled={true}>
+            <ArrowRightLeft className="mr-2 h-4 w-4" />
             Convert to Gregorian
           </Button>
           {gregorianResult && (

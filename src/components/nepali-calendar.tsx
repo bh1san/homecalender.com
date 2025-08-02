@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getCalendarEvents } from '@/ai/flows/calendar-events-flow';
 import { CalendarEvent, CurrentDateInfoResponse } from '@/ai/schemas';
-import { getNepaliMonthName, getNepaliNumber } from '@/lib/nepali-date-converter';
+import { getNepaliMonthName, getNepaliNumber, getFirstDayOfMonthBS } from '@/lib/nepali-date-converter';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight, Loader, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -17,18 +17,17 @@ interface NepaliCalendarProps {
 const WEEK_DAYS_NP = ["आइत", "सोम", "मंगल", "बुध", "बिहि", "शुक्र", "शनि"];
 
 export default function NepaliCalendar({ today }: NepaliCalendarProps) {
-    const [currentDate, setCurrentDate] = useState(() => {
-        const initialDate = new Date();
-        return { year: initialDate.getFullYear(), month: initialDate.getMonth() + 1 };
+    const [currentBSDate, setCurrentBSDate] = useState({
+        year: today?.bsYear || new Date().getFullYear() + 57,
+        month: today?.bsMonth || new Date().getMonth() + 1,
     });
     
     const [monthData, setMonthData] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
-    const [currentBSYear, setCurrentBSYear] = useState(2081);
-    const [currentBSMonth, setCurrentBSMonth] = useState(4);
     
-    // This will hold the first day of the week for the displayed month
-    const [firstDayOfWeek, setFirstDayOfWeek] = useState(0);
+    const firstDayOfWeek = useMemo(() => {
+        return getFirstDayOfMonthBS(currentBSDate.year, currentBSDate.month);
+    }, [currentBSDate.year, currentBSDate.month]);
 
     const fetchMonthData = useCallback(async (year: number, month: number) => {
         setLoading(true);
@@ -36,20 +35,6 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
             const data = await getCalendarEvents({ year, month });
             if (data.month_events && data.month_events.length > 0) {
                 setMonthData(data.month_events);
-                setCurrentBSYear(year);
-                setCurrentBSMonth(month);
-
-                // Determine the first day of the week (Sunday=0, Saturday=6)
-                const firstDayAD = new Date(`${year}-${String(month).padStart(2, '0')}-01`);
-                const firstEvent = data.month_events[0];
-                 if (firstEvent.gregorian_day) {
-                    const firstDateBS = new Date(firstEvent.gregorian_day);
-                    const dayOfWeek = new Date(firstDateBS.setDate(firstDateBS.getDate() - (firstEvent.day-1))).getDay();
-                    setFirstDayOfWeek(dayOfWeek);
-                 } else {
-                     setFirstDayOfWeek(0);
-                 }
-
             } else {
                 setMonthData([]);
             }
@@ -63,53 +48,48 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
     
     useEffect(() => {
         if (today) {
-            setCurrentDate({ year: today.bsYear, month: today.bsMonth });
-            fetchMonthData(today.bsYear, today.bsMonth);
+            const newCurrentBSDate = { year: today.bsYear, month: today.bsMonth };
+            setCurrentBSDate(newCurrentBSDate);
+            fetchMonthData(newCurrentBSDate.year, newCurrentBSDate.month);
         } else {
-             // Fallback to a default date if today's date is not available
-            const fallbackDate = new Date();
-            const year = fallbackDate.getFullYear();
-            const month = fallbackDate.getMonth() + 1; // Use current Gregorian month as a starting point
-            // A rough conversion to get a BS year.
-            const bsYear = year + 57;
-            setCurrentDate({ year: bsYear, month: month });
-            fetchMonthData(bsYear, month);
+            // Fallback to a default date if today's date is not available
+            fetchMonthData(currentBSDate.year, currentBSDate.month);
         }
     }, [today, fetchMonthData]);
     
     const handlePrevMonth = () => {
-        const newDate = { ...currentDate };
-        newDate.month--;
-        if (newDate.month < 1) {
-            newDate.month = 12;
-            newDate.year--;
-        }
-        setCurrentDate(newDate);
-        fetchMonthData(newDate.year, newDate.month);
+        setCurrentBSDate(prev => {
+            const newDate = { ...prev };
+            newDate.month--;
+            if (newDate.month < 1) {
+                newDate.month = 12;
+                newDate.year--;
+            }
+            fetchMonthData(newDate.year, newDate.month);
+            return newDate;
+        });
     };
 
     const handleNextMonth = () => {
-        const newDate = { ...currentDate };
-        newDate.month++;
-        if (newDate.month > 12) {
-            newDate.month = 1;
-            newDate.year++;
-        }
-        setCurrentDate(newDate);
-        fetchMonthData(newDate.year, newDate.month);
+        setCurrentBSDate(prev => {
+            const newDate = { ...prev };
+            newDate.month++;
+            if (newDate.month > 12) {
+                newDate.month = 1;
+                newDate.year++;
+            }
+            fetchMonthData(newDate.year, newDate.month);
+            return newDate;
+        });
     };
-
-    const daysInMonth = monthData.length;
 
     const calendarCells = [];
     for (let i = 0; i < firstDayOfWeek; i++) {
         calendarCells.push(<div key={`empty-${i}`} className="border rounded-md bg-muted/40" />);
     }
 
-    for (let i = 0; i < daysInMonth; i++) {
-        const day = i + 1;
-        const eventData = monthData[i];
-        const isToday = today ? (eventData.day === today.bsDay && currentBSMonth === today.bsMonth && currentBSYear === today.bsYear) : false;
+    monthData.forEach((eventData) => {
+        const isToday = today ? (eventData.day === today.bsDay && currentBSDate.month === today.bsMonth && currentBSDate.year === today.bsYear) : false;
         
         const cellContent = (
              <div className={cn(
@@ -141,20 +121,20 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
                          <p className="text-xs text-foreground truncate">{eventData.tithi}</p>
                     )}
                 </div>
-                 {eventData && eventData.events.length > 0 && !isToday && (
-                     <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-red-500 rounded-full" />
+                 {eventData && eventData.events.length > 0 && (
+                     <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-accent rounded-full" />
                  )}
             </div>
         );
         
         const cell = (
-            <div key={day}>
+            <div key={eventData.day}>
                 {eventData ? (
                      <Popover>
                         <PopoverTrigger asChild>{cellContent}</PopoverTrigger>
                         <PopoverContent className="w-60 p-4" align="start">
                             <div className="space-y-2">
-                                <h4 className="font-bold text-lg text-primary">{getNepaliNumber(eventData.day)} {getNepaliMonthName(currentBSMonth)}</h4>
+                                <h4 className="font-bold text-lg text-primary">{getNepaliNumber(eventData.day)} {getNepaliMonthName(currentBSDate.month)}</h4>
                                 {eventData.tithi && <p className="text-sm text-muted-foreground font-semibold">{eventData.tithi}</p>}
                                 <hr />
                                 {eventData.events.length > 0 ? (
@@ -175,7 +155,8 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
         );
 
         calendarCells.push(cell);
-    }
+    })
+
 
     return (
         <div className="p-0 sm:p-2 bg-card rounded-lg w-full">
@@ -184,7 +165,7 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
                     <ChevronLeft className="h-5 w-5" />
                 </Button>
                 <h2 className="text-xl sm:text-2xl font-bold text-center text-primary">
-                    {getNepaliMonthName(currentBSMonth)} {getNepaliNumber(currentBSYear)}
+                    {getNepaliMonthName(currentBSDate.month)} {getNepaliNumber(currentBSDate.year)}
                 </h2>
                 <Button variant="outline" size="icon" onClick={handleNextMonth} disabled={loading}>
                     <ChevronRight className="h-5 w-5" />

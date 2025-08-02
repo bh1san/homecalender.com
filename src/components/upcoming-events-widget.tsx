@@ -5,24 +5,16 @@ import { useEffect, useState } from "react";
 import { getUpcomingEvents } from "@/ai/flows/upcoming-events-flow";
 import { UpcomingEvent } from "@/ai/schemas";
 import { getNepaliMonthName, getNepaliNumber } from "@/lib/nepali-date-converter";
+import { Badge } from "./ui/badge";
 
-// A placeholder for converting AD date string to BS parts
-// In a real scenario without a stable library, this would need a robust implementation
-// or an AI flow call.
-async function getBSDateParts(dateStr: string): Promise<{ monthName: string, day: string }> {
+// This is a simple helper and might not be perfectly accurate without a conversion library.
+// It splits the YYYY-MM-DD string.
+function getADDateParts(dateStr: string): { month: number, day: number, year: number } {
     try {
-        const date = new Date(dateStr);
-        // This is a rough, placeholder conversion.
-        const bsYear = date.getFullYear() + 57;
-        const bsMonth = date.getMonth() + 1; // Not accurate
-        const bsDay = date.getDate(); // Not accurate
-        
-        return {
-            monthName: getNepaliMonthName(bsMonth),
-            day: getNepaliNumber(bsDay)
-        };
+        const parts = dateStr.split('-').map(Number);
+        return { year: parts[0], month: parts[1], day: parts[2] };
     } catch {
-        return { monthName: "...", day: "..." };
+        return { month: 0, day: 0, year: 0 };
     }
 }
 
@@ -30,24 +22,13 @@ async function getBSDateParts(dateStr: string): Promise<{ monthName: string, day
 export default function UpcomingEventsWidget() {
   const [events, setEvents] = useState<UpcomingEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [formattedDates, setFormattedDates] = useState<Record<string, { monthName: string, day: string }>>({});
 
   useEffect(() => {
     const fetchAndFormatEvents = async () => {
       setLoading(true);
       try {
         const upcomingEventsData = await getUpcomingEvents();
-        const upcomingEvents = upcomingEventsData.events;
-        setEvents(upcomingEvents);
-        
-        const dates: Record<string, { monthName: string, day: string }> = {};
-        for (const event of upcomingEvents) {
-            if (!dates[event.startDate]) {
-                dates[event.startDate] = await getBSDateParts(event.startDate);
-            }
-        }
-        setFormattedDates(dates);
-
+        setEvents(upcomingEventsData.events);
       } catch (error) {
         console.error("Failed to fetch upcoming events:", error);
       } finally {
@@ -75,24 +56,29 @@ export default function UpcomingEventsWidget() {
   }
 
   if (events.length === 0) {
-    return <p className="text-center text-muted-foreground p-6">No upcoming events found.</p>;
+    return <p className="text-center text-muted-foreground p-6">कुनै आउँदो कार्यक्रम छैन।</p>;
   }
 
   return (
     <div className="p-0">
         <ul className="space-y-1">
-            {events.map((event, index) => (
-                <li key={index} className="flex items-center gap-4 p-3 hover:bg-muted/50 rounded-md transition-colors">
-                    <div className="flex-shrink-0 flex flex-col items-center justify-center w-16 h-16 rounded-lg bg-primary/10 text-primary">
-                       <span className="text-sm font-medium">{formattedDates[event.startDate]?.monthName || '...'}</span>
-                       <span className="text-2xl font-bold">{formattedDates[event.startDate]?.day || '...'}</span>
-                    </div>
-                    <div className="flex-grow">
-                        <p className="font-semibold text-card-foreground">{event.summary}</p>
-                         <p className="text-xs text-muted-foreground">{event.startDate}</p>
-                    </div>
-                </li>
-            ))}
+            {events.map((event, index) => {
+                // Since the API now provides the date parts directly, we use them.
+                const { day, month } = getADDateParts(event.startDate);
+                
+                return (
+                    <li key={index} className="flex items-center gap-4 p-3 hover:bg-muted/50 rounded-md transition-colors">
+                        <div className="flex-shrink-0 flex flex-col items-center justify-center w-16 h-16 rounded-lg bg-primary/10 text-primary">
+                           <span className="text-sm font-medium">{getNepaliMonthName(month) || '...'}</span>
+                           <span className="text-2xl font-bold">{getNepaliNumber(day) || '...'}</span>
+                        </div>
+                        <div className="flex-grow">
+                            <p className="font-semibold text-card-foreground">{event.summary}</p>
+                             {event.isHoliday && <Badge variant="destructive" className="mt-1">Holiday</Badge>}
+                        </div>
+                    </li>
+                );
+            })}
         </ul>
     </div>
   );
