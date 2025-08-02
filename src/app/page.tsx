@@ -41,33 +41,41 @@ export default function Home() {
   const [location, setLocation] = useState<{ country: string | null }>({ country: null });
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [festivals, setFestivals] = useState<Festival[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingNews, setLoadingNews] = useState(true);
+  const [loadingFestivals, setLoadingFestivals] = useState(true);
   const [navLinks, setNavLinks] = useState<string[]>(initialNavLinks);
   const [logoUrl, setLogoUrl] = useState("https://placehold.co/200x50.png");
 
   const isNepal = useMemo(() => location.country === 'Nepal', [location.country]);
 
   useEffect(() => {
-    const fetchData = async (country: string) => {
-      setLoading(true);
+    const fetchNewsAndFestivals = async (country: string) => {
+      setLoadingNews(true);
+      setLoadingFestivals(true);
       try {
-        const [newsData, festivalData] = await Promise.all([
-          getNews(country),
-          getFestivals(country)
-        ]);
+        const newsPromise = getNews(country);
+        const festivalPromise = getFestivals(country);
+
+        const newsData = await newsPromise;
         setNewsItems(newsData.headlines);
+        setLoadingNews(false);
+
+        const festivalData = await festivalPromise;
         setFestivals(festivalData.festivals);
+        setLoadingFestivals(false);
+        
       } catch (error) {
         console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
+        setLoadingNews(false);
+        setLoadingFestivals(false);
       }
     };
 
     if (location.country) {
-      fetchData(location.country);
+      fetchNewsAndFestivals(location.country);
     } else {
-        setLoading(false);
+      setLoadingNews(false);
+      setLoadingFestivals(false);
     }
   }, [location.country]);
 
@@ -94,7 +102,7 @@ export default function Home() {
           <h3 className="text-lg font-semibold mb-3 text-white dark:text-gray-200 bg-black/50 p-2 rounded">
             News Bulletin {location.country ? `from ${location.country}` : 'Headlines'}
           </h3>
-            {loading && !newsItems.length ? (
+            {loadingNews && !newsItems.length ? (
                 <div className="flex space-x-4 overflow-x-auto pb-4">
                     {[...Array(8)].map((_, index) => (
                         <div key={index} className="flex-shrink-0 w-48 bg-card/80 rounded-lg shadow-md overflow-hidden animate-pulse">
@@ -145,7 +153,7 @@ export default function Home() {
                       <DateConverter />
                     </TabsContent>
                     <TabsContent value="festivals" className="mt-6">
-                      {loading ? (
+                      {loadingFestivals ? (
                          <div className="space-y-2">
                             {[...Array(5)].map((_, i) => (
                                <div key={i} className="h-16 bg-muted/50 rounded animate-pulse" />
