@@ -48,6 +48,13 @@ const formatUpcomingEventDate = (date: Date) => {
     return format(date, "do MMMM");
 };
 
+type UpcomingEvent = {
+    day: string;
+    month: string;
+    title: string;
+    fullDate: string;
+};
+
 export default function Home() {
   const [location, setLocation] = useState<{ country: string | null }>({ country: null });
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
@@ -56,6 +63,7 @@ export default function Home() {
   const [loadingFestivals, setLoadingFestivals] = useState(true);
   const [settings, setSettings] = useState<Settings>({ logoUrl: "https://placehold.co/200x50.png", navLinks: [] });
   const [loadingSettings, setLoadingSettings] = useState(true);
+  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -76,26 +84,29 @@ export default function Home() {
 
   const isNepal = useMemo(() => location.country === 'Nepal', [location.country]);
   
-  const upcomingEvents = useMemo(() => {
-    if (!festivals) return [];
-    
-    const now = new Date();
-    
-    return festivals
-        .map(festival => ({
-            ...festival,
-            parsedDate: parseFestivalDate(festival.gregorianStartDate),
-        }))
-        .filter(event => event.parsedDate && differenceInDays(event.parsedDate, now) >= 0)
-        .sort((a, b) => a.parsedDate!.getTime() - b.parsedDate!.getTime())
-        .slice(0, 5)
-        .map(event => ({
-            day: format(event.parsedDate!, 'dd'),
-            month: format(event.parsedDate!, 'MMM'),
-            title: event.name,
-            fullDate: formatUpcomingEventDate(event.parsedDate!),
-        }));
-
+  useEffect(() => {
+    if (festivals.length > 0) {
+      const now = new Date();
+      
+      const events = festivals
+          .map(festival => ({
+              ...festival,
+              parsedDate: parseFestivalDate(festival.gregorianStartDate),
+          }))
+          .filter(event => event.parsedDate && differenceInDays(event.parsedDate, now) >= 0)
+          .sort((a, b) => a.parsedDate!.getTime() - b.parsedDate!.getTime())
+          .slice(0, 5)
+          .map(event => ({
+              day: format(event.parsedDate!, 'dd'),
+              month: format(event.parsedDate!, 'MMM'),
+              title: event.name,
+              fullDate: formatUpcomingEventDate(event.parsedDate!),
+          }));
+        
+        setUpcomingEvents(events);
+    } else {
+        setUpcomingEvents([]);
+    }
   }, [festivals]);
 
 

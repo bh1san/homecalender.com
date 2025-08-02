@@ -18,10 +18,13 @@ const quotes = [
 ];
 
 export default function MotivationalQuote() {
-  const [currentQuote, setCurrentQuote] = useState(quotes[0]);
+  const [currentQuote, setCurrentQuote] = useState("");
   const [isFading, setIsFading] = useState(false);
 
   useEffect(() => {
+    // Set initial quote on client-side
+    setCurrentQuote(quotes[Math.floor(Math.random() * quotes.length)]);
+
     const intervalId = setInterval(() => {
       setIsFading(true);
       setTimeout(() => {
@@ -37,6 +40,12 @@ export default function MotivationalQuote() {
 
     return () => clearInterval(intervalId);
   }, [currentQuote]);
+
+  if (!currentQuote) {
+    return (
+        <div className="w-[400px] h-[100px] flex items-center justify-center bg-black/20 rounded-lg p-4 text-center overflow-hidden" />
+    );
+  }
 
   return (
     <div className="w-[400px] h-[100px] flex items-center justify-center bg-black/20 rounded-lg p-4 text-center overflow-hidden">
