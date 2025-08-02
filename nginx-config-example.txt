@@ -1,22 +1,33 @@
-# This is an example Nginx configuration file for your Next.js application.
-# You would typically save a file like this on your DigitalOcean server at:
-# /etc/nginx/sites-available/homecalender.com
-#
-# Then, you would create a symbolic link to it in the sites-enabled directory:
-# sudo ln -s /etc/nginx/sites-available/homecalender.com /etc/nginx/sites-enabled/
-#
-# Finally, test the configuration and reload Nginx:
-# sudo nginx -t
-# sudo systemctl reload nginx
+# This is an example Nginx configuration file for your Next.js application
+# after setting up SSL with Certbot. Certbot will typically make these
+# changes for you automatically.
 
+# This first server block handles HTTP traffic on port 80.
+# Certbot usually modifies it to redirect all traffic to HTTPS.
 server {
-    # Listen on port 80 for http traffic.
-    # The 'listen [::]:80;' line is for IPv6.
     listen 80;
     listen [::]:80;
-
-    # Replace 'homecalender.com' with your actual domain name.
     server_name homecalender.com www.homecalender.com;
+
+    # This line, added by Certbot, performs the 301 redirect to HTTPS.
+    return 301 https://$host$request_uri;
+}
+
+# This second server block handles the secure HTTPS traffic on port 443.
+server {
+    # Listen on port 443 for https traffic.
+    listen 443 ssl;
+    listen [::]:443 ssl;
+
+    server_name homecalender.com www.homecalender.com;
+
+    # These lines specify the path to the SSL certificate and private key.
+    # Certbot will generate these and fill in the paths for you.
+    ssl_certificate /etc/letsencrypt/live/homecalender.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/homecalender.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
 
     # This block handles the reverse proxy. It passes requests to your
     # Next.js application, which you have running on port 3000 with pm2.
