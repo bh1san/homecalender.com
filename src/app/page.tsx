@@ -231,7 +231,11 @@ export default function Home() {
           <div className="lg:col-span-3 space-y-8">
             <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
                 <CardContent className="p-2 sm:p-4">
-                     <NepaliCalendar today={patroData?.today} />
+                     <NepaliCalendar 
+                        today={patroData?.today} 
+                        monthEvents={patroData?.monthEvents} 
+                        isLoading={loading} 
+                    />
                 </CardContent>
               </Card>
 
@@ -313,5 +317,3 @@ function Header({ navLinks, logoUrl, isLoading }: { navLinks: string[], logoUrl:
         </header>
     )
 }
-
-    

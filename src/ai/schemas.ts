@@ -129,6 +129,7 @@ export const PatroDataResponseSchema = z.object({
     goldSilver: GoldSilverSchema.nullable(),
     forex: z.array(ForexSchema),
     today: CurrentDateInfoResponseSchema.nullable(),
+    monthEvents: z.array(CalendarEventSchema).optional(),
     upcomingEvents: z.array(UpcomingEventSchema),
 });
 export type PatroDataResponse = z.infer<typeof PatroDataResponseSchema>;

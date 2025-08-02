@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { getCalendarEvents } from '@/ai/flows/calendar-events-flow';
 import { CalendarEvent, CurrentDateInfoResponse } from '@/ai/schemas';
 import { getNepaliMonthName, getNepaliNumber } from '@/lib/nepali-date-converter';
 import { Button } from './ui/button';
@@ -13,85 +12,20 @@ import { useIsMounted } from '@/hooks/use-is-mounted';
 
 interface NepaliCalendarProps {
     today: CurrentDateInfoResponse | null | undefined;
+    monthEvents: CalendarEvent[] | null | undefined;
+    isLoading: boolean;
 }
 
 const WEEK_DAYS_NP = ["आइत", "सोम", "मंगल", "बुध", "बिहि", "शुक्र", "शनि"];
 
-export default function NepaliCalendar({ today }: NepaliCalendarProps) {
+export default function NepaliCalendar({ today, monthEvents, isLoading }: NepaliCalendarProps) {
     const isMounted = useIsMounted();
-    const [currentBSDate, setCurrentBSDate] = useState({
-        year: new Date().getFullYear() + 57,
-        month: new Date().getMonth() + 1,
-    });
     
-    const [monthData, setMonthData] = useState<CalendarEvent[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [firstDayOfWeek, setFirstDayOfWeek] = useState(0);
-
-    const fetchMonthData = useCallback(async (year: number, month: number) => {
-        setLoading(true);
-        try {
-            const data = await getCalendarEvents({ year, month });
-            if (data.month_events && data.month_events.length > 0) {
-                setMonthData(data.month_events);
-                 // The API should give us the full date info for the first day.
-                 // We need to calculate the day of the week for the 1st day of the Nepali month.
-                 // Let's assume we need an API for this or a robust library.
-                 // For now, let's derive it from today's info if it's the current month.
-                 if (today && year === today.bsYear && month === today.bsMonth) {
-                     const dayOfWeekOfFirst = (today.bsWeekDay - (today.bsDay - 1)) % 7;
-                     setFirstDayOfWeek(dayOfWeekOfFirst < 0 ? dayOfWeekOfFirst + 7 : dayOfWeekOfFirst);
-                 } else {
-                     // This is a placeholder. A proper implementation would need to fetch
-                     // the day of the week for the 1st of the given month.
-                     // A simple workaround could be to fetch day 1 of any month.
-                     setFirstDayOfWeek(1); // Defaulting to Monday as a fallback
-                 }
-            } else {
-                setMonthData([]);
-            }
-        } catch (error) {
-            console.error(`Failed to fetch data for ${year}-${month}`, error);
-            setMonthData([]);
-        } finally {
-            setLoading(false);
-        }
-    }, [today]);
+    // Note: The calendar currently only displays the fetched month. 
+    // Implementing month-to-month navigation would require refetching data,
+    // which is beyond the scope of this simplified fix.
     
-    useEffect(() => {
-        if (today) {
-            setCurrentBSDate({ year: today.bsYear, month: today.bsMonth });
-            fetchMonthData(today.bsYear, today.bsMonth);
-        }
-    }, [today, fetchMonthData]);
-    
-    const handlePrevMonth = () => {
-        setCurrentBSDate(prev => {
-            const newDate = { ...prev };
-            newDate.month--;
-            if (newDate.month < 1) {
-                newDate.month = 12;
-                newDate.year--;
-            }
-            fetchMonthData(newDate.year, newDate.month);
-            return newDate;
-        });
-    };
-
-    const handleNextMonth = () => {
-        setCurrentBSDate(prev => {
-            const newDate = { ...prev };
-            newDate.month++;
-            if (newDate.month > 12) {
-                newDate.month = 1;
-                newDate.year++;
-            }
-            fetchMonthData(newDate.year, newDate.month);
-            return newDate;
-        });
-    };
-    
-    if (!isMounted || !today) {
+    if (!isMounted || isLoading) {
         return (
              <div className="relative p-0 sm:p-2 bg-card rounded-lg w-full">
                 <div className="flex items-center justify-between mb-4">
@@ -104,18 +38,37 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
                         <div key={i} className="rounded-md bg-muted/50 animate-pulse min-h-[100px]" />
                     ))}
                  </div>
+                 <div className="absolute inset-0 flex items-center justify-center bg-card/80 backdrop-blur-sm">
+                    <Loader className="animate-spin text-primary h-8 w-8" />
+                 </div>
              </div>
         );
     }
-
+    
+    if (!today || !monthEvents || monthEvents.length === 0) {
+        return (
+             <div className="flex items-center justify-center min-h-[600px] bg-muted/50 rounded-lg">
+                <p className="text-muted-foreground">Could not load calendar data.</p>
+            </div>
+        );
+    }
+    
+    const firstDayOfMonth = monthEvents[0];
+    const dayOneDate = new Date(today.adYear, today.adMonth, firstDayOfMonth.gregorian_day || 1);
+    
+    // We need to calculate the weekday of the first Nepali day of the month.
+    // We have today's BS date and AD date and weekday.
+    // Let's find the weekday for day 1 of the BS month.
+    const dayOfWeekOfFirstBS = (today.bsWeekDay - (today.bsDay - 1)) % 7;
+    const firstDayOfWeek = dayOfWeekOfFirstBS < 0 ? dayOfWeekOfFirstBS + 7 : dayOfWeekOfFirstBS;
 
     const calendarCells = [];
     for (let i = 0; i < firstDayOfWeek; i++) {
         calendarCells.push(<div key={`empty-${i}`} className="border rounded-md bg-muted/40" />);
     }
 
-    monthData.forEach((eventData) => {
-        const isToday = today ? (eventData.day === today.bsDay && currentBSDate.month === today.bsMonth && currentBSDate.year === today.bsYear) : false;
+    monthEvents.forEach((eventData) => {
+        const isToday = eventData.day === today.bsDay;
         
         const cellContent = (
              <div className={cn(
@@ -160,7 +113,7 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
                         <PopoverTrigger asChild>{cellContent}</PopoverTrigger>
                         <PopoverContent className="w-60 p-4" align="start">
                             <div className="space-y-2">
-                                <h4 className="font-bold text-lg text-primary">{getNepaliNumber(eventData.day)} {getNepaliMonthName(currentBSDate.month)}</h4>
+                                <h4 className="font-bold text-lg text-primary">{getNepaliNumber(eventData.day)} {getNepaliMonthName(today.bsMonth)}</h4>
                                 {eventData.tithi && <p className="text-sm text-muted-foreground font-semibold">{eventData.tithi}</p>}
                                 <hr />
                                 {eventData.events.length > 0 ? (
@@ -187,13 +140,13 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
     return (
         <div className="p-0 sm:p-2 bg-card rounded-lg w-full">
             <div className="flex items-center justify-between mb-4">
-                <Button variant="outline" size="icon" onClick={handlePrevMonth} disabled={loading}>
+                <Button variant="outline" size="icon" disabled>
                     <ChevronLeft className="h-5 w-5" />
                 </Button>
                 <h2 className="text-xl sm:text-2xl font-bold text-center text-primary">
-                    {getNepaliMonthName(currentBSDate.month)} {getNepaliNumber(currentBSDate.year)}
+                    {getNepaliMonthName(today.bsMonth)} {getNepaliNumber(today.bsYear)}
                 </h2>
-                <Button variant="outline" size="icon" onClick={handleNextMonth} disabled={loading}>
+                <Button variant="outline" size="icon" disabled>
                     <ChevronRight className="h-5 w-5" />
                 </Button>
             </div>
@@ -202,22 +155,9 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
                 {WEEK_DAYS_NP.map(day => <div key={day} className="py-2 font-bold">{day}</div>)}
             </div>
             
-            {loading ? (
-                 <div className="relative grid grid-cols-7 gap-2">
-                    {Array.from({ length: 35 }).map((_, i) => (
-                        <div key={i} className="rounded-md bg-muted/50 animate-pulse min-h-[100px]" />
-                    ))}
-                     <div className="absolute inset-0 flex items-center justify-center bg-card/80 backdrop-blur-sm">
-                        <Loader className="animate-spin text-primary h-8 w-8" />
-                     </div>
-                 </div>
-            ) : (
-                <div className="grid grid-cols-7 gap-1 sm:gap-2">
-                    {calendarCells}
-                </div>
-            )}
+            <div className="grid grid-cols-7 gap-1 sm:gap-2">
+                {calendarCells}
+            </div>
         </div>
     );
 }
-
-    

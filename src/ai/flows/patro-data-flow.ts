@@ -2,7 +2,7 @@
 'use server';
 /**
  * @fileOverview A flow for fetching data like horoscopes, gold/silver prices, and forex rates using Genkit AI.
- * It also fetches today's date info and upcoming events from the Nepali Calendar API.
+ * It also fetches today's date info and all calendar event data for the current month from the Nepali Calendar API.
  *
  * - getPatroData - A function that fetches all daily data for the app.
  */
@@ -14,10 +14,10 @@ import {
   HoroscopeSchema,
   GoldSilverSchema,
   ForexSchema,
-  UpcomingEventSchema,
-  CurrentDateInfoResponse
+  CurrentDateInfoResponse,
+  CalendarEventSchema
 } from '@/ai/schemas';
-import { getTodaysInfoFromApi } from '@/services/nepali-date';
+import { getTodaysInfoFromApi, getEventsForMonthFromApi } from '@/services/nepali-date';
 
 // In-memory cache for patro data, specific to Nepal
 let patroDataCache: PatroDataResponse | null = null;
@@ -57,54 +57,66 @@ const patroDataFlow = ai.defineFlow(
 
     console.log("Fetching data from APIs and AI...");
     
-    // Fetch from API and Scraper in parallel
-    const [apiData, scraperResponse] = await Promise.all([
-      getTodaysInfoFromApi().catch(e => {
+    let today: CurrentDateInfoResponse | null = null;
+    let monthEvents: z.infer<typeof CalendarEventSchema>[] = [];
+    
+    // Fetch today's info first to determine the current month
+    const todayApiData = await getTodaysInfoFromApi().catch(e => {
         console.error("API call to getTodaysInfoFromApi failed:", e);
         return null;
-      }),
-      scraperPrompt().then(r => r.output).catch(e => {
-        console.error("AI call to scraperPrompt failed:", e);
-        return null;
-      }),
-    ]);
+    });
 
-    let today: CurrentDateInfoResponse | null = null;
-    let upcomingEvents: z.infer<typeof UpcomingEventSchema>[] = [];
-    
-    if (apiData) {
-        const adWeekDay = apiData.ad_day_of_week_en - 1;
+    if (todayApiData) {
+        const adWeekDay = todayApiData.ad_day_of_week_en - 1;
         today = {
-            bsYear: apiData.bs_year_en,
-            bsMonth: apiData.bs_month_code_en,
-            bsDay: apiData.bs_day_en,
-            bsWeekDay: adWeekDay,
-            adYear: apiData.ad_year_en,
-            adMonth: apiData.ad_month_code_en - 1,
-            adDay: apiData.ad_day_en,
-            day: apiData.bs_day_en,
-            tithi: apiData.tithi.tithi_name_np,
-            events: apiData.events.map(e => e.event_title_np).filter((e): e is string => !!e),
-            is_holiday: apiData.is_holiday,
-            panchanga: apiData.panchanga.panchanga_np,
+            bsYear: todayApiData.bs_year_en,
+            bsMonth: todayApiData.bs_month_code_en,
+            bsDay: todayApiData.bs_day_en,
+            bsWeekDay: adWeekDay < 0 ? 6 : adWeekDay,
+            adYear: todayApiData.ad_year_en,
+            adMonth: todayApiData.ad_month_code_en - 1, // Their API is 1-12, JS is 0-11
+            adDay: todayApiData.ad_day_en,
+            day: todayApiData.bs_day_en,
+            tithi: todayApiData.tithi.tithi_name_np,
+            events: todayApiData.events.map(e => e.event_title_np).filter((e): e is string => !!e),
+            is_holiday: todayApiData.is_holiday,
+            panchanga: todayApiData.panchanga.panchanga_np,
         };
 
-        upcomingEvents = apiData.events
-            .filter((e): e is { event_title_np: string; event_title_en: string; is_public_holiday: boolean } => !!e.event_title_np && !!e.event_title_en)
-            .map(e => ({
-                summary: e.event_title_np,
-                startDate: `${apiData.ad_year_en}-${String(apiData.ad_month_code_en).padStart(2, '0')}-${String(apiData.ad_day_en).padStart(2, '0')}`,
-                isHoliday: e.is_public_holiday,
-            }))
-            .slice(0, 8);
+        // Now fetch the entire month's data
+        const monthApiData = await getEventsForMonthFromApi(today.bsYear, today.bsMonth).catch(e => {
+            console.error(`API call to getEventsForMonthFromApi for ${today?.bsYear}-${today?.bsMonth} failed:`, e);
+            return []; // Return empty array on failure
+        });
+        
+        if (monthApiData.length > 0) {
+           monthEvents = monthApiData.map(day => ({
+              day: day.bs_day_en,
+              gregorian_day: day.ad_day_en,
+              tithi: day.tithi.tithi_name_np,
+              events: day.events.map(e => e.event_title_np).filter((e): e is string => !!e),
+              is_holiday: day.is_holiday,
+              panchanga: day.panchanga.panchanga_np,
+          }));
+        }
     }
+
+    const scraperResponse = await scraperPrompt().then(r => r.output).catch(e => {
+        console.error("AI call to scraperPrompt failed:", e);
+        return null;
+    });
     
     const response: PatroDataResponse = {
         horoscope: scraperResponse?.horoscope || [],
         goldSilver: scraperResponse?.goldSilver || null,
         forex: scraperResponse?.forex || [],
         today: today,
-        upcomingEvents: upcomingEvents,
+        monthEvents: monthEvents, // Add month events to the response
+        upcomingEvents: today ? today.events.map(event => ({
+            summary: event,
+            startDate: `${today?.adYear}-${String(today?.adMonth + 1).padStart(2, '0')}-${String(today?.adDay).padStart(2, '0')}`,
+            isHoliday: false // This info might not be directly available for all events here
+        })).slice(0, 8) : [],
     };
 
     patroDataCache = response;
