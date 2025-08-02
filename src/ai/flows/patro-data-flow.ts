@@ -51,6 +51,30 @@ const scraperPrompt = ai.definePrompt({
     `
 });
 
+const generateAllDataFromAI = async (): Promise<PatroDataResponse> => {
+    console.log("Generating all patro data using AI fallback...");
+    const aiResponse = await scraperPrompt().then(r => r.output).catch(e => {
+        console.error("AI call to scraperPrompt failed:", e);
+        return null;
+    });
+
+    if (aiResponse) {
+         return {
+            horoscope: aiResponse.horoscope,
+            goldSilver: aiResponse.goldSilver,
+            forex: aiResponse.forex,
+            today: aiResponse.today,
+            monthEvents: aiResponse.monthEvents,
+            upcomingEvents: aiResponse.upcomingEvents,
+        };
+    }
+    // If AI also fails, return an empty but valid response shape to prevent crashes
+    return {
+        horoscope: [], goldSilver: null, forex: [], today: null, monthEvents: [], upcomingEvents: []
+    };
+};
+
+
 const patroDataFlow = ai.defineFlow(
   {
     name: 'patroDataFlow',
@@ -66,17 +90,17 @@ const patroDataFlow = ai.defineFlow(
 
     console.log("Attempting to fetch data from RapidAPI...");
     
-    let today: CurrentDateInfoResponse | null = null;
-    let monthEvents: z.infer<typeof CalendarEventSchema>[] = [];
+    let todayFromApi: CurrentDateInfoResponse | null = null;
+    let monthEventsFromApi: z.infer<typeof CalendarEventSchema>[] = [];
     
     try {
         const todayApiData = await getTodaysInfoFromApi();
-        const adWeekDay = todayApiData.ad_day_of_week_en - 1; // API is 1-indexed, JS is 0-indexed
-        today = {
+        const adWeekDay = todayApiData.ad_day_of_week_en - 1;
+        todayFromApi = {
             bsYear: todayApiData.bs_year_en,
             bsMonth: todayApiData.bs_month_code_en,
             bsDay: todayApiData.bs_day_en,
-            bsWeekDay: adWeekDay < 0 ? 6 : adWeekDay, // handle Sunday case
+            bsWeekDay: adWeekDay < 0 ? 6 : adWeekDay,
             adYear: todayApiData.ad_year_en,
             adMonth: todayApiData.ad_month_code_en - 1,
             adDay: todayApiData.ad_day_en,
@@ -87,8 +111,8 @@ const patroDataFlow = ai.defineFlow(
             panchanga: todayApiData.panchanga.panchanga_np,
         };
 
-        const monthApiData = await getEventsForMonthFromApi(today.bsYear, today.bsMonth);
-        monthEvents = monthApiData.map(day => ({
+        const monthApiData = await getEventsForMonthFromApi(todayFromApi.bsYear, todayFromApi.bsMonth);
+        monthEventsFromApi = monthApiData.map(day => ({
             day: day.bs_day_en,
             gregorian_day: day.ad_day_en,
             tithi: day.tithi.tithi_name_np,
@@ -97,64 +121,36 @@ const patroDataFlow = ai.defineFlow(
             panchanga: day.panchanga.panchanga_np,
         }));
         
-        console.log("Successfully fetched data from RapidAPI.");
+        console.log("Successfully fetched calendar data from RapidAPI.");
 
     } catch (apiError) {
-        console.warn("RapidAPI call failed. Falling back to AI generation.", apiError instanceof Error ? apiError.message : apiError);
-        today = null; // Reset to ensure AI fallback is triggered
-        monthEvents = [];
+        console.warn("RapidAPI call failed. Full AI fallback will be used.", apiError instanceof Error ? apiError.message : apiError);
+        todayFromApi = null; // Nullify to ensure we trigger AI fallback
+        monthEventsFromApi = [];
     }
     
-    // If API fails or is not configured, AI generation is used as a fallback for all data.
-    if (!today || monthEvents.length === 0) {
-        console.log("Generating all patro data using AI fallback...");
-        const aiResponse = await scraperPrompt().then(r => r.output).catch(e => {
-            console.error("AI call to scraperPrompt failed:", e);
-            return null;
-        });
-
-        if (aiResponse) {
-             const response: PatroDataResponse = {
-                horoscope: aiResponse.horoscope,
-                goldSilver: aiResponse.goldSilver,
-                forex: aiResponse.forex,
-                today: aiResponse.today,
-                monthEvents: aiResponse.monthEvents,
-                upcomingEvents: aiResponse.upcomingEvents,
-            };
-            patroDataCache = response;
-            lastFetchTime = now;
-            console.log("AI data generation successful.");
-            return response;
-        } else {
-             // If AI also fails, return an empty but valid response shape to prevent crashes
-             const emptyResponse: PatroDataResponse = {
-                horoscope: [], goldSilver: null, forex: [], today: null, monthEvents: [], upcomingEvents: []
-             };
-             patroDataCache = emptyResponse;
-             lastFetchTime = now;
-             return emptyResponse;
-        }
+    // If API failed for either today or month, use AI for everything.
+    if (!todayFromApi || monthEventsFromApi.length === 0) {
+        const aiData = await generateAllDataFromAI();
+        patroDataCache = aiData;
+        lastFetchTime = now;
+        return aiData;
     }
     
-    // If API was successful, we still need to generate the rest of the data.
-    console.log("API data successful, generating remaining data from AI...");
-    const scraperResponse = await scraperPrompt().then(r => r.output).catch(e => {
+    // If API was successful, generate only the remaining data from AI.
+    console.log("API calendar data successful, generating remaining data from AI...");
+    const aiResponse = await scraperPrompt().then(r => r.output).catch(e => {
         console.error("AI call to scraperPrompt failed:", e);
-        return null; // Return null on failure
+        return null;
     });
     
     const response: PatroDataResponse = {
-        horoscope: scraperResponse?.horoscope || [],
-        goldSilver: scraperResponse?.goldSilver || null,
-        forex: scraperResponse?.forex || [],
-        today: today, // From API
-        monthEvents: monthEvents, // From API
-        upcomingEvents: scraperResponse?.upcomingEvents || (today ? today.events.map(event => ({
-            summary: event,
-            startDate: `${today?.adYear}-${String(today?.adMonth + 1).padStart(2, '0')}-${String(today?.adDay).padStart(2, '0')}`,
-            isHoliday: false
-        })).slice(0, 8) : []),
+        horoscope: aiResponse?.horoscope || [],
+        goldSilver: aiResponse?.goldSilver || null,
+        forex: aiResponse?.forex || [],
+        today: todayFromApi, // From API
+        monthEvents: monthEventsFromApi, // From API
+        upcomingEvents: aiResponse?.upcomingEvents || [],
     };
 
     patroDataCache = response;
@@ -167,3 +163,5 @@ const patroDataFlow = ai.defineFlow(
 export async function getPatroData(): Promise<PatroDataResponse> {
   return patroDataFlow();
 }
+
+    
