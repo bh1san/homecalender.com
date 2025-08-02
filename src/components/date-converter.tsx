@@ -60,8 +60,7 @@ export default function DateConverter() {
       });
 
       try {
-        const cal = NepaliCalendar;
-        const todayBS = cal.toBS(today);
+        const todayBS = NepaliCalendar.toBS(today);
         setNepaliDate({
             year: String(todayBS.bs_year),
             month: String(todayBS.bs_month),
@@ -81,8 +80,7 @@ export default function DateConverter() {
     }
     setIsConvertingAD(true);
     try {
-        const cal = NepaliCalendar;
-        const bsDate = cal.adToBs(parseInt(year), parseInt(month), parseInt(day));
+        const bsDate = NepaliCalendar.adToBs(parseInt(year), parseInt(month), parseInt(day));
         const monthName = nepaliMonths[bsDate.bs_month - 1];
         setNepaliResult(`${bsDate.bs_date} ${monthName}, ${bsDate.bs_year}`);
     } catch (e) {
@@ -102,8 +100,7 @@ export default function DateConverter() {
     }
     setIsConvertingBS(true);
     try {
-        const cal = NepaliCalendar;
-        const adDate = cal.bsToAd(parseInt(year), parseInt(month), parseInt(day));
+        const adDate = NepaliCalendar.bsToAd(parseInt(year), parseInt(month), parseInt(day));
         const monthName = gregorianMonths[adDate.ad_month - 1];
         setGregorianResult(`${adDate.ad_date} ${monthName}, ${adDate.ad_year}`);
     } catch (e) {
@@ -118,11 +115,11 @@ export default function DateConverter() {
   if (!isMounted) {
     return (
         <div className="space-y-8">
-            <Card className="h-52 w-full animate-pulse bg-muted/50" />
+            <div className="h-52 w-full animate-pulse bg-muted/50 rounded-lg" />
             <div className="relative flex justify-center">
                 <Separator className="absolute inset-x-0 top-1/2" />
             </div>
-            <Card className="h-52 w-full animate-pulse bg-muted/50" />
+            <div className="h-52 w-full animate-pulse bg-muted/50 rounded-lg" />
         </div>
     );
   }

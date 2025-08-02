@@ -27,8 +27,7 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
 
     // Use the library on the client-side to get the most accurate date
     try {
-        const cal = NepaliCalendar; // Use the imported object directly
-        const bsDate = cal.toBS(new Date());
+        const bsDate = NepaliCalendar.toBS(new Date());
         
         setClientToday({
             bsYear: bsDate.bs_year,
