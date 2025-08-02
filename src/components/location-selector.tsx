@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -36,7 +37,7 @@ export default function LocationSelector({ onLocationChange }: LocationSelectorP
     if (isMounted) {
       onLocationChange(selectedCountry);
     }
-  }, [selectedCountry, onLocationChange, isMounted]);
+  }, [selectedCountry, isMounted]);
 
   const handleCountryChange = (country: string) => {
     setSelectedCountry(country);
