@@ -76,7 +76,7 @@ export default function Home() {
       <Header navLinks={navLinks} logoUrl={logoUrl} />
       <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 bg-accent/90 text-white p-4 rounded-lg shadow-md items-center">
-            <CurrentDateTime />
+            <CurrentDateTime country={location.country} />
             <div className="hidden sm:flex justify-end">
                 <Image src="https://placehold.co/400x100.png" alt="Ad Banner" width={400} height={100} data-ai-hint="game banner" className="rounded-md" />
             </div>
@@ -251,5 +251,3 @@ function Header({ navLinks, logoUrl }: { navLinks: string[], logoUrl: string }) 
         </header>
     )
 }
-
-    
