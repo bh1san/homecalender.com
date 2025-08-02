@@ -4,6 +4,7 @@
  * @fileOverview A flow for fetching events for a specific month of the Nepali calendar.
  *
  * - getCalendarEvents - A function that fetches events, tithis, and holidays.
+ * - getCurrentDateInfo - A function that fetches the current date's full information.
  */
 
 import {ai} from '@/ai/genkit';
@@ -105,7 +106,23 @@ const currentDateInfoFlow = ai.defineFlow(
     // 5. Find today's event from the list
     const todayEvent = monthOutput.month_events.find(e => e.day === bsDate.day);
     if (!todayEvent) {
-      throw new Error('Could not find event info for the current date.');
+      // This should ideally not happen if the prompt returns data for all days
+      // For now, let's create a minimal response to avoid crashing the client
+      console.warn(`Could not find event info for the current date: ${bsDate.day}/${bsDate.month}/${bsDate.year}`);
+       return {
+        bsYear: bsDate.year,
+        bsMonth: bsDate.month,
+        bsDay: bsDate.day,
+        bsWeekDay: bsDate.weekDay,
+        adYear: nowInKathmandu.getFullYear(),
+        adMonth: nowInKathmandu.getMonth(),
+        adDay: nowInKathmandu.getDate(),
+        day: bsDate.day,
+        tithi: 'अज्ञात',
+        events: [],
+        is_holiday: false,
+        panchanga: ''
+      };
     }
     
     // 6. Return today's complete information

@@ -3,6 +3,10 @@ import { NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 
+// Force dynamic rendering, which will prevent caching of the response.
+// This is important to ensure the calendar data is always fresh.
+export const dynamic = 'force-dynamic';
+
 const settingsFilePath = path.join(process.cwd(), 'data', 'settings.json');
 const dataDir = path.join(process.cwd(), 'data');
 
