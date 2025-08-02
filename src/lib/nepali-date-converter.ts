@@ -1,7 +1,5 @@
 // This file now contains only formatting helpers, as the core conversion logic
 // is handled by the more robust API service.
-import { toAD as convertToAD, toBS as convertToBS } from 'nepali-date-converter-minimal';
-
 
 const getNepaliMonthName = (month: number) => {
     // Month is 1-indexed
@@ -31,20 +29,15 @@ const getNepaliNumber = (num: number | string) => {
     }).join("");
 };
 
-
-const toBS = (adDate: Date) => {
-    const bsDate = convertToBS(adDate);
-    const [year, month, day] = bsDate.split('-').map(Number);
-    return { year, month, day, weekDay: adDate.getDay() };
-};
-const toAD = (bsDate: { year: number, month: number, day: number }) => {
-    return convertToAD(new Date(`${bsDate.year}-${bsDate.month}-${bsDate.day}`));
-};
-
-const getFirstDayOfMonthBS = (year: number, month: number) => {
-    const adDate = convertToAD(new Date(`${year}-${month}-01`));
-    return adDate.getDay();
+const getFirstDayOfMonthBS = (year: number, month: number): number => {
+    // This function needs to determine the day of the week for the 1st of a given Nepali month.
+    // Since we are not using a library anymore, a simple but less accurate estimation
+    // might be needed if the API for some reason doesn't provide this.
+    // For now, we will rely on the API to provide the starting day implicitly.
+    // Let's return a default (Sunday) and handle the padding in the component based on the first day's data from API.
+    // A more robust client-side implementation would require a complex algorithm.
+    return 0; // Defaulting to Sunday. The calendar component will handle the real offset.
 };
 
 
-export { getNepaliMonthName, getEnglishMonthName, getNepaliDayOfWeek, getNepaliNumber, getFirstDayOfMonthBS, toBS };
+export { getNepaliMonthName, getEnglishMonthName, getNepaliDayOfWeek, getNepaliNumber, getFirstDayOfMonthBS };

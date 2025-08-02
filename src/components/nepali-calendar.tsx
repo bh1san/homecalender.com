@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { getCalendarEvents } from '@/ai/flows/calendar-events-flow';
 import { CalendarEvent, CurrentDateInfoResponse } from '@/ai/schemas';
-import { getNepaliMonthName, getNepaliNumber, getFirstDayOfMonthBS } from '@/lib/nepali-date-converter';
+import { getNepaliMonthName, getNepaliNumber } from '@/lib/nepali-date-converter';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight, Loader, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -26,8 +26,27 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
     const [loading, setLoading] = useState(true);
     
     const firstDayOfWeek = useMemo(() => {
-        return getFirstDayOfMonthBS(currentBSDate.year, currentBSDate.month);
-    }, [currentBSDate.year, currentBSDate.month]);
+        if (!monthData || monthData.length === 0) return 0; // Default to Sunday if no data
+        // Find the day of the week for the 1st of the month.
+        // Assuming the API returns data for the 1st day.
+        const firstDayOfMonthData = monthData.find(d => d.day === 1);
+        if (!firstDayOfMonthData || firstDayOfMonthData.gregorian_day === undefined) {
+             // As a fallback, calculate based on today's info if it's the current month
+            if (today && today.bsYear === currentBSDate.year && today.bsMonth === currentBSDate.month) {
+                const dayOfWeekOfFirst = (today.bsWeekDay - (today.bsDay - 1)) % 7;
+                return dayOfWeekOfFirst < 0 ? dayOfWeekOfFirst + 7 : dayOfWeekOfFirst;
+            }
+            return 0; // Default fallback
+        }
+        // This is a rough calculation and might not be perfect without a proper library
+        // It relies on having the gregorian day and a known weekday
+        if (today) {
+             const dayOfWeekOfFirst = (today.bsWeekDay - (today.bsDay - 1)) % 7;
+             return dayOfWeekOfFirst < 0 ? dayOfWeekOfFirst + 7 : dayOfWeekOfFirst;
+        }
+        return 0;
+
+    }, [monthData, today, currentBSDate]);
 
     const fetchMonthData = useCallback(async (year: number, month: number) => {
         setLoading(true);

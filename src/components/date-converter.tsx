@@ -103,6 +103,7 @@ export default function DateConverter() {
             <ArrowRightLeft className="mr-2 h-4 w-4" />
              Convert to Nepali
           </Button>
+          {isConvertingAD && <FlagLoader />}
           {nepaliResult && (
             <div className="rounded-md bg-accent/20 p-3 text-center font-medium text-primary">
               <p>Nepali Date: <span className="font-bold">{nepaliResult}</span></p>
@@ -149,6 +150,7 @@ export default function DateConverter() {
             <ArrowRightLeft className="mr-2 h-4 w-4" />
             Convert to Gregorian
           </Button>
+          {isConvertingBS && <FlagLoader />}
           {gregorianResult && (
             <div className="rounded-md bg-accent/20 p-3 text-center font-medium text-primary">
                <p>Gregorian Date: <span className="font-bold">{gregorianResult}</span></p>
