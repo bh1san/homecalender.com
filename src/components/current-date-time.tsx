@@ -9,19 +9,21 @@ interface CurrentDateTimeProps {
   country: string | null;
 }
 
-const toNepaliNumber = (num: number) => {
+const toNepaliNumber = (num: number | string) => {
     const nepaliDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
-    return String(num).split("").map(digit => nepaliDigits[parseInt(digit)]).join("");
+    return String(num).split("").map(char => {
+        if (!isNaN(parseInt(char))) {
+            return nepaliDigits[parseInt(char)];
+        }
+        return char;
+    }).join("");
 }
-
-const nepaliWeekdays = ["आइतवार", "सोमवार", "मङ्गलवार", "बुधवार", "बिहिवार", "शुक्रवार", "शनिवार"];
 
 export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
   const [dateTime, setDateTime] = useState<{
       timeString: string, 
       dateString: string,
       nepaliDate: DateConversionOutput | null,
-      nepaliWeekday: string,
     } | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -34,16 +36,14 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
     const fetchDateAndTime = async () => {
         setLoading(true);
         try {
-            // Using a public timezone API. In a real app, this might be a paid service or a more comprehensive library.
             const tzResponse = await fetch(`https://worldtimeapi.org/api/timezone/${countryToTimezone(country)}`);
             if (!tzResponse.ok) throw new Error('Failed to fetch timezone.');
             
             const timeData = await tzResponse.json();
-            const now = new Date(timeData.utc_datetime);
+            const now = new Date(timeData.datetime);
 
             const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
             const dateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            const nepaliWeekday = nepaliWeekdays[now.getDay()];
 
             if (country === 'Nepal') {
                 const result = await convertDate({
@@ -52,17 +52,16 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
                     month: now.getMonth() + 1,
                     day: now.getDate()
                 });
-                setDateTime({ timeString, dateString, nepaliDate: result, nepaliWeekday });
+                setDateTime({ timeString, dateString, nepaliDate: result });
             } else {
-                 setDateTime({ timeString, dateString, nepaliDate: null, nepaliWeekday });
+                 setDateTime({ timeString, dateString, nepaliDate: null });
             }
         } catch (error) {
             console.error("Failed to fetch date and time", error);
-            // Fallback to local time if API fails
             const now = new Date();
             const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
             const dateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            setDateTime({ timeString, dateString, nepaliDate: null, nepaliWeekday: '' });
+            setDateTime({ timeString, dateString, nepaliDate: null });
         } finally {
             setLoading(false);
         }
@@ -71,7 +70,6 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
     fetchDateAndTime();
   }, [country]);
 
-  // A helper to map country to a major timezone. Not exhaustive.
   const countryToTimezone = (countryName: string) => {
       const map: { [key: string]: string } = {
           'Nepal': 'Asia/Kathmandu',
@@ -82,7 +80,7 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
           'Canada': 'America/Toronto',
           'Japan': 'Asia/Tokyo',
       };
-      return map[countryName] || 'Etc/UTC'; // Default to UTC
+      return map[countryName] || 'Etc/UTC';
   }
 
 
@@ -98,25 +96,26 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
     );
   }
 
-  const { timeString, dateString, nepaliDate, nepaliWeekday } = dateTime;
+  const { timeString, dateString, nepaliDate } = dateTime;
   
   const isNepal = country === 'Nepal';
 
   const mainDateString = isNepal && nepaliDate 
-    ? `${toNepaliNumber(nepaliDate.day)} ${nepaliDate.month} ${toNepaliNumber(nepaliDate.year)}, ${nepaliWeekday}` 
+    ? `${toNepaliNumber(nepaliDate.day)} ${nepaliDate.month} ${toNepaliNumber(nepaliDate.year)}, ${nepaliDate.weekday}`
     : dateString;
-
-  const secondaryLine1 = isNepal ? 'साउन कृष्ण पञ्चमी' : `Local Time`;
-  const secondaryLine2 = isNepal ? 'पञ्चाङ्गः सौभाग्य कौलव शतभिषा' : ` `;
-
+    
+  const nepaliTimeParts = timeString.split(':');
+  const nepaliTimeString = toNepaliNumber(`${nepaliTimeParts[0]}:${nepaliTimeParts[1].substring(0,2)}`);
+  const timeSuffix = timeString.slice(-2);
+  const localizedTimePrefix = timeSuffix === 'AM' ? 'बिहानको' : 'बेलुकीको';
 
   return (
     <div>
         <h1 className="text-3xl font-bold">{mainDateString}</h1>
-        <p className="text-sm">{secondaryLine1}</p>
-        <p className="text-sm">{secondaryLine2}</p>
+        {isNepal && nepaliDate && <p className="text-sm">साउन शुक्ल अष्टमी</p>}
+        {isNepal && nepaliDate && <p className="text-sm">पञ्चाङ्गः शुभ बव विशाखा</p>}
         <p className="text-sm">
-            {isNepal ? `बिहानको ${timeString}` : timeString}
+            {isNepal ? `${localizedTimePrefix} ${nepaliTimeString}` : timeString}
         </p>
         {isNepal && <p className="text-sm mt-1">{dateString}</p>}
     </div>

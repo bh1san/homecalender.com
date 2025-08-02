@@ -23,19 +23,19 @@ const prompt = ai.definePrompt({
   name: 'calendarEventsPrompt',
   input: {schema: CalendarEventsRequestSchema},
   output: {schema: CalendarEventsResponseSchema},
-  prompt: `You are a Nepali calendar data expert. For the given Nepali calendar year ({{year}} BS) and month ({{month}}), generate a complete list of daily events.
+  prompt: `You are a Nepali calendar data expert. For the given Nepali calendar year ({{year}} BS) and month ({{month}}), generate a complete list of daily events. All text outputs should be in Nepali script.
 
 For each day of the month, provide the following details:
 1.  'day': The numeric day of the month.
-2.  'tithi': The official lunar phase (Tithi) for that day.
-3.  'events': A list of all festivals, observances, or special events occurring on that day. If there are no events, provide an empty list.
+2.  'tithi': The official lunar phase (Tithi) for that day, in Nepali script.
+3.  'events': A list of all festivals, observances, or special events occurring on that day, in Nepali script. If there are no events, provide an empty list.
 4.  'is_holiday': A boolean value indicating if the day is a public holiday in Nepal. Mark major festival days and Saturdays as holidays.
 
 Example for a single day's output:
 {
   "day": 1,
-  "tithi": "Shrawan Krishna Pratipada",
-  "events": ["Saune Sankranti", "Luto Phalne Din"],
+  "tithi": "श्रावण कृष्ण प्रतिपदा",
+  "events": ["साउने संक्रान्ति", "लुतो फाल्ने दिन"],
   "is_holiday": true
 }
 

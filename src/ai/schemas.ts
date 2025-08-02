@@ -6,6 +6,7 @@ import {z} from 'genkit';
 
 // News Schemas
 export const NewsItemSchema = z.object({
+  id: z.string().describe('A unique identifier for the news article.'),
   title: z.string().describe('The headline of the news article.'),
   imageDataUri: z
     .string()
@@ -21,6 +22,15 @@ export const NewsResponseSchema = z.object({
     .describe('A list of 8 recent news headlines from a country with generated images.'),
 });
 export type NewsResponse = z.infer<typeof NewsResponseSchema>;
+
+export const NewsArticleSchema = z.object({
+  title: z.string().describe('The full title of the news article.'),
+  content: z.string().describe('The full content of the news article, formatted as Markdown with at least 5 paragraphs.'),
+  imageDataUri: z.string().describe('A relevant, generated image for the article as a data URI.'),
+  category: z.string().describe('The category of the news article (e.g., Politics, Sports).'),
+  publishedDate: z.string().describe("The publication date of the article in 'Month Day, Year' format."),
+});
+export type NewsArticle = z.infer<typeof NewsArticleSchema>;
 
 // Festival Schemas
 export const FestivalSchema = z.object({
@@ -47,8 +57,9 @@ export type DateConversionInput = z.infer<typeof DateConversionInputSchema>;
 
 export const DateConversionOutputSchema = z.object({
   year: z.number(),
-  month: z.string(),
+  month: z.string().describe("The name of the converted month, in English or Nepali script depending on the target."),
   day: z.number(),
+  weekday: z.string().describe("The name of the weekday, in English or Nepali script."),
   fullDate: z.string().describe("The full converted date in 'Month Day, Year' format."),
 });
 export type DateConversionOutput = z.infer<typeof DateConversionOutputSchema>;
@@ -56,8 +67,8 @@ export type DateConversionOutput = z.infer<typeof DateConversionOutputSchema>;
 // Calendar Events Schemas
 export const CalendarEventSchema = z.object({
     day: z.number().describe("The day of the month."),
-    tithi: z.string().describe("The lunar phase (Tithi) of the day."),
-    events: z.array(z.string()).describe("A list of events or festivals on this day."),
+    tithi: z.string().describe("The lunar phase (Tithi) of the day, in Nepali script."),
+    events: z.array(z.string()).describe("A list of events or festivals on this day, in Nepali script."),
     is_holiday: z.boolean().describe("Whether the day is a public holiday."),
 });
 export type CalendarEvent = z.infer<typeof CalendarEventSchema>;

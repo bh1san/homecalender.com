@@ -30,7 +30,10 @@ const prompt = ai.definePrompt({
   Month: {{month}}
   Day: {{day}}
   
-  Provide the converted date in the specified output format. For Nepali months, use the full name (e.g., 'Baisakh', 'Jestha').`,
+  Provide the converted date in the specified output format.
+  - For ad_to_bs conversions, provide the Nepali month name and weekday in Nepali script (e.g., 'बैशाख', 'आइतवार').
+  - For bs_to_ad conversions, use the full English name (e.g., 'Baisakh', 'Sunday').
+  - The fullDate should always be in 'Month Day, Year' format using the appropriate language.`,
 });
 
 const dateConversionFlow = ai.defineFlow(
