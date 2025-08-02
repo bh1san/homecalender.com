@@ -16,7 +16,6 @@ const nepaliMonths = [
 
 const years = Array.from({ length: 20 }, (_, i) => 2070 + i);
 
-// Approximate days for client-side rendering, will be synced with server.
 const daysInMonthBS = [31, 32, 31, 32, 31, 30, 30, 29, 30, 29, 30, 31]; 
 const weekDays = ["आइतवार", "सोमवार", "मङ्गलवार", "बुधवार", "बिहिवार", "शुक्रवार", "शनिवार"];
 
@@ -24,38 +23,18 @@ export default function NepaliCalendar() {
   const [currentDate, setCurrentDate] = useState<{ year: number; month: number; day: number } | null>(null);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [gregorianDate, setGregorianDate] = useState<Date | null>(null);
-  const [displayDate, setDisplayDate] = useState<{ year: number, month: number}>({ year: 2081, month: 3 });
+  const [displayDate, setDisplayDate] = useState<{ year: number, month: number } | null>(null);
   const [monthEvents, setMonthEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchCurrentNepaliDate = useCallback(async () => {
-    const now = new Date();
-    try {
-      const result = await convertDate({
-        source: 'ad_to_bs',
-        year: now.getFullYear(),
-        month: now.getMonth() + 1,
-        day: now.getDate()
-      });
-      const nepaliMonthIndex = nepaliMonths.indexOf(result.month);
-      if (nepaliMonthIndex !== -1) {
-          const today = { year: result.year, month: nepaliMonthIndex, day: result.day };
-          setCurrentDate(today);
-          setDisplayDate({ year: today.year, month: today.month });
-          setSelectedDay(today.day);
-      }
-      setGregorianDate(now);
-    } catch (error) {
-      console.error("Failed to fetch current Nepali date", error);
-      setGregorianDate(new Date());
-    }
-  }, []);
-
-  const fetchMonthEvents = useCallback(async (year: number, month: number) => {
+  const fetchMonthData = useCallback(async (year: number, month: number) => {
     setIsLoading(true);
     try {
         const result = await getCalendarEvents({ year, month: month + 1 });
         setMonthEvents(result.month_events);
+        
+        // This is a mock starting day. Real-world Nepali calendar logic is far more complex.
+        const pseudoStartDate = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     } catch (error) {
         console.error("Failed to fetch month events", error);
         setMonthEvents([]);
@@ -65,56 +44,86 @@ export default function NepaliCalendar() {
   }, []);
 
   useEffect(() => {
-    fetchCurrentNepaliDate();
-  }, [fetchCurrentNepaliDate]);
+    const initializeCalendar = async () => {
+        setIsLoading(true);
+        const now = new Date();
+        try {
+            const result = await convertDate({
+                source: 'ad_to_bs',
+                year: now.getFullYear(),
+                month: now.getMonth() + 1,
+                day: now.getDate()
+            });
+            const nepaliMonthIndex = nepaliMonths.indexOf(result.month);
+            if (nepaliMonthIndex !== -1) {
+                const today = { year: result.year, month: nepaliMonthIndex, day: result.day };
+                setCurrentDate(today);
+                setDisplayDate({ year: today.year, month: today.month });
+                setSelectedDay(today.day);
+                await fetchMonthData(today.year, today.month);
+            }
+             setGregorianDate(now);
+        } catch (error) {
+            console.error("Failed to initialize calendar", error);
+            setGregorianDate(new Date());
+            setIsLoading(false);
+        }
+    };
+    initializeCalendar();
+  }, [fetchMonthData]);
+
 
   useEffect(() => {
-    if (currentDate) {
-        fetchMonthEvents(displayDate.year, displayDate.month);
+    if (displayDate && !isLoading && displayDate.year !== currentDate?.year && displayDate.month !== currentDate?.month) {
+        fetchMonthData(displayDate.year, displayDate.month);
     }
-  }, [displayDate, currentDate, fetchMonthEvents]);
-
-  const currentMonthName = useMemo(() => nepaliMonths[displayDate.month], [displayDate.month]);
+  }, [displayDate, currentDate, fetchMonthData, isLoading]);
   
-  // This is a mock starting day. Real-world Nepali calendar logic is far more complex.
+
+  const currentMonthName = useMemo(() => displayDate ? nepaliMonths[displayDate.month] : '', [displayDate]);
+  
   const startDayOfMonth = useMemo(() => {
     if (!gregorianDate) return 0;
     // This calculation is a placeholder for layout.
     // A proper implementation would need a library or a robust BS date algorithm.
     const pseudoStartDate = new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), 1);
     return pseudoStartDate.getDay();
-  }, [displayDate.year, displayDate.month, gregorianDate]);
+  }, [displayDate?.year, displayDate?.month, gregorianDate]);
 
 
   const handlePrevMonth = () => {
+    if (!displayDate) return;
     setDisplayDate(prev => {
-      const newMonth = prev.month === 0 ? 11 : prev.month - 1;
-      const newYear = prev.month === 0 ? prev.year - 1 : prev.year;
+      const newMonth = prev!.month === 0 ? 11 : prev!.month - 1;
+      const newYear = prev!.month === 0 ? prev!.year - 1 : prev!.year;
       return { year: newYear, month: newMonth };
     });
     setSelectedDay(null);
   };
 
   const handleNextMonth = () => {
+     if (!displayDate) return;
     setDisplayDate(prev => {
-      const newMonth = prev.month === 11 ? 0 : prev.month + 1;
-      const newYear = prev.month === 11 ? prev.year + 1 : prev.year;
+      const newMonth = prev!.month === 11 ? 0 : prev!.month + 1;
+      const newYear = prev!.month === 11 ? prev!.year + 1 : prev!.year;
       return { year: newYear, month: newMonth };
     });
     setSelectedDay(null);
   };
   
   const handleDateChange = (type: 'year' | 'month', value: string) => {
-      setDisplayDate(prev => ({...prev, [type]: Number(value)}));
+      if (!displayDate) return;
+      setDisplayDate(prev => ({...prev!, [type]: Number(value)}));
       setSelectedDay(null);
   }
 
   const calendarGrid = useMemo(() => {
+    if (!displayDate) return [];
     const daysInMonth = monthEvents.length > 0 ? monthEvents.length : daysInMonthBS[displayDate.month];
     const blanks = Array(startDayOfMonth).fill(null);
     const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
     return [...blanks, ...days];
-  }, [startDayOfMonth, monthEvents, displayDate.month]);
+  }, [startDayOfMonth, monthEvents, displayDate]);
 
   const toNepaliNumber = (num: number) => {
     if (num === null || num === undefined) return '';
@@ -122,10 +131,11 @@ export default function NepaliCalendar() {
     return String(num).split("").map(digit => nepaliDigits[parseInt(digit)]).join("");
   }
 
-  if (!currentDate) {
+  if (!displayDate) {
     return (
         <div className="w-full flex items-center justify-center p-8">
-            <div className="animate-pulse">Loading Calendar...</div>
+            <LoaderCircle className="w-8 h-8 animate-spin text-primary" />
+            <span className="ml-2">Loading Calendar...</span>
         </div>
     );
   }
@@ -180,28 +190,30 @@ export default function NepaliCalendar() {
             </div>
             <div className="grid grid-cols-7 gap-px bg-gray-200 border border-gray-200">
             {calendarGrid.map((day, index) => {
-                const eventInfo = day ? getEventForDay(day) : null;
-                const isToday = day === currentDate.day && displayDate.month === currentDate.month && displayDate.year === currentDate.year;
+                if (!day) return <div key={index} className="bg-white"></div>;
+
+                const eventInfo = getEventForDay(day);
+                const isToday = day === currentDate?.day && displayDate.month === currentDate?.month && displayDate.year === currentDate?.year;
                 const isHoliday = eventInfo?.is_holiday || weekDays[index % 7] === 'शनिवार';
 
                 return (
                 <div key={index} className="flex flex-col items-start justify-start p-1 bg-white min-h-[100px] text-left">
-                {day ? (
                     <div
                     onClick={() => setSelectedDay(day)}
                     className={cn(
-                        "flex flex-col items-start justify-start w-full h-full rounded-md transition-all duration-200",
-                        isToday && "bg-primary/20",
+                        "flex flex-col items-start justify-start w-full h-full rounded-md transition-all duration-200 cursor-pointer hover:bg-gray-100",
+                         selectedDay === day && "ring-2 ring-primary",
+                         isToday && "bg-primary/10",
                     )}
                     >
                         <div className="flex justify-between w-full">
                             <span className="text-xs text-gray-500">{eventInfo?.tithi?.split(' ').pop()}</span>
-                            {gregorianDate && <span className="text-xs text-gray-500">{new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), day - currentDate.day + gregorianDate.getDate()).getDate()}</span>}
+                            {gregorianDate && <span className="text-xs text-gray-500">{new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), day - (currentDate?.day || 0) + gregorianDate.getDate()).getDate()}</span>}
                         </div>
                         <span className={cn(
                             "text-xl font-bold w-full text-center",
                             isHoliday && "text-red-600",
-                            day === selectedDay && "bg-primary text-white rounded-full p-1"
+                            isToday && "bg-primary text-white rounded-full p-1"
                         )}>
                             {toNepaliNumber(day)}
                         </span>
@@ -209,9 +221,6 @@ export default function NepaliCalendar() {
                            {eventInfo?.events.map(e => <div key={e} className="truncate">{e}</div>)}
                         </div>
                     </div>
-                ) : (
-                    <div className="w-full h-full" />
-                )}
                 </div>
                 );
             })}
