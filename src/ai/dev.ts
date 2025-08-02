@@ -4,4 +4,5 @@ import './flows/news-flow';
 import './flows/festival-flow';
 import './flows/calendar-events-flow';
 import './flows/upcoming-events-flow';
+import './flows/patro-data-flow';
     

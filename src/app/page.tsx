@@ -19,7 +19,7 @@ import FestivalList from "@/components/festival-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getNews } from "@/ai/flows/news-flow";
-import { NewsItem, Festival, CurrentDateInfoResponse } from "@/ai/schemas";
+import { NewsItem, Festival, CurrentDateInfoResponse, PatroDataResponse } from "@/ai/schemas";
 import CurrentDateTime from "@/components/current-date-time";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { getFestivals } from "@/ai/flows/festival-flow";
@@ -30,6 +30,11 @@ import MotivationalQuote from "@/components/motivational-quote";
 import { User } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import UpcomingEventsWidget from "@/components/upcoming-events-widget";
+import { getPatroData } from "@/ai/flows/patro-data-flow";
+import Rashifal from "@/components/rashifal";
+import GoldSilver from "@/components/gold-silver";
+import Forex from "@/components/forex";
+
 
 type Settings = {
     logoUrl: string;
@@ -40,8 +45,10 @@ export default function Home() {
   const [location, setLocation] = useState<{ country: string | null }>({ country: "Nepal" });
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [festivals, setFestivals] = useState<Festival[]>([]);
+  const [patroData, setPatroData] = useState<PatroDataResponse | null>(null);
   const [loadingNews, setLoadingNews] = useState(true);
   const [loadingFestivals, setLoadingFestivals] = useState(true);
+  const [loadingPatroData, setLoadingPatroData] = useState(true);
   const [settings, setSettings] = useState<Settings>({ logoUrl: "https://placehold.co/200x50.png", navLinks: [] });
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [today, setToday] = useState<CurrentDateInfoResponse | null>(null);
@@ -95,6 +102,26 @@ export default function Home() {
     }
     
   }, [location.country]);
+
+  useEffect(() => {
+    const fetchPatroData = async () => {
+        if (!isNepal) {
+            setPatroData(null);
+            setLoadingPatroData(false);
+            return;
+        }
+        setLoadingPatroData(true);
+        try {
+            const data = await getPatroData();
+            setPatroData(data);
+        } catch (error) {
+            console.error("Error fetching patro data:", error);
+        } finally {
+            setLoadingPatroData(false);
+        }
+    }
+    fetchPatroData();
+  }, [isNepal]);
 
   return (
     <div className="min-h-screen bg-muted/40 font-body">
@@ -186,10 +213,7 @@ export default function Home() {
                     <CardTitle className="text-lg font-semibold text-card-foreground">राशीफल</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex items-center justify-center h-24 bg-muted rounded-md">
-                        <MessageSquare className="w-8 h-8 text-muted-foreground" />
-                        <p className="ml-2 text-muted-foreground">Horoscope coming soon.</p>
-                    </div>
+                     {isNepal ? <Rashifal loading={loadingPatroData} horoscope={patroData?.horoscope} /> : <p className="text-sm text-center text-muted-foreground p-6">Horoscope is only available for Nepal.</p>}
                 </CardContent>
             </Card>
 
@@ -199,12 +223,15 @@ export default function Home() {
                 </CardHeader>
                 <CardContent>
                   <Tabs defaultValue="converter" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 bg-muted/60">
+                    <TabsList className="grid w-full grid-cols-3 bg-muted/60">
                       <TabsTrigger value="converter">
                         <ArrowRightLeft className="mr-2 h-4 w-4" /> Converter
                       </TabsTrigger>
                       <TabsTrigger value="festivals">
                         <PartyPopper className="mr-2 h-4 w-4" /> Festivals
+                      </TabsTrigger>
+                       <TabsTrigger value="gold">
+                        Gold/Silver
                       </TabsTrigger>
                     </TabsList>
                     <TabsContent value="converter" className="mt-6">
@@ -221,6 +248,9 @@ export default function Home() {
                          festivals.length > 0 ? <FestivalList festivals={festivals} /> : <p className="text-center text-muted-foreground p-4 bg-background/80 rounded">No festivals found for the selected country.</p>
                       )}
                     </TabsContent>
+                     <TabsContent value="gold" className="mt-6">
+                         {isNepal ? <GoldSilver loading={loadingPatroData} prices={patroData?.goldSilver} /> : <p className="text-sm text-center text-muted-foreground p-6">Gold/Silver prices are only available for Nepal.</p>}
+                    </TabsContent>
                   </Tabs>
                 </CardContent>
               </Card>
@@ -233,6 +263,18 @@ export default function Home() {
                      {isNepal ? <NepaliCalendar today={today} /> : <Calendar mode="single" className="w-full rounded-md bg-card/90 flex justify-center" />}
                 </CardContent>
               </Card>
+
+              {isNepal && (
+                <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
+                  <CardHeader>
+                    <CardTitle>Foreign Exchange Rates</CardTitle>
+                    <CardDescription>Rates are against NPR and provided by Nepal Rastra Bank.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Forex loading={loadingPatroData} rates={patroData?.forex} />
+                  </CardContent>
+                </Card>
+              )}
           </div>
 
         </div>
