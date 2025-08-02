@@ -30,8 +30,10 @@ const countries = [
 export default function LocationSelector({ onLocationChange }: LocationSelectorProps) {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false); 
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     // Set Nepal as default on initial load, but don't trigger location detection automatically
     handleCountryChange("Nepal");
   }, []);
@@ -72,6 +74,15 @@ export default function LocationSelector({ onLocationChange }: LocationSelectorP
       setIsLocating(false);
     }
   };
+
+  if (!isMounted) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="h-10 w-[200px] bg-muted rounded-md animate-pulse" />
+        <div className="h-10 w-10 bg-muted rounded-md animate-pulse" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center gap-2">

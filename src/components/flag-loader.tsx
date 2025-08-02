@@ -25,11 +25,7 @@ const FlagLoader = ({ className }: { className?: string }) => {
   }, []);
 
   if (!isMounted) {
-      return (
-        <div className={cn("relative w-8 h-8 flex items-center justify-center font-sans", className)}>
-            <span className="text-2xl"></span>
-        </div>
-      )
+    return <div className={cn("relative w-8 h-8", className)}></div>;
   }
 
   return (
