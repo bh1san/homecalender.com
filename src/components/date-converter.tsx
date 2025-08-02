@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -48,7 +49,7 @@ export default function DateConverter() {
   const isMounted = useIsMounted();
 
   useEffect(() => {
-    if (!isMounted) return;
+    // This effect runs only on the client, after hydration
     const today = new Date();
     setGregorianDate({
       year: String(today.getFullYear()),
@@ -60,7 +61,7 @@ export default function DateConverter() {
         month: "4",
         day: "1"
     });
-  }, [isMounted]);
+  }, []); // Empty dependency array ensures this runs once on mount
 
   const handleConversion = () => {
      toast({
@@ -79,9 +80,8 @@ export default function DateConverter() {
             </div>
             <Card className="h-52 w-full animate-pulse bg-muted/50" />
         </div>
-    )
+    );
   }
-
 
   return (
     <div className="space-y-8">
@@ -98,7 +98,7 @@ export default function DateConverter() {
           <div className="space-y-2">
             <Label htmlFor="gregorian-month">Month</Label>
              <Select value={gregorianDate.month} onValueChange={(value) => setGregorianDate({...gregorianDate, month: value})}>
-                <SelectTrigger id="gregorian-month"><SelectValue placeholder="Select month..." /></SelectTrigger>
+                <SelectTrigger id="gregorian-month"><SelectValue placeholder="Select month..." /></SelectValue>
                 <SelectContent>
                   {gregorianMonths.map((month, index) => (
                     <SelectItem key={month} value={String(index + 1)}>{month}</SelectItem>

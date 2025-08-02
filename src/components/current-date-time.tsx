@@ -25,8 +25,7 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
   const isMounted = useIsMounted();
   
   useEffect(() => {
-    if (!isMounted) return;
-
+    // This effect runs only on the client, after hydration
     const intervalId = setInterval(() => {
       const timezone = "Asia/Kathmandu";
       const now = new Date();
@@ -35,7 +34,7 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [isMounted]);
+  }, []); // Empty dependency array ensures this runs once on mount
 
 
   if (!isMounted || !today) {

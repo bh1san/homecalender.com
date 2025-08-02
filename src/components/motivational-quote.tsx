@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -23,8 +24,7 @@ export default function MotivationalQuote() {
   const isMounted = useIsMounted();
 
   useEffect(() => {
-    if (!isMounted) return;
-
+    // This effect runs only on the client, after hydration
     setCurrentQuote(quotes[Math.floor(Math.random() * quotes.length)]);
 
     const intervalId = setInterval(() => {
@@ -41,7 +41,7 @@ export default function MotivationalQuote() {
     }, 15000); 
 
     return () => clearInterval(intervalId);
-  }, [isMounted, currentQuote]);
+  }, [currentQuote]); // Note: dependency on currentQuote is for the interval logic, not for initial render.
 
   if (!isMounted) {
     return (
