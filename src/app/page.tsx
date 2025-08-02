@@ -27,7 +27,7 @@ import { Calendar } from "@/components/ui/calendar";
 import LocationSelector from "@/components/location-selector";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import MotivationalQuote from "@/components/motivational-quote";
-import { format, differenceInDays, parseISO, addDays } from 'date-fns';
+import { format, differenceInDays, parseISO } from 'date-fns';
 import { User } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -49,9 +49,12 @@ const parseFestivalDate = (dateString: string): Date | null => {
 };
 
 const formatUpcomingEventDate = (date: Date): string => {
-    const diff = differenceInDays(date, new Date());
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = differenceInDays(date, today);
      if (diff === 0) return "Today";
     if (diff === 1) return "Tomorrow";
+    if (diff < 0) return "Past";
     return `in ${diff} days`;
 };
 
@@ -71,14 +74,12 @@ export default function Home() {
   const [settings, setSettings] = useState<Settings>({ logoUrl: "https://placehold.co/200x50.png", navLinks: [] });
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
-  const [isMounted, setIsMounted] = useState(false);
   const [today, setToday] = useState<CurrentDateInfoResponse | null>(null);
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const processFestivals = useCallback((festivalData: Festival[]) => {
+      const todayDate = new Date();
+      todayDate.setHours(0, 0, 0, 0); // Normalize today's date
 
-  const processFestivals = useCallback((festivalData: Festival[], todayDate: Date) => {
       const events = festivalData
           .map(festival => ({ ...festival, parsedDate: parseFestivalDate(festival.gregorianStartDate) }))
           .filter(event => {
@@ -117,8 +118,6 @@ export default function Home() {
   const isNepal = useMemo(() => location.country === 'Nepal', [location.country]);
 
   useEffect(() => {
-    if (!isMounted) return;
-
     const fetchNewsAndFestivals = async (country: string) => {
       setLoadingNews(true);
       setLoadingFestivals(true);
@@ -135,11 +134,7 @@ export default function Home() {
         
         const festivalData = await festivalPromise;
         setFestivals(festivalData.festivals);
-        // We can process festivals immediately after fetching if we have today's date
-        if (today) {
-           const todayAdDate = new Date(today.adYear, today.adMonth, today.adDay);
-           processFestivals(festivalData.festivals, todayAdDate);
-        }
+        processFestivals(festivalData.festivals);
         
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -152,23 +147,14 @@ export default function Home() {
     const countryToFetch = location.country || "Nepal";
     fetchNewsAndFestivals(countryToFetch);
     
-  }, [location.country, isMounted, processFestivals, today]);
-
-  const handleDateLoaded = useCallback((date: CurrentDateInfoResponse) => {
-      setToday(date);
-      // Once we have the accurate date, if we have festivals, process them
-      if (festivals.length > 0) {
-          const todayAdDate = new Date(date.adYear, date.adMonth, date.adDay);
-          processFestivals(festivals, todayAdDate);
-      }
-  }, [festivals, processFestivals]);
+  }, [location.country, processFestivals]);
 
   return (
-    <div className="min-h-screen bg-muted/40">
+    <div className="min-h-screen bg-muted/40 font-body">
       <Header navLinks={settings.navLinks} logoUrl={settings.logoUrl} isLoading={loadingSettings} />
       <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 bg-primary text-primary-foreground p-4 rounded-lg shadow-md items-center">
-            <CurrentDateTime country={location.country} onDateLoaded={handleDateLoaded} />
+            <CurrentDateTime country={location.country} onDateLoaded={setToday} />
             <div className="hidden sm:flex justify-end">
                 <MotivationalQuote />
             </div>
@@ -395,3 +381,5 @@ function Header({ navLinks, logoUrl, isLoading }: { navLinks: string[], logoUrl:
         </header>
     )
 }
+
+    

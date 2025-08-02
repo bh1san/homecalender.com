@@ -24,7 +24,7 @@ const gregorianMonths = [
 ];
 
 interface NepaliCalendarProps {
-    today?: CurrentDateInfoResponse | null;
+    today: CurrentDateInfoResponse | null;
 }
 
 export default function NepaliCalendar({ today }: NepaliCalendarProps) {
@@ -33,11 +33,6 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [firstDayOfMonth, setFirstDayOfMonth] = useState(0);
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   const fetchMonthData = useCallback(async (year: number, month: number) => {
     setIsLoading(true);
@@ -59,21 +54,25 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
   }, []);
 
   useEffect(() => {
-    if (isMounted && today) {
-      setDisplayDate({ year: today.bsYear, month: today.bsMonth - 1 });
+    if (today) {
+      const initialDate = { year: today.bsYear, month: today.bsMonth - 1 };
+      setDisplayDate(initialDate);
       setSelectedDay(today.bsDay);
+      fetchMonthData(initialDate.year, initialDate.month);
     }
-  }, [isMounted, today]);
+  }, [today, fetchMonthData]);
 
   useEffect(() => {
-    if (displayDate) {
-      fetchMonthData(displayDate.year, displayDate.month);
+    if (displayDate && !today) { // if today is cleared, but we still have a display date
+       fetchMonthData(displayDate.year, displayDate.month);
     }
-  }, [displayDate, fetchMonthData]);
-  
+  }, [displayDate, today, fetchMonthData]);
+
   const changeDisplayedMonth = (year: number, month: number) => {
       setSelectedDay(null);
-      setDisplayDate({ year, month });
+      const newDisplayDate = { year, month };
+      setDisplayDate(newDisplayDate);
+      fetchMonthData(newDisplayDate.year, newDisplayDate.month);
   };
   
   const handlePrevMonth = () => {
@@ -100,11 +99,7 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
   const handleDateChange = (type: 'year' | 'month', value: string) => {
       if (!displayDate) return;
       const newDisplayDate = {...displayDate, [type]: Number(value)};
-      if (type === 'month') {
-        changeDisplayedMonth(newDisplayDate.year, newDisplayDate.month);
-      } else {
-        changeDisplayedMonth(newDisplayDate.year, newDisplayDate.month);
-      }
+      changeDisplayedMonth(newDisplayDate.year, type === 'month' ? Number(value) : newDisplayDate.month);
   }
 
   const calendarGrid = useMemo(() => {
@@ -145,7 +140,7 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
     return `${startMonth}/${endMonth} ${startYear}`;
 };
 
-  const initialLoading = !displayDate || !today;
+  const initialLoading = !displayDate;
   
   if (initialLoading) {
     return (
@@ -162,7 +157,7 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
     <div className="w-full">
       <div className="flex flex-col sm:flex-row items-center justify-between mb-4 px-2 gap-4">
         <div className="flex items-center space-x-1">
-            <Button variant="outline" size="sm" onClick={goToToday}>आज</Button>
+            <Button variant="outline" size="sm" onClick={goToToday} disabled={!today}>आज</Button>
              <div className="flex items-center rounded-md border">
                 <Button variant="ghost" size="icon" className="h-9 w-9 rounded-r-none"><Grid className="h-4 w-4"/></Button>
                 <Button variant="ghost" size="icon" className="h-9 w-9 rounded-l-none text-muted-foreground"><Rows className="h-4 w-4"/></Button>
@@ -217,7 +212,7 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
                 if (!day) return <div key={`blank-${index}`} className="bg-gray-50"></div>;
 
                 const eventInfo = getEventForDay(day);
-                const isToday = day === today.bsDay && displayDate.month === (today.bsMonth - 1) && displayDate.year === today.bsYear;
+                const isToday = today ? (day === today.bsDay && displayDate.month === (today.bsMonth - 1) && displayDate.year === today.bsYear) : false;
                 const isHoliday = eventInfo?.is_holiday || weekDays[index % 7] === 'शनिवार';
                 
                 return (
@@ -253,3 +248,5 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
     </div>
   );
 }
+
+    
