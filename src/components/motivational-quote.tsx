@@ -24,7 +24,6 @@ export default function MotivationalQuote() {
 
   useEffect(() => {
     setIsMounted(true);
-    // Set initial quote on client-side
     setCurrentQuote(quotes[Math.floor(Math.random() * quotes.length)]);
 
     const intervalId = setInterval(() => {
@@ -37,8 +36,8 @@ export default function MotivationalQuote() {
         }
         setCurrentQuote(nextQuote);
         setIsFading(false);
-      }, 1000); // Corresponds to the fade-out duration
-    }, 15000); // 15 seconds
+      }, 1000); 
+    }, 15000);
 
     return () => clearInterval(intervalId);
   }, []);
@@ -60,5 +59,3 @@ export default function MotivationalQuote() {
     </div>
   );
 }
-
-    

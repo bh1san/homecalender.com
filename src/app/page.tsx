@@ -35,7 +35,6 @@ type Settings = {
 
 const parseFestivalDate = (dateString: string) => {
     try {
-        // The date comes in YYYY-MM-DD format, so parseISO can handle it directly.
         const date = parseISO(dateString);
         if (isNaN(date.getTime())) return null;
         return date;
@@ -64,6 +63,11 @@ export default function Home() {
   const [settings, setSettings] = useState<Settings>({ logoUrl: "https://placehold.co/200x50.png", navLinks: [] });
   const [loadingSettings, setLoadingSettings] = useState(true);
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -85,7 +89,7 @@ export default function Home() {
   const isNepal = useMemo(() => location.country === 'Nepal' || location.country === null, [location.country]);
   
   useEffect(() => {
-    if (festivals.length > 0) {
+    if (isMounted && festivals.length > 0) {
       const now = new Date();
       
       const events = festivals
@@ -107,7 +111,7 @@ export default function Home() {
     } else {
       setUpcomingEvents([]);
     }
-  }, [festivals]);
+  }, [festivals, isMounted]);
 
 
   useEffect(() => {
@@ -148,7 +152,7 @@ export default function Home() {
     <div className="min-h-screen">
       <Header navLinks={settings.navLinks} logoUrl={settings.logoUrl} isLoading={loadingSettings} />
       <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 bg-accent/90 text-white p-4 rounded-lg shadow-md items-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 bg-primary text-primary-foreground p-4 rounded-lg shadow-md items-center">
             <CurrentDateTime country={location.country} />
             <div className="hidden sm:flex justify-end">
                 <MotivationalQuote />
@@ -164,7 +168,7 @@ export default function Home() {
         </div>
 
         <section className="mb-8">
-          <h3 className="text-lg font-semibold mb-3 text-white dark:text-gray-200 bg-black/50 p-2 rounded">
+          <h3 className="text-lg font-semibold mb-3 text-accent-foreground dark:text-gray-200 bg-accent p-2 rounded">
             News Bulletin {location.country ? `from ${location.country}` : 'Headlines'}
           </h3>
             {loadingNews ? (
@@ -298,7 +302,7 @@ export default function Home() {
 function Header({ navLinks, logoUrl, isLoading }: { navLinks: string[], logoUrl: string, isLoading: boolean }) {
     if (isLoading) {
         return (
-             <header className="bg-accent/90 text-white shadow-md backdrop-blur-sm sticky top-0 z-50">
+             <header className="bg-white text-primary-foreground shadow-md backdrop-blur-sm sticky top-0 z-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
                         <div className="h-8 w-48 bg-gray-300/20 animate-pulse rounded-md" />
@@ -312,7 +316,7 @@ function Header({ navLinks, logoUrl, isLoading }: { navLinks: string[], logoUrl:
     }
     
     return (
-        <header className="bg-accent/90 text-white shadow-md backdrop-blur-sm sticky top-0 z-50">
+        <header className="bg-white text-foreground shadow-md backdrop-blur-sm sticky top-0 z-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
                     <Link href="/">
@@ -320,14 +324,14 @@ function Header({ navLinks, logoUrl, isLoading }: { navLinks: string[], logoUrl:
                     </Link>
                     <nav className="hidden md:flex items-center space-x-4">
                         {navLinks.map(link => (
-                            <Link key={link} href="#" className="text-sm font-medium hover:underline transition-transform hover:scale-110">
+                            <Link key={link} href="#" className="text-sm font-medium hover:text-primary hover:underline transition-colors">
                                 {link}
                             </Link>
                         ))}
                     </nav>
                     <div className="flex items-center space-x-4">
-                        <Button variant="outline" size="sm" className="bg-transparent border-white text-white hover:bg-white hover:text-accent-foreground">EN</Button>
-                        <User className="h-6 w-6 cursor-pointer hover:text-primary-foreground/80"/>
+                        <Button variant="outline" size="sm">EN</Button>
+                        <User className="h-6 w-6 cursor-pointer hover:text-primary"/>
                     </div>
                     <div className="md:hidden">
                         <Sheet>
@@ -352,5 +356,3 @@ function Header({ navLinks, logoUrl, isLoading }: { navLinks: string[], logoUrl:
         </header>
     )
 }
-
-    
