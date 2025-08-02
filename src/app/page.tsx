@@ -1,7 +1,7 @@
 
 "use client";
 
-import { ArrowRightLeft, CalendarDays, PartyPopper, Search, Menu, LoaderCircle } from "lucide-react";
+import { ArrowRightLeft, CalendarDays, PartyPopper, Search, Menu } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -36,8 +36,7 @@ type Settings = {
 const parseFestivalDate = (dateString: string) => {
     try {
         const date = parseISO(dateString);
-        if (isNaN(date.getTime())) return null;
-        return date;
+        return isNaN(date.getTime()) ? null : date;
     } catch {
         return null;
     }
@@ -89,25 +88,25 @@ export default function Home() {
   const isNepal = useMemo(() => location.country === 'Nepal' || location.country === null, [location.country]);
 
   const processFestivals = useCallback((festivalData: Festival[]) => {
-    if (!isMounted) return;
-    const now = new Date();
-    
-    const events = festivalData
-        .map(festival => ({
-            ...festival,
-            parsedDate: parseFestivalDate(festival.gregorianStartDate),
-        }))
-        .filter(event => event.parsedDate && differenceInDays(event.parsedDate, now) >= 0)
-        .sort((a, b) => a.parsedDate!.getTime() - b.parsedDate!.getTime())
-        .slice(0, 5)
-        .map(event => ({
-            day: format(event.parsedDate!, 'dd'),
-            month: format(event.parsedDate!, 'MMM'),
-            title: event.name,
-            fullDate: formatUpcomingEventDate(event.parsedDate!),
-        }));
+      if (!isMounted) return;
+      const now = new Date();
       
-    setUpcomingEvents(events);
+      const events = festivalData
+          .map(festival => {
+              const parsedDate = parseFestivalDate(festival.gregorianStartDate);
+              return { ...festival, parsedDate };
+          })
+          .filter(event => event.parsedDate && differenceInDays(event.parsedDate, now) >= 0)
+          .sort((a, b) => a.parsedDate!.getTime() - b.parsedDate!.getTime())
+          .slice(0, 5)
+          .map(event => ({
+              day: format(event.parsedDate!, 'dd'),
+              month: format(event.parsedDate!, 'MMM'),
+              title: event.name,
+              fullDate: formatUpcomingEventDate(event.parsedDate!),
+          }));
+        
+      setUpcomingEvents(events);
   }, [isMounted]);
 
   useEffect(() => {
@@ -137,12 +136,11 @@ export default function Home() {
       }
     };
 
-    if (location.country) {
-      fetchNewsAndFestivals(location.country);
-    } else {
-      fetchNewsAndFestivals("Nepal");
+    if (isMounted) {
+      const countryToFetch = location.country || "Nepal";
+      fetchNewsAndFestivals(countryToFetch);
     }
-  }, [location.country, processFestivals]);
+  }, [location.country, isMounted, processFestivals]);
 
   return (
     <div className="min-h-screen">

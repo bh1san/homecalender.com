@@ -21,73 +21,65 @@ const gregorianMonths = [
   "July", "August", "September", "October", "November", "December"
 ];
 
+type NepaliDate = {
+  year: number;
+  month: number; // 0-indexed
+  day: number;
+}
+
 type CalendarData = {
-  currentDate: { year: number; month: number; day: number };
-  gregorianDate: Date;
+  currentDate: NepaliDate;
   monthEvents: CalendarEvent[];
 }
 
 export default function NepaliCalendar() {
-  const [calendarData, setCalendarData] = useState<CalendarData | null>(null);
+  const [currentDate, setCurrentDate] = useState<NepaliDate | null>(null);
   const [displayDate, setDisplayDate] = useState<{ year: number; month: number } | null>(null);
+  const [monthEvents, setMonthEvents] = useState<CalendarEvent[]>([]);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [firstDayOfMonth, setFirstDayOfMonth] = useState(0);
 
+  useEffect(() => {
+    // This effect runs once on mount to determine the current Nepali date.
+    const now = new Date();
+    const bsDate = toBS(now);
+    const today: NepaliDate = { year: bsDate.year, month: bsDate.month - 1, day: bsDate.day };
+    
+    setCurrentDate(today);
+    setDisplayDate({ year: today.year, month: today.month });
+    setSelectedDay(today.day);
+  }, []);
+
   const fetchMonthData = useCallback(async (year: number, month: number) => {
     setIsLoading(true);
     try {
+      // Month is 1-indexed for the API
       const eventsPromise = getCalendarEvents({ year, month: month + 1 });
-      const firstDay = getFirstDayOfMonthBS(year, month + 1);
+      const firstDayPromise = getFirstDayOfMonthBS(year, month + 1);
       
-      const monthEvents = await eventsPromise;
+      const [monthEventsData, firstDay] = await Promise.all([eventsPromise, firstDayPromise]);
       
-      setCalendarData(prevData => ({...(prevData as CalendarData), monthEvents: monthEvents.month_events}));
+      setMonthEvents(monthEventsData.month_events);
       setFirstDayOfMonth(firstDay);
-      setDisplayDate({ year, month });
 
     } catch (error) {
       console.error("Failed to fetch month data", error);
+      setMonthEvents([]); // Clear events on error
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    const initializeCalendar = async () => {
-      try {
-        const now = new Date();
-        const bsDate = toBS(now);
-        
-        const today = { year: bsDate.year, month: bsDate.month - 1, day: bsDate.day };
-        
-        setCalendarData({
-          currentDate: today,
-          gregorianDate: now,
-          monthEvents: [],
-        });
-        setSelectedDay(today.day);
-        
-        // This was the problematic part. Now `displayDate` is set before fetching.
-        setDisplayDate({ year: today.year, month: today.month });
-
-      } catch (error) {
-        console.error("Failed to initialize calendar", error);
-        setCalendarData(null); 
-        setIsLoading(false);
-      }
-    };
-    initializeCalendar();
-  }, []);
 
   useEffect(() => {
-      if (displayDate) {
-          fetchMonthData(displayDate.year, displayDate.month);
-      }
+    // This effect fetches data whenever the displayDate changes.
+    if (displayDate) {
+      fetchMonthData(displayDate.year, displayDate.month);
+    }
   }, [displayDate, fetchMonthData]);
   
   const changeDisplayedMonth = (year: number, month: number) => {
-      if (!calendarData) return;
       setSelectedDay(null);
       setDisplayDate({ year, month });
   };
@@ -113,13 +105,13 @@ export default function NepaliCalendar() {
   }
 
   const calendarGrid = useMemo(() => {
-    if (!displayDate || !calendarData) return [];
+    if (!displayDate) return [];
     
     const daysInMonth = getDaysInMonthBS(displayDate.year, displayDate.month + 1);
     const blanks = Array(firstDayOfMonth).fill(null);
     const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
     return [...blanks, ...days];
-  }, [calendarData, displayDate, firstDayOfMonth]);
+  }, [displayDate, firstDayOfMonth]);
 
   const toNepaliNumber = (num: number) => {
     if (num === null || num === undefined) return '';
@@ -127,7 +119,7 @@ export default function NepaliCalendar() {
     return String(num).split("").map(digit => nepaliDigits[parseInt(digit)]).join("");
   }
 
-  const initialLoading = isLoading && !calendarData?.monthEvents.length;
+  const initialLoading = !displayDate || !currentDate;
   
   if (initialLoading) {
     return (
@@ -138,15 +130,6 @@ export default function NepaliCalendar() {
     );
   }
   
-  if (!displayDate || !calendarData) {
-     return (
-        <div className="w-full flex items-center justify-center p-8 bg-red-50 text-red-600 rounded-lg">
-            <span>Could not load calendar data.</span>
-        </div>
-    );
-  }
-
-  const { currentDate, monthEvents } = calendarData;
   const getEventForDay = (day: number) => monthEvents.find(e => e.day === day);
   const currentMonthName = nepaliMonths[displayDate.month];
   const correspondingADDate = toAD({year: displayDate.year, month: displayDate.month + 1, day: 1});
@@ -219,13 +202,15 @@ export default function NepaliCalendar() {
                             <span className="text-xs text-gray-500">{eventInfo?.tithi?.split(' ').pop()}</span>
                             <span className="text-xs text-gray-500">{approxGregorianDay}</span>
                         </div>
-                        <span className={cn(
-                            "text-xl font-bold w-full text-center",
-                            isHoliday && "text-red-600",
-                            isToday && "bg-primary text-white rounded-full p-1"
-                        )}>
-                            {toNepaliNumber(day)}
-                        </span>
+                         <div className={cn("w-full text-center")}>
+                            <span className={cn(
+                                "text-xl font-bold ",
+                                isHoliday && "text-red-600",
+                                isToday ? "bg-primary text-white rounded-full px-2 py-1" : "p-1"
+                            )}>
+                                {toNepaliNumber(day)}
+                            </span>
+                        </div>
                         <div className="text-[10px] leading-tight text-center w-full mt-1 h-10 overflow-hidden">
                            {eventInfo?.events.map(e => <div key={e} className="truncate">{e}</div>)}
                         </div>
@@ -239,3 +224,5 @@ export default function NepaliCalendar() {
     </div>
   );
 }
+
+    
