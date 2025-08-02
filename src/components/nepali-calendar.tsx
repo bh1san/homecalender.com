@@ -30,17 +30,35 @@ export default function NepaliCalendar() {
   const [displayDate, setDisplayDate] = useState<{ year: number; month: number } | null>(null);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [firstDayOfMonth, setFirstDayOfMonth] = useState(0);
 
-  const fetchMonthEvents = useCallback(async (year: number, month: number) => {
+  const fetchMonthData = useCallback(async (year: number, month: number) => {
+    setIsLoading(true);
     try {
       // month is 0-indexed in the component, but 1-indexed for the API
-      const result = await getCalendarEvents({ year, month: month + 1 });
-      return result.month_events;
+      const eventsPromise = getCalendarEvents({ year, month: month + 1 });
+      
+      // Approximating the start day of the week for a better placeholder
+      // A more accurate method would require a BS to AD conversion for the 1st of the month.
+      const approxStartDate = new Date(year - 57, month, 1);
+      const firstDayPromise = convertDate({ source: 'bs_to_ad', year: year, month: month + 1, day: 1 }).then(res => {
+         // Fallback to approximation if AI fails
+         return res ? new Date(res.year, nepaliMonths.indexOf(res.month), res.day).getDay() : approxStartDate.getDay();
+      }).catch(() => approxStartDate.getDay());
+
+      const [monthEvents, firstDay] = await Promise.all([eventsPromise, firstDayPromise]);
+      
+      setCalendarData(prevData => ({...(prevData as CalendarData), monthEvents: monthEvents.month_events}));
+      setFirstDayOfMonth(firstDay);
+      setDisplayDate({ year, month });
+
     } catch (error) {
-      console.error("Failed to fetch month events", error);
-      return [];
+      console.error("Failed to fetch month data", error);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
+
 
   useEffect(() => {
     const initializeCalendar = async () => {
@@ -59,35 +77,27 @@ export default function NepaliCalendar() {
         if (nepaliMonthIndex !== -1) {
           const today = { year: bsDate.year, month: nepaliMonthIndex, day: bsDate.day };
           
-          setDisplayDate({ year: today.year, month: today.month });
-          setSelectedDay(today.day);
-
-          const monthEvents = await fetchMonthEvents(today.year, today.month);
-          
           setCalendarData({
             currentDate: today,
             gregorianDate: now,
-            monthEvents: monthEvents,
+            monthEvents: [],
           });
+          setSelectedDay(today.day);
+          await fetchMonthData(today.year, today.month);
         }
       } catch (error) {
         console.error("Failed to initialize calendar", error);
-      } finally {
         setIsLoading(false);
       }
     };
     initializeCalendar();
-  }, [fetchMonthEvents]);
+  }, [fetchMonthData]);
 
   const changeDisplayedMonth = useCallback(async (year: number, month: number) => {
       if (!calendarData) return;
-      setIsLoading(true);
       setSelectedDay(null);
-      setDisplayDate({ year, month });
-      const newMonthEvents = await fetchMonthEvents(year, month);
-      setCalendarData(prevData => ({...(prevData as CalendarData), monthEvents: newMonthEvents}));
-      setIsLoading(false);
-  }, [calendarData, fetchMonthEvents]);
+      await fetchMonthData(year, month);
+  }, [calendarData, fetchMonthData]);
   
   const handlePrevMonth = () => {
     if (!displayDate) return;
@@ -112,16 +122,11 @@ export default function NepaliCalendar() {
   const calendarGrid = useMemo(() => {
     if (!displayDate || !calendarData) return [];
     
-    // Placeholder for starting day of the week.
-    // A robust solution requires a library or a complex BS date algorithm.
-    const pseudoStartDate = new Date(calendarData.gregorianDate.getFullYear(), calendarData.gregorianDate.getMonth(), 1);
-    const startDayOfMonth = pseudoStartDate.getDay();
-    
     const daysInMonth = calendarData.monthEvents.length > 0 ? calendarData.monthEvents.length : daysInMonthBS[displayDate.month];
-    const blanks = Array(startDayOfMonth).fill(null);
+    const blanks = Array(firstDayOfMonth).fill(null);
     const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
     return [...blanks, ...days];
-  }, [calendarData, displayDate]);
+  }, [calendarData, displayDate, firstDayOfMonth]);
 
   const toNepaliNumber = (num: number) => {
     if (num === null || num === undefined) return '';
@@ -129,7 +134,9 @@ export default function NepaliCalendar() {
     return String(num).split("").map(digit => nepaliDigits[parseInt(digit)]).join("");
   }
 
-  if (isLoading && !calendarData) {
+  const initialLoading = isLoading && !calendarData;
+
+  if (initialLoading) {
     return (
         <div className="w-full flex items-center justify-center p-8">
             <LoaderCircle className="w-8 h-8 animate-spin text-primary" />
@@ -202,7 +209,6 @@ export default function NepaliCalendar() {
                 const isToday = day === currentDate.day && displayDate.month === currentDate.month && displayDate.year === currentDate.year;
                 const isHoliday = eventInfo?.is_holiday || weekDays[index % 7] === 'शनिवार';
                 
-                // This logic to get the corresponding Gregorian day is an approximation
                 const approxGregorianDay = new Date(gregorianDate.getFullYear(), gregorianDate.getMonth(), day - currentDate.day + gregorianDate.getDate()).getDate();
 
                 return (
@@ -239,5 +245,3 @@ export default function NepaliCalendar() {
     </div>
   );
 }
-
-    
