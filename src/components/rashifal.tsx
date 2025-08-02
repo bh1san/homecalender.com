@@ -46,7 +46,7 @@ export default function Rashifal({ loading, horoscope }: RashifalProps) {
         setSelectedRashi(rashi);
     };
     
-    const displayRashi = selectedRashi || horoscope[0];
+    const displayRashi = selectedRashi;
 
     return (
         <div className="space-y-3">

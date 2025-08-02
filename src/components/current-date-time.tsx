@@ -68,7 +68,7 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
   const gregorianDateStr = `${getEnglishMonthName(displayDate.adMonth)} ${displayDate.adDay}, ${displayDate.adYear}`;
 
   const nepaliTimeParts = timeString.split(/:| /);
-  const nepaliTimeString = getNepaliNumber(`${nepaliTimeParts[0]}:${nepaliTimeParts[1]}`);
+  const nepaliTimeString = timeString ? getNepaliNumber(`${nepaliTimeParts[0]}:${nepaliTimeParts[1]}`) : "";
   const timeSuffix = timeString.slice(-2);
   const localizedTimePrefix = timeSuffix === 'AM' ? 'बिहानको' : 'बेलुकीको';
 
