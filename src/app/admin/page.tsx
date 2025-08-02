@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { PlusCircle, Edit, Trash2, LoaderCircle } from "lucide-react";
+import { PlusCircle, Edit, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
+import FlagLoader from "@/components/flag-loader";
 
 // Mock data for now
 const mockNews = [
@@ -208,7 +209,7 @@ export default function AdminPage() {
   if (isLoading) {
       return (
           <div className="flex items-center justify-center min-h-screen">
-              <LoaderCircle className="w-8 h-8 animate-spin" />
+              <FlagLoader />
               <span className="ml-2">Loading Settings...</span>
           </div>
       )

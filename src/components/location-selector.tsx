@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { MapPin, LoaderCircle } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from './ui/button';
+import FlagLoader from './flag-loader';
 
 interface LocationSelectorProps {
   onLocationChange: (country: string | null) => void;
@@ -87,7 +88,7 @@ export default function LocationSelector({ onLocationChange }: LocationSelectorP
         </SelectContent>
       </Select>
       <Button variant="ghost" size="icon" onClick={handleDetectLocation} disabled={isLocating}>
-        {isLocating ? <LoaderCircle className="animate-spin" /> : <MapPin className="h-5 w-5 text-gray-600" />}
+        {isLocating ? <FlagLoader /> : <MapPin className="h-5 w-5 text-gray-600" />}
         <span className="sr-only">Detect Location</span>
       </Button>
     </div>

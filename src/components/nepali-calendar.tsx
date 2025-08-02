@@ -2,13 +2,14 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, LoaderCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { convertDate } from '@/ai/flows/date-conversion-flow';
 import { getCalendarEvents } from '@/ai/flows/calendar-events-flow';
 import { CalendarEvent, DateConversionOutput } from '@/ai/schemas';
+import FlagLoader from './flag-loader';
 
 const nepaliMonths = [
   "बैशाख", "जेठ", "असार", "श्रावण", "भदौ", "आश्विन", "कार्तिक", "मंसिर", "पौष", "माघ", "फाल्गुन", "चैत्र"
@@ -140,7 +141,7 @@ export default function NepaliCalendar() {
   if (initialLoading) {
     return (
         <div className="w-full flex items-center justify-center p-8">
-            <LoaderCircle className="w-8 h-8 animate-spin text-primary" />
+            <FlagLoader />
             <span className="ml-2">Loading Calendar...</span>
         </div>
     );
@@ -193,7 +194,7 @@ export default function NepaliCalendar() {
       <div className="relative">
         {isLoading && (
             <div className="absolute inset-0 bg-white/70 flex items-center justify-center z-10">
-                <LoaderCircle className="w-8 h-8 animate-spin text-primary" />
+                <FlagLoader />
             </div>
         )}
         <div className={cn("animate-in fade-in duration-500", isLoading ? 'opacity-50' : 'opacity-100')}>

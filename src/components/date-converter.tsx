@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRightLeft, LoaderCircle } from "lucide-react";
+import { ArrowRightLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
+import FlagLoader from "./flag-loader";
 
 const nepaliMonths = [
   "Baisakh", "Jestha", "Ashadh", "Shrawan", "Bhadra",
@@ -147,7 +148,7 @@ export default function DateConverter() {
         <CardFooter className="flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
           <Button onClick={handleGregorianToNepali} disabled={isConvertingAD}>
             {isConvertingAD ? (
-              <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+              <FlagLoader />
             ) : (
               <ArrowRightLeft className="mr-2 h-4 w-4" />
             )}
@@ -197,7 +198,7 @@ export default function DateConverter() {
         <CardFooter className="flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
           <Button onClick={handleNepaliToGregorian} disabled={isConvertingBS}>
             {isConvertingBS ? (
-                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                <FlagLoader />
               ) : (
                 <ArrowRightLeft className="mr-2 h-4 w-4" />
             )}
