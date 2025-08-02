@@ -28,47 +28,50 @@ export default function CurrentDateTime({ country, onDateLoaded }: CurrentDateTi
   const [isMounted, setIsMounted] = useState(false);
   const [gregorianDateString, setGregorianDateString] = useState("");
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
   const fetchDateAndTime = useCallback(async () => {
     if (country !== "Nepal") {
-        setLoading(false);
-        return;
+      setLoading(false);
+      return;
     }
     setLoading(true);
     try {
-        const info = await getCurrentDateInfo();
-        setDateInfo(info);
-        if(onDateLoaded) {
-            onDateLoaded(info);
-        }
+      const info = await getCurrentDateInfo();
+      setDateInfo(info);
+      if (onDateLoaded) {
+        onDateLoaded(info);
+      }
     } catch (error) {
-        console.error("Failed to fetch date and time", error);
-        setDateInfo(null);
+      console.error("Failed to fetch date and time", error);
+      setDateInfo(null);
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   }, [country, onDateLoaded]);
 
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
     if (!isMounted) return;
-    
+
     fetchDateAndTime();
-    
+
     const intervalId = setInterval(() => {
-        const timezone = country === "Nepal" ? "Asia/Kathmandu" : undefined;
-        const now = new Date();
+      const timezone = country === "Nepal" ? "Asia/Kathmandu" : undefined;
+      const now = new Date();
+      if (timezone) {
         const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true, timeZone: timezone });
         setTimeString(timeStr);
-        if (country !== "Nepal") {
-             setGregorianDateString(now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
-        }
+      } else {
+        const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true });
+        setTimeString(timeStr);
+        setGregorianDateString(now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
+      }
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [isMounted, fetchDateAndTime, country]);
+  }, [isMounted, country, fetchDateAndTime]);
 
 
   if (loading && country === 'Nepal') {
