@@ -13,7 +13,7 @@ import {
   CardFooter
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import NepaliCalendar from "@/components/nepali-calendar";
+import NepaliCalendarComponent from "@/components/nepali-calendar";
 import DateConverter from "@/components/date-converter";
 import FestivalList from "@/components/festival-list";
 import { Button } from "@/components/ui/button";
@@ -231,7 +231,7 @@ export default function Home() {
           <div className="lg:col-span-3 space-y-8">
             <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
                 <CardContent className="p-2 sm:p-4">
-                     <NepaliCalendar 
+                     <NepaliCalendarComponent
                         today={patroData?.today} 
                         monthEvents={patroData?.monthEvents} 
                         isLoading={loading} 

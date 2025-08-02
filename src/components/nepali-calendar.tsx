@@ -9,7 +9,7 @@ import { ChevronLeft, ChevronRight, Loader, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { useIsMounted } from '@/hooks/use-is-mounted';
-import NepaliCalendarLib from 'nepali-calendar-js';
+import NepaliCalendar from 'nepali-calendar-js';
 
 interface NepaliCalendarProps {
     today: CurrentDateInfoResponse | null | undefined;
@@ -19,7 +19,7 @@ interface NepaliCalendarProps {
 
 const WEEK_DAYS_NP = ["आइत", "सोम", "मंगल", "बुध", "बिहि", "शुक्र", "शनि"];
 
-export default function NepaliCalendar({ today: initialToday, monthEvents: initialMonthEvents, isLoading: initialIsLoading }: NepaliCalendarProps) {
+export default function NepaliCalendarComponent({ today: initialToday, monthEvents: initialMonthEvents, isLoading: initialIsLoading }: NepaliCalendarProps) {
     const isMounted = useIsMounted();
     const [currentDate, setCurrentDate] = useState({ year: 0, month: 0 });
     const [monthData, setMonthData] = useState<any>(null);
@@ -27,8 +27,7 @@ export default function NepaliCalendar({ today: initialToday, monthEvents: initi
 
     useEffect(() => {
         if (isMounted) {
-            const cal = NepaliCalendarLib;
-            const todayBS = cal.toBS(new Date());
+            const todayBS = NepaliCalendar.toBS(new Date());
             setCurrentDate({ year: todayBS.bs_year, month: todayBS.bs_month });
         }
     }, [isMounted]);
@@ -37,8 +36,7 @@ export default function NepaliCalendar({ today: initialToday, monthEvents: initi
         if (currentDate.year > 0) {
             setIsLoading(true);
             try {
-                const cal = NepaliCalendarLib;
-                const data = cal.getMonthData(currentDate.year, currentDate.month);
+                const data = NepaliCalendar.getMonthData(currentDate.year, currentDate.month);
                 setMonthData(data);
             } catch (e) {
                 console.error("Failed to get month data", e);
@@ -101,7 +99,7 @@ export default function NepaliCalendar({ today: initialToday, monthEvents: initi
         );
     }
     
-    const todayBS = NepaliCalendarLib.toBS(new Date());
+    const todayBS = NepaliCalendar.toBS(new Date());
     const firstDayOfWeek = monthData.first_day; // 1 for Sunday, 2 for Monday..
     const calendarCells = [];
     for (let i = 1; i < firstDayOfWeek; i++) {

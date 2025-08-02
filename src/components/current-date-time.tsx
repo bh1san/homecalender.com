@@ -50,7 +50,7 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
 
 
     return () => clearInterval(intervalId);
-  }, [today]);
+  }, [isMounted, today]);
 
   const displayDate = clientToday || today;
 
