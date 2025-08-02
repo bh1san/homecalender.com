@@ -76,8 +76,8 @@ export default function Home() {
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
   const [today, setToday] = useState<CurrentDateInfoResponse | null>(null);
 
-  const processFestivals = useCallback((festivalData: Festival[]) => {
-      const todayDate = new Date();
+  const processFestivals = useCallback((festivalData: Festival[], currentDate: Date) => {
+      const todayDate = new Date(currentDate);
       todayDate.setHours(0, 0, 0, 0); // Normalize today's date
 
       const events = festivalData
@@ -114,7 +114,7 @@ export default function Home() {
     }
     fetchSettings();
   }, []);
-
+  
   const isNepal = useMemo(() => location.country === 'Nepal', [location.country]);
 
   useEffect(() => {
@@ -134,7 +134,9 @@ export default function Home() {
         
         const festivalData = await festivalPromise;
         setFestivals(festivalData.festivals);
-        processFestivals(festivalData.festivals);
+        if (today) {
+           processFestivals(festivalData.festivals, new Date(today.adYear, today.adMonth, today.adDay));
+        }
         
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -147,7 +149,13 @@ export default function Home() {
     const countryToFetch = location.country || "Nepal";
     fetchNewsAndFestivals(countryToFetch);
     
-  }, [location.country, processFestivals]);
+  }, [location.country, processFestivals, today]);
+
+  useEffect(() => {
+      if (today && festivals.length > 0) {
+          processFestivals(festivals, new Date(today.adYear, today.adMonth, today.adDay));
+      }
+  }, [today, festivals, processFestivals]);
 
   return (
     <div className="min-h-screen bg-muted/40 font-body">
@@ -381,5 +389,3 @@ function Header({ navLinks, logoUrl, isLoading }: { navLinks: string[], logoUrl:
         </header>
     )
 }
-
-    

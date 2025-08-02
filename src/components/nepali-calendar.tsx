@@ -56,17 +56,19 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
   useEffect(() => {
     if (today) {
       const initialDate = { year: today.bsYear, month: today.bsMonth - 1 };
-      setDisplayDate(initialDate);
-      setSelectedDay(today.bsDay);
-      fetchMonthData(initialDate.year, initialDate.month);
+      if (!displayDate || displayDate.year !== initialDate.year || displayDate.month !== initialDate.month) {
+        setDisplayDate(initialDate);
+        setSelectedDay(today.bsDay);
+        fetchMonthData(initialDate.year, initialDate.month);
+      }
     }
-  }, [today, fetchMonthData]);
+  }, [today, fetchMonthData, displayDate]);
 
   useEffect(() => {
-    if (displayDate && !today) { // if today is cleared, but we still have a display date
+    if (displayDate && !isLoading) { // Re-fetch if displayDate changes for some other reason
        fetchMonthData(displayDate.year, displayDate.month);
     }
-  }, [displayDate, today, fetchMonthData]);
+  }, [displayDate]);
 
   const changeDisplayedMonth = (year: number, month: number) => {
       setSelectedDay(null);
@@ -248,5 +250,3 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
     </div>
   );
 }
-
-    
