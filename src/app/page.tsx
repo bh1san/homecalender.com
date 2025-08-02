@@ -37,31 +37,29 @@ const parseFestivalDate = (dateString: string) => {
     try {
         const now = new Date();
         const year = now.getFullYear();
-        // Try to parse dates like "Month Day" e.g. "August 15"
+        // Try to parse dates like "Month Day" e.g. "August 15" or "October 31"
         let date = new Date(`${dateString} ${year}`);
+
         if (isNaN(date.getTime())) {
-             // Fallback for formats like "February/March"
-            const monthName = dateString.split('/')[0].trim();
+             // Fallback for formats like "March", "Late September", "February/March"
+            const monthName = dateString.split(/[\s/]+/)[0].trim();
             date = new Date(`${monthName} 1 ${year}`);
         }
+
         if (isNaN(date.getTime())) return null;
 
-        // If the date is in the past, assume it's for the next year
-        if (date < now) {
+        // If the parsed date is more than a month in the past, assume it's for the next year
+        if (differenceInDays(date, now) < -30) {
             date.setFullYear(year + 1);
         }
+        
         return date;
     } catch {
         return null;
     }
 };
 
-const formatRelativeTime = (date: Date) => {
-    const diff = differenceInDays(date, new Date());
-    if (diff < 0) return format(date, "do MMMM yyyy"); // Show past events with year
-    if (diff === 0) return "Today";
-    if (diff === 1) return "Tomorrow";
-    if (diff > 1 && diff <= 7) return `In ${diff} days`;
+const formatUpcomingEventDate = (date: Date) => {
     return format(date, "do MMMM");
 };
 
@@ -96,20 +94,21 @@ export default function Home() {
   const upcomingEvents = useMemo(() => {
     if (!festivals) return [];
     
+    const now = new Date();
+    
     return festivals
         .map(festival => ({
             ...festival,
             parsedDate: parseFestivalDate(festival.date),
         }))
-        .filter(event => event.parsedDate) // Keep all events with a parseable date
+        .filter(event => event.parsedDate && differenceInDays(event.parsedDate, now) >= 0)
         .sort((a, b) => a.parsedDate!.getTime() - b.parsedDate!.getTime())
-        .filter(event => differenceInDays(event.parsedDate!, new Date()) >= 0) // Filter for today or future events
         .slice(0, 5)
         .map(event => ({
             day: format(event.parsedDate!, 'dd'),
             month: format(event.parsedDate!, 'MMM'),
             title: event.name,
-            relativeTime: formatRelativeTime(event.parsedDate!),
+            fullDate: formatUpcomingEventDate(event.parsedDate!),
         }));
 
   }, [festivals]);
@@ -272,7 +271,7 @@ export default function Home() {
                                      </div>
                                     <div>
                                         <p className="font-medium text-card-foreground">{event.title}</p>
-                                        <p className="text-sm text-muted-foreground">{event.relativeTime}</p>
+                                        <p className="text-sm text-muted-foreground">{event.fullDate}</p>
                                     </div>
                                 </div>
                             ))}
