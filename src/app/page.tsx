@@ -1,7 +1,7 @@
 
 "use client";
 
-import { ArrowRightLeft, CalendarDays, PartyPopper, Search, Menu } from "lucide-react";
+import { ArrowRightLeft, CalendarDays, PartyPopper, Search, Menu, Plus, MessageSquare } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -9,6 +9,8 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
+  CardFooter
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import NepaliCalendar from "@/components/nepali-calendar";
@@ -25,8 +27,9 @@ import { Calendar } from "@/components/ui/calendar";
 import LocationSelector from "@/components/location-selector";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import MotivationalQuote from "@/components/motivational-quote";
-import { format, differenceInDays, parseISO } from 'date-fns';
+import { format, differenceInDays, parseISO, addDays } from 'date-fns';
 import { User } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 type Settings = {
     logoUrl: string;
@@ -36,21 +39,25 @@ type Settings = {
 const parseFestivalDate = (dateString: string): Date | null => {
     try {
         const date = parseISO(dateString);
-        return isNaN(date.getTime()) ? null : date;
+        if (isNaN(date.getTime())) {
+            return null;
+        }
+        // Adjust for timezone offset by creating date in UTC
+        return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
     } catch {
         return null;
     }
 };
 
 const formatUpcomingEventDate = (date: Date): string => {
-    return format(date, "do MMMM");
+    return `in ${differenceInDays(date, new Date())} days`;
 };
 
 type UpcomingEvent = {
     day: string;
     month: string;
     title: string;
-    fullDate: string;
+    countdown: string;
 };
 
 export default function Home() {
@@ -89,16 +96,22 @@ export default function Home() {
 
   const processFestivals = useCallback((festivalData: Festival[]) => {
       const now = new Date();
+       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
       const events = festivalData
           .map(festival => ({ ...festival, parsedDate: parseFestivalDate(festival.gregorianStartDate) }))
-          .filter(event => event.parsedDate && differenceInDays(event.parsedDate, now) >= 0)
+          .filter(event => {
+              if (!event.parsedDate) return false;
+              const diff = differenceInDays(event.parsedDate, today);
+              return diff >= 0;
+          })
           .sort((a, b) => a.parsedDate!.getTime() - b.parsedDate!.getTime())
           .slice(0, 5)
           .map(event => ({
               day: format(event.parsedDate!, 'dd'),
               month: format(event.parsedDate!, 'MMM'),
               title: event.name,
-              fullDate: formatUpcomingEventDate(event.parsedDate!),
+              countdown: formatUpcomingEventDate(event.parsedDate!),
           }));
       setUpcomingEvents(events);
   }, []);
@@ -201,15 +214,76 @@ export default function Home() {
             )}
         </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
-            <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
-                <CardContent className="p-2 sm:p-4">
-                  <Tabs defaultValue="calendar" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 bg-muted/60">
-                      <TabsTrigger value="calendar">
-                        <CalendarDays className="mr-2 h-4 w-4" /> Calendar
-                      </TabsTrigger>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          <aside className="lg:col-span-1 space-y-8">
+             <Card className="bg-card/80 backdrop-blur-sm">
+                <CardHeader>
+                    <CardTitle className="text-lg font-semibold text-card-foreground">आउँदा दिनहरु</CardTitle>
+                </CardHeader>
+                <CardContent>
+                     {loadingFestivals ? (
+                        <div className="space-y-4">
+                            {[...Array(3)].map((_, i) => (
+                                <div key={i} className="flex items-start gap-4 p-2">
+                                    <div className="w-12 h-12 bg-muted rounded-md animate-pulse" />
+                                    <div className="w-full">
+                                        <div className="h-5 bg-muted rounded w-3/4 animate-pulse" />
+                                        <div className="h-4 bg-muted/50 rounded w-1/2 mt-1 animate-pulse" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            {upcomingEvents.map(event => (
+                                <div key={event.title} className="flex items-center gap-3 p-2 rounded-lg transition-colors border-b last:border-b-0">
+                                    <div className="flex-shrink-0 text-center bg-primary/10 text-primary p-2 rounded-md">
+                                        <div className="font-bold text-lg">{event.day}</div>
+                                        <div className="text-xs font-medium">{event.month}</div>
+                                     </div>
+                                    <div className="flex-grow">
+                                        <p className="font-medium text-card-foreground text-sm">{event.title}</p>
+                                        <p className="text-xs text-muted-foreground">{event.countdown}</p>
+                                    </div>
+                                </div>
+                            ))}
+                            {upcomingEvents.length === 0 && !loadingFestivals && (
+                                <p className="text-sm text-center text-muted-foreground">No upcoming events found.</p>
+                            )}
+                        </div>
+                     )}
+                </CardContent>
+            </Card>
+
+            <Card className="bg-card/80 backdrop-blur-sm">
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="text-lg font-semibold text-card-foreground">मेरो नोट</CardTitle>
+                     <Button size="sm" variant="outline"><Plus className="mr-1" /> Add Note</Button>
+                </CardHeader>
+                <CardContent>
+                    <Textarea placeholder="You can add your notes here." className="bg-background/50"/>
+                </CardContent>
+            </Card>
+
+             <Card className="bg-card/80 backdrop-blur-sm">
+                <CardHeader>
+                    <CardTitle className="text-lg font-semibold text-card-foreground">राशीफल</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center justify-center h-24 bg-muted rounded-md">
+                        <MessageSquare className="w-8 h-8 text-muted-foreground" />
+                        <p className="ml-2 text-muted-foreground">Horoscope coming soon.</p>
+                    </div>
+                </CardContent>
+            </Card>
+
+             <Card className="shadow-lg bg-card/80 backdrop-blur-sm">
+                <CardHeader>
+                    <CardTitle>Tools</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Tabs defaultValue="converter" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 bg-muted/60">
                       <TabsTrigger value="converter">
                         <ArrowRightLeft className="mr-2 h-4 w-4" /> Converter
                       </TabsTrigger>
@@ -217,9 +291,6 @@ export default function Home() {
                         <PartyPopper className="mr-2 h-4 w-4" /> Festivals
                       </TabsTrigger>
                     </TabsList>
-                    <TabsContent value="calendar" className="mt-6">
-                        {isNepal ? <NepaliCalendar /> : <Calendar mode="single" className="w-full rounded-md bg-card/90" />}
-                    </TabsContent>
                     <TabsContent value="converter" className="mt-6">
                       <DateConverter />
                     </TabsContent>
@@ -237,51 +308,17 @@ export default function Home() {
                   </Tabs>
                 </CardContent>
               </Card>
+
+          </aside>
+
+          <div className="lg:col-span-3 space-y-8">
+            <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
+                <CardContent className="p-2 sm:p-4">
+                     {isNepal ? <NepaliCalendar /> : <Calendar mode="single" className="w-full rounded-md bg-card/90" />}
+                </CardContent>
+              </Card>
           </div>
 
-          <div className="space-y-8">
-            <Card className="bg-card/80 backdrop-blur-sm">
-                <CardHeader>
-                    <CardTitle className="text-lg font-semibold text-card-foreground">Upcoming Events</CardTitle>
-                </CardHeader>
-                <CardContent>
-                     {loadingFestivals ? (
-                        <div className="space-y-4">
-                            {[...Array(3)].map((_, i) => (
-                                <div key={i} className="flex items-start gap-4 p-2">
-                                    <div className="flex-shrink-0">
-                                        <div className="w-12 h-8 bg-muted rounded-t-md animate-pulse" />
-                                        <div className="w-12 h-4 bg-muted/50 rounded-b-md animate-pulse" />
-                                    </div>
-                                    <div className="w-full">
-                                        <div className="h-5 bg-muted rounded w-3/4 animate-pulse" />
-                                        <div className="h-4 bg-muted/50 rounded w-1/2 mt-1 animate-pulse" />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {upcomingEvents.map(event => (
-                                <div key={event.title} className="flex items-start gap-4 p-2 rounded-lg transition-colors hover:bg-primary/10">
-                                    <div className="flex-shrink-0 text-center">
-                                        <div className="bg-primary text-primary-foreground font-bold p-2 rounded-t-md text-sm">{event.day}</div>
-                                        <div className="bg-secondary text-secondary-foreground p-1 rounded-b-md text-xs">{event.month}</div>
-                                     </div>
-                                    <div>
-                                        <p className="font-medium text-card-foreground">{event.title}</p>
-                                        <p className="text-sm text-muted-foreground">{event.fullDate}</p>
-                                    </div>
-                                </div>
-                            ))}
-                            {upcomingEvents.length === 0 && !loadingFestivals && (
-                                <p className="text-sm text-center text-muted-foreground">No upcoming events found for the selected country.</p>
-                            )}
-                        </div>
-                     )}
-                </CardContent>
-            </Card>
-          </div>
         </div>
       </main>
     </div>
