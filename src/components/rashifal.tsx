@@ -32,8 +32,8 @@ export default function Rashifal({ loading, horoscope }: RashifalProps) {
         return <p className="text-center text-muted-foreground p-4">Could not load horoscope.</p>;
     }
     
-    const handleRashiChange = (title: string) => {
-        const rashi = horoscope.find(r => r.title === title) || null;
+    const handleRashiChange = (name: string) => {
+        const rashi = horoscope.find(r => r.name === name) || null;
         setSelectedRashi(rashi);
     };
     
@@ -42,20 +42,20 @@ export default function Rashifal({ loading, horoscope }: RashifalProps) {
 
     return (
         <div className="space-y-3">
-             <Select onValueChange={handleRashiChange} defaultValue={displayRashi.title}>
+             <Select onValueChange={handleRashiChange} defaultValue={displayRashi.name}>
                 <SelectTrigger className="w-full font-semibold">
                     <SelectValue placeholder="Select your Rashi..." />
                 </SelectTrigger>
                 <SelectContent>
                     {horoscope.map((rashi) => (
-                        <SelectItem key={rashi.title} value={rashi.title}>
-                           {rashi.title}
+                        <SelectItem key={rashi.name} value={rashi.name}>
+                           {rashi.name}
                         </SelectItem>
                     ))}
                 </SelectContent>
             </Select>
             <p className="text-sm text-muted-foreground p-3 bg-muted/40 rounded-md min-h-[100px]">
-                {displayRashi.description}
+                {displayRashi.text}
             </p>
         </div>
     )

@@ -1,48 +1,24 @@
 
 'use server';
 /**
- * @fileOverview A flow for fetching data like horoscopes, gold/silver prices, and forex rates.
+ * @fileOverview A flow for fetching data like horoscopes, gold/silver prices, and forex rates using hamro-patro-scraper.
  * It also fetches today's date info and upcoming events.
  *
  * - getPatroData - A function that fetches all daily data for the app.
  */
-
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { 
   PatroDataResponse, 
   PatroDataResponseSchema, 
-  HoroscopeSchema, 
-  GoldSilverSchema, 
-  ForexSchema,
+  Horoscope,
+  GoldSilver,
+  Forex,
   UpcomingEventSchema,
-  CurrentDateInfoResponseSchema
+  CurrentDateInfoResponse
 } from '@/ai/schemas';
 import { getTodaysInfoFromApi } from '@/services/nepali-date';
-
-
-const PatroDataGenerationInputSchema = z.object({
-  country: z.string().describe('The country for which to generate the data. Should be Nepal.'),
-});
-
-
-const PatroDataGenerationSchema = z.object({
-    horoscope: z.array(HoroscopeSchema).describe("A list of 12 horoscopes (Rashifal) for today in Nepali."),
-    goldSilver: GoldSilverSchema.describe("Today's price for fine gold, tejabi gold, and silver in Nepal."),
-    forex: z.array(ForexSchema).describe("A list of 10 major foreign exchange rates against the Nepalese Rupee (NPR), including USD, EUR, GBP, JPY, INR, etc."),
-});
-
-
-const patroDataPrompt = ai.definePrompt({
-  name: 'patroDataPrompt',
-  input: {schema: PatroDataGenerationInputSchema},
-  output: {schema: PatroDataGenerationSchema},
-  prompt: `You are a data provider for a Nepali calendar application. Generate the daily data for {{country}}.
-- Horoscope (Rashifal): Provide a short, engaging, one-sentence horoscope for all 12 zodiac signs in Nepali.
-- Gold/Silver Prices: Provide the prices for Fine Gold (छापावाल सुन), Tejabi Gold (तेजाबी सुन), and Silver (चाँदी) in NPR per Tola. The prices should be realistic for today.
-- Forex: Provide the buy and sell rates for 10 major currencies against NPR. Include their flag emoji image URL from a reliable source. The unit should be 1 for most, but check standard units for currencies like JPY.`,
-});
-
+import { getHoroscope, getGoldPrices, getExchangeRates } from 'hamro-patro-scraper';
 
 const patroDataFlow = ai.defineFlow(
   {
@@ -51,26 +27,29 @@ const patroDataFlow = ai.defineFlow(
     outputSchema: PatroDataResponseSchema,
   },
   async () => {
-    console.log("Generating patro data...");
+    console.log("Fetching data from APIs and scraper...");
     
-    // Fetch from API and AI in parallel
-    const [apiData, aiData] = await Promise.all([
+    // Fetch from API and Scraper in parallel
+    const [apiData, horoscopeData, goldSilverData, forexData] = await Promise.all([
       getTodaysInfoFromApi().catch(e => {
         console.error("API call to getTodaysInfoFromApi failed:", e);
-        return null; // Don't block everything if the API fails
-      }),
-      patroDataPrompt({ country: "Nepal" }).then(p => p.output).catch(e => {
-        console.error("AI call to patroDataPrompt failed:", e);
         return null;
-      })
+      }),
+      getHoroscope().catch(e => {
+        console.error("Scraper call to getHoroscope failed:", e);
+        return [];
+      }),
+      getGoldPrices().catch(e => {
+        console.error("Scraper call to getGoldPrices failed:", e);
+        return null;
+      }),
+      getExchangeRates().catch(e => {
+        console.error("Scraper call to getExchangeRates failed:", e);
+        return [];
+      }),
     ]);
 
-    if (!aiData) {
-        throw new Error('Could not generate core data from AI.');
-    }
-
-    // Process API data if it's available
-    let today: z.infer<typeof CurrentDateInfoResponseSchema> | null = null;
+    let today: CurrentDateInfoResponse | null = null;
     let upcomingEvents: z.infer<typeof UpcomingEventSchema>[] = [];
     
     if (apiData) {
@@ -100,10 +79,22 @@ const patroDataFlow = ai.defineFlow(
             .slice(0, 8);
     }
     
+    let mappedGoldSilver: GoldSilver | null = null;
+    if (goldSilverData) {
+        const findPrice = (item: string) => goldSilverData.find(p => p.item.toLowerCase().includes(item.toLowerCase())) || { item, price: 'N/A', unit: 'Tola' };
+        mappedGoldSilver = {
+            fineGold: findPrice('fine gold'),
+            tejabiGold: findPrice('tejabi gold'),
+            silver: findPrice('silver'),
+        }
+    }
+
     return {
-        ...aiData,
+        horoscope: horoscopeData,
+        goldSilver: mappedGoldSilver,
+        forex: forexData,
         today: today,
-        upcomingEvents: upcomingEvents
+        upcomingEvents: upcomingEvents,
     };
   }
 );

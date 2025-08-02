@@ -5,7 +5,7 @@ import { GoldSilver as GoldSilverType } from '@/ai/schemas';
 
 interface GoldSilverProps {
     loading: boolean;
-    prices?: GoldSilverType;
+    prices?: GoldSilverType | null;
 }
 
 const PriceDisplay = ({ label, value, unit }: { label: string, value?: string, unit?: string }) => (

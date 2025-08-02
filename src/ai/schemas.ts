@@ -92,12 +92,14 @@ export type UpcomingEventsResponse = z.infer<typeof UpcomingEventsResponseSchema
 // Hamro Patro Scraper Schemas
 
 export const HoroscopeSchema = z.object({
-    title: z.string(),
-    description: z.string(),
+    rashi: z.number(),
+    name: z.string(),
+    text: z.string(),
 });
 export type Horoscope = z.infer<typeof HoroscopeSchema>;
 
 export const GoldPriceSchema = z.object({
+    item: z.string(),
     unit: z.string(),
     price: z.string(),
 });
@@ -117,14 +119,14 @@ export const ForexSchema = z.object({
     buy: z.string(),
     sell: z.string(),
     iso3: z.string(),
-    flag: z.string(),
+    flag: z.string().url(),
 });
 export type Forex = z.infer<typeof ForexSchema>;
 
 
 export const PatroDataResponseSchema = z.object({
     horoscope: z.array(HoroscopeSchema),
-    goldSilver: GoldSilverSchema,
+    goldSilver: GoldSilverSchema.nullable(),
     forex: z.array(ForexSchema),
     today: CurrentDateInfoResponseSchema.nullable(),
     upcomingEvents: z.array(UpcomingEventSchema),
