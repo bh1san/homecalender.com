@@ -20,8 +20,10 @@ const quotes = [
 export default function MotivationalQuote() {
   const [currentQuote, setCurrentQuote] = useState("");
   const [isFading, setIsFading] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
     // Set initial quote on client-side
     setCurrentQuote(quotes[Math.floor(Math.random() * quotes.length)]);
 
@@ -39,9 +41,9 @@ export default function MotivationalQuote() {
     }, 15000); // 15 seconds
 
     return () => clearInterval(intervalId);
-  }, [currentQuote]);
+  }, []);
 
-  if (!currentQuote) {
+  if (!isMounted || !currentQuote) {
     return (
         <div className="w-[400px] h-[100px] flex items-center justify-center bg-black/20 rounded-lg p-4 text-center overflow-hidden" />
     );
@@ -58,3 +60,5 @@ export default function MotivationalQuote() {
     </div>
   );
 }
+
+    

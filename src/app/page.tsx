@@ -85,7 +85,6 @@ export default function Home() {
   const isNepal = useMemo(() => location.country === 'Nepal' || location.country === null, [location.country]);
   
   useEffect(() => {
-    let isMounted = true;
     if (festivals.length > 0) {
       const now = new Date();
       
@@ -104,16 +103,9 @@ export default function Home() {
               fullDate: formatUpcomingEventDate(event.parsedDate!),
           }));
         
-        if (isMounted) {
-            setUpcomingEvents(events);
-        }
+      setUpcomingEvents(events);
     } else {
-        if (isMounted) {
-            setUpcomingEvents([]);
-        }
-    }
-    return () => {
-      isMounted = false;
+      setUpcomingEvents([]);
     }
   }, [festivals]);
 
@@ -360,3 +352,5 @@ function Header({ navLinks, logoUrl, isLoading }: { navLinks: string[], logoUrl:
         </header>
     )
 }
+
+    

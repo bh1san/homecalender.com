@@ -34,8 +34,6 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let isMounted = true;
-
     const effectiveCountry = country || 'Nepal';
 
     const fetchDateAndTime = async () => {
@@ -47,8 +45,7 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
             if (!tzResponse.ok) throw new Error(`Failed to fetch timezone data for ${timezone}.`);
             
             const timeData = await tzResponse.json();
-            if (!isMounted) return;
-
+            
             const now = new Date(timeData.datetime);
 
             const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true, timeZone: timezone });
@@ -56,9 +53,9 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
 
             if (effectiveCountry === 'Nepal') {
                 const bsDate = toBS(now);
-                if (isMounted) setDateTime({ timeString, dateString, nepaliDate: bsDate });
+                setDateTime({ timeString, dateString, nepaliDate: bsDate });
             } else {
-                 if (isMounted) setDateTime({ timeString, dateString, nepaliDate: null });
+                 setDateTime({ timeString, dateString, nepaliDate: null });
             }
         } catch (error) {
             console.error("Failed to fetch date and time", error);
@@ -66,17 +63,14 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
             const now = new Date();
             const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
             const dateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-             if (isMounted) setDateTime({ timeString, dateString, nepaliDate: null });
+             setDateTime({ timeString, dateString, nepaliDate: null });
         } finally {
-            if (isMounted) setLoading(false);
+            setLoading(false);
         }
     };
     
     fetchDateAndTime();
 
-    return () => {
-        isMounted = false;
-    }
   }, [country]);
 
   const countryToTimezone = (countryName: string) => {
@@ -156,3 +150,5 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
     </div>
   );
 }
+
+    
