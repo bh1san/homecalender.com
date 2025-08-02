@@ -26,17 +26,43 @@ import { Calendar } from "@/components/ui/calendar";
 import LocationSelector from "@/components/location-selector";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import MotivationalQuote from "@/components/motivational-quote";
-
-const upcomingEvents = [
-    { day: "15", month: "Jul", title: "World Youth Skills Day", relativeTime: "Today" },
-    { day: "17", month: "Jul", title: "First day of Shrawan", relativeTime: "2 days later" },
-]
+import { format, differenceInDays } from 'date-fns';
 
 const initialNavLinks = [
     "Remit", "Mart", "Gifts", "Recharge", "Health", "Bank Rates", "Jyotish", 
     "Rashifal", "Podcasts", "News", "Blog", "Gold/Silver", "Forex", "Converter"
 ];
 
+const parseFestivalDate = (dateString: string) => {
+    try {
+        const now = new Date();
+        const year = now.getFullYear();
+        // Try to parse dates like "Month Day" e.g. "August 15"
+        let date = new Date(`${dateString} ${year}`);
+        if (isNaN(date.getTime())) {
+             // Fallback for formats like "February/March"
+            const monthName = dateString.split('/')[0].trim();
+            date = new Date(`${monthName} 1 ${year}`);
+        }
+        if (isNaN(date.getTime())) return null;
+
+        // If the date is in the past, assume it's for the next year
+        if (date < now) {
+            date.setFullYear(year + 1);
+        }
+        return date;
+    } catch {
+        return null;
+    }
+};
+
+const formatRelativeTime = (date: Date) => {
+    const diff = differenceInDays(date, new Date());
+    if (diff === 0) return "Today";
+    if (diff === 1) return "Tomorrow";
+    if (diff > 1 && diff <= 7) return `${diff} days later`;
+    return format(date, "do MMMM");
+};
 
 export default function Home() {
   const [location, setLocation] = useState<{ country: string | null }>({ country: null });
@@ -48,6 +74,27 @@ export default function Home() {
   const [logoUrl, setLogoUrl] = useState("https://placehold.co/200x50.png");
 
   const isNepal = useMemo(() => location.country === 'Nepal', [location.country]);
+  
+  const upcomingEvents = useMemo(() => {
+    if (!festivals) return [];
+    
+    return festivals
+        .map(festival => ({
+            ...festival,
+            parsedDate: parseFestivalDate(festival.date),
+        }))
+        .filter(event => event.parsedDate && event.parsedDate >= new Date())
+        .sort((a, b) => a.parsedDate!.getTime() - b.parsedDate!.getTime())
+        .slice(0, 5)
+        .map(event => ({
+            day: format(event.parsedDate!, 'dd'),
+            month: format(event.parsedDate!, 'MMM'),
+            title: event.name,
+            relativeTime: formatRelativeTime(event.parsedDate!),
+        }));
+
+  }, [festivals]);
+
 
   useEffect(() => {
     const fetchNewsAndFestivals = async (country: string) => {
@@ -181,40 +228,40 @@ export default function Home() {
                     <CardTitle className="text-lg font-semibold text-card-foreground">Upcoming Events</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-4">
-                        {upcomingEvents.map(event => (
-                            <div key={event.title} className="flex items-start gap-4 p-2 rounded-lg transition-colors hover:bg-primary/10">
-                                <div className="flex-shrink-0 text-center">
-                                    <div className="bg-primary text-primary-foreground font-bold p-2 rounded-t-md text-sm">{event.day}</div>
-                                    <div className="bg-secondary text-secondary-foreground p-1 rounded-b-md text-xs">{event.month}</div>
-                                 </div>
-                                <div>
-                                    <p className="font-medium text-card-foreground">{event.title}</p>
-                                    <p className="text-sm text-muted-foreground">{event.relativeTime}</p>
+                     {loadingFestivals && upcomingEvents.length === 0 ? (
+                        <div className="space-y-4">
+                            {[...Array(2)].map((_, i) => (
+                                <div key={i} className="flex items-start gap-4 p-2">
+                                    <div className="flex-shrink-0">
+                                        <div className="w-12 h-8 bg-muted rounded-t-md animate-pulse" />
+                                        <div className="w-12 h-4 bg-muted/50 rounded-b-md animate-pulse" />
+                                    </div>
+                                    <div className="w-full">
+                                        <div className="h-5 bg-muted rounded w-3/4 animate-pulse" />
+                                        <div className="h-4 bg-muted/50 rounded w-1/2 mt-1 animate-pulse" />
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-                </CardContent>
-            </Card>
-
-            <div className="grid grid-cols-2 gap-4">
-                <Button variant="outline" className="justify-start bg-card/80 backdrop-blur-sm transition-transform hover:scale-105"><Gift className="mr-2 text-pink-500"/> Remit</Button>
-                <Button variant="outline" className="justify-start bg-card/80 backdrop-blur-sm transition-transform hover:scale-105"><History className="mr-2 text-green-500"/> Recharge</Button>
-                <Button variant="outline" className="justify-start bg-card/80 backdrop-blur-sm transition-transform hover:scale-105"><Heart className="mr-2 text-blue-500"/> Gifts</Button>
-                <Button variant="outline" className="justify-start bg-card/80 backdrop-blur-sm transition-transform hover:scale-105"><CalendarDays className="mr-2 text-red-500"/> Holidays</Button>
-            </div>
-            
-            <Card className="bg-card/80 backdrop-blur-sm">
-                <CardHeader>
-                    <CardTitle className="text-lg font-semibold text-card-foreground">Our Doctors</CardTitle>
-                </CardHeader>
-                <CardContent className="flex items-center gap-4">
-                    <Image src="https://placehold.co/60x60.png" alt="Dr. Babita Sharma" width={60} height={60} className="rounded-full" data-ai-hint="woman doctor"/>
-                    <div>
-                        <p className="font-bold text-red-600">Dr. Babita Sharma</p>
-                        <p className="text-sm text-muted-foreground">MBBS, MD Psychiatry and Psychotherapy</p>
-                    </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {upcomingEvents.map(event => (
+                                <div key={event.title} className="flex items-start gap-4 p-2 rounded-lg transition-colors hover:bg-primary/10">
+                                    <div className="flex-shrink-0 text-center">
+                                        <div className="bg-primary text-primary-foreground font-bold p-2 rounded-t-md text-sm">{event.day}</div>
+                                        <div className="bg-secondary text-secondary-foreground p-1 rounded-b-md text-xs">{event.month}</div>
+                                     </div>
+                                    <div>
+                                        <p className="font-medium text-card-foreground">{event.title}</p>
+                                        <p className="text-sm text-muted-foreground">{event.relativeTime}</p>
+                                    </div>
+                                </div>
+                            ))}
+                            {upcomingEvents.length === 0 && !loadingFestivals && (
+                                <p className="text-sm text-center text-muted-foreground">No upcoming events found for the selected country.</p>
+                            )}
+                        </div>
+                     )}
                 </CardContent>
             </Card>
           </div>
@@ -266,5 +313,3 @@ function Header({ navLinks, logoUrl }: { navLinks: string[], logoUrl: string }) 
         </header>
     )
 }
-
-    
