@@ -13,6 +13,9 @@ const FestivalGenerationInputSchema = z.object({
   country: z.string().describe('The country for which to generate the festival list.'),
 });
 
+// In-memory cache
+const festivalCache = new Map<string, FestivalResponse>();
+
 const festivalPrompt = ai.definePrompt({
   name: 'festivalPrompt',
   input: {schema: FestivalGenerationInputSchema},
@@ -32,11 +35,18 @@ const festivalFlow = ai.defineFlow(
     outputSchema: FestivalResponseSchema,
   },
   async ({ country }) => {
+    if (festivalCache.has(country)) {
+      console.log(`Returning cached festival list for ${country}.`);
+      return festivalCache.get(country)!;
+    }
+
     console.log(`Generating festival list for ${country}.`);
     const {output} = await festivalPrompt({ country });
     if (!output) {
       throw new Error('Could not generate festivals.');
     }
+
+    festivalCache.set(country, output);
     return output;
   }
 );

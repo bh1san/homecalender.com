@@ -20,6 +20,12 @@ import {
 import { getTodaysInfoFromApi } from '@/services/nepali-date';
 import { getHoroscope, getGoldPrices, getExchangeRates } from 'hamro-patro-scraper';
 
+// In-memory cache for patro data, specific to Nepal
+let patroDataCache: PatroDataResponse | null = null;
+let lastFetchTime: number | null = null;
+
+const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
+
 const patroDataFlow = ai.defineFlow(
   {
     name: 'patroDataFlow',
@@ -27,6 +33,12 @@ const patroDataFlow = ai.defineFlow(
     outputSchema: PatroDataResponseSchema,
   },
   async () => {
+    const now = Date.now();
+    if (patroDataCache && lastFetchTime && (now - lastFetchTime < CACHE_DURATION_MS)) {
+        console.log("Returning cached patro data.");
+        return patroDataCache;
+    }
+
     console.log("Fetching data from APIs and scraper...");
     
     // Fetch from API and Scraper in parallel
@@ -99,14 +111,19 @@ const patroDataFlow = ai.defineFlow(
             },
         }
     }
-
-    return {
+    
+    const response: PatroDataResponse = {
         horoscope: horoscopeData,
         goldSilver: mappedGoldSilver,
         forex: forexData,
         today: today,
         upcomingEvents: upcomingEvents,
     };
+
+    patroDataCache = response;
+    lastFetchTime = now;
+
+    return response;
   }
 );
 

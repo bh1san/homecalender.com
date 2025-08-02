@@ -14,6 +14,10 @@ const NewsGenerationInputSchema = z.object({
   country: z.string().describe('The country for which to generate news headlines.'),
 });
 
+// In-memory cache
+const newsCache = new Map<string, NewsResponse>();
+
+
 const NewsGenerationItemSchema = z.object({
   id: z.string().describe('A unique identifier for the news article.'),
   title: z.string().describe('The headline of the news article.'),
@@ -44,6 +48,11 @@ const newsFlow = ai.defineFlow(
     outputSchema: NewsResponseSchema,
   },
   async ({ country }) => {
+     if (newsCache.has(country)) {
+      console.log(`Returning cached news for ${country}.`);
+      return newsCache.get(country)!;
+    }
+
     console.log(`Generating new news response for ${country}.`);
 
     const {output} = await newsPrompt({ country });
@@ -57,8 +66,11 @@ const newsFlow = ai.defineFlow(
         imageDataUri: `https://placehold.co/192x128.png`,
         imageHint: headline.imageHint,
     }));
+    
+    const response: NewsResponse = {headlines: headlinesWithImages};
+    newsCache.set(country, response);
 
-    return {headlines: headlinesWithImages};
+    return response;
   }
 );
 
