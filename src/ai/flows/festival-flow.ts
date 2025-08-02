@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A flow for fetching major festivals for a given country.
@@ -8,13 +9,12 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { FestivalResponse, FestivalResponseSchema } from '@/ai/schemas';
+import { getFromCache, setInCache } from '@/ai/cache';
+
 
 const FestivalGenerationInputSchema = z.object({
   country: z.string().describe('The country for which to generate the festival list.'),
 });
-
-// In-memory cache
-const festivalCache = new Map<string, FestivalResponse>();
 
 const festivalPrompt = ai.definePrompt({
   name: 'festivalPrompt',
@@ -35,9 +35,11 @@ const festivalFlow = ai.defineFlow(
     outputSchema: FestivalResponseSchema,
   },
   async ({ country }) => {
-    if (festivalCache.has(country)) {
-      console.log(`Returning cached festival list for ${country}.`);
-      return festivalCache.get(country)!;
+    const cacheKey = `festivals_${country}`;
+    const cachedFestivals = getFromCache<FestivalResponse>(cacheKey);
+    if (cachedFestivals) {
+        console.log(`Returning cached festival list for ${country}.`);
+        return cachedFestivals;
     }
 
     console.log(`Generating festival list for ${country}.`);
@@ -46,7 +48,7 @@ const festivalFlow = ai.defineFlow(
       throw new Error('Could not generate festivals.');
     }
 
-    festivalCache.set(country, output);
+    setInCache(cacheKey, output);
     return output;
   }
 );

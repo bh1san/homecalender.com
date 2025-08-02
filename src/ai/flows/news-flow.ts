@@ -9,14 +9,12 @@
 import {ai} from '@/ai/genkit';
 import {NewsResponse, NewsResponseSchema} from '@/ai/schemas';
 import {z} from 'genkit';
+import { getFromCache, setInCache } from '@/ai/cache';
+
 
 const NewsGenerationInputSchema = z.object({
   country: z.string().describe('The country for which to generate news headlines.'),
 });
-
-// In-memory cache
-const newsCache = new Map<string, NewsResponse>();
-
 
 const NewsGenerationItemSchema = z.object({
   id: z.string().describe('A unique identifier for the news article.'),
@@ -48,9 +46,11 @@ const newsFlow = ai.defineFlow(
     outputSchema: NewsResponseSchema,
   },
   async ({ country }) => {
-     if (newsCache.has(country)) {
+    const cacheKey = `news_${country}`;
+    const cachedNews = getFromCache<NewsResponse>(cacheKey);
+    if (cachedNews) {
       console.log(`Returning cached news for ${country}.`);
-      return newsCache.get(country)!;
+      return cachedNews;
     }
 
     console.log(`Generating new news response for ${country}.`);
@@ -68,7 +68,7 @@ const newsFlow = ai.defineFlow(
     }));
     
     const response: NewsResponse = {headlines: headlinesWithImages};
-    newsCache.set(country, response);
+    setInCache(cacheKey, response);
 
     return response;
   }

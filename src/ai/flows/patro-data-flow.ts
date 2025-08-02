@@ -21,10 +21,7 @@ import {
   UpcomingEventSchema,
 } from '@/ai/schemas';
 import { getTodaysInfoFromApi, getEventsForMonthFromApi } from '@/services/nepali-date';
-
-// In-memory cache for patro data, specific to Nepal
-let patroDataCache: PatroDataResponse | null = null;
-let lastFetchTime: number | null = null;
+import { getFromCache, setInCache } from '@/ai/cache';
 
 const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -82,10 +79,11 @@ const patroDataFlow = ai.defineFlow(
     outputSchema: PatroDataResponseSchema,
   },
   async () => {
-    const now = Date.now();
-    if (patroDataCache && lastFetchTime && (now - lastFetchTime < CACHE_DURATION_MS)) {
+    const cacheKey = "patro_data_nepal";
+    const cachedData = getFromCache<PatroDataResponse>(cacheKey, CACHE_DURATION_MS);
+    if (cachedData) {
         console.log("Returning cached patro data.");
-        return patroDataCache;
+        return cachedData;
     }
 
     console.log("Attempting to fetch data from RapidAPI...");
@@ -132,8 +130,7 @@ const patroDataFlow = ai.defineFlow(
     // If API failed for either today or month, use AI for everything.
     if (!todayFromApi || monthEventsFromApi.length === 0) {
         const aiData = await generateAllDataFromAI();
-        patroDataCache = aiData;
-        lastFetchTime = now;
+        setInCache(cacheKey, aiData);
         return aiData;
     }
     
@@ -153,8 +150,7 @@ const patroDataFlow = ai.defineFlow(
         upcomingEvents: aiResponse?.upcomingEvents || [],
     };
 
-    patroDataCache = response;
-    lastFetchTime = now;
+    setInCache(cacheKey, response);
 
     return response;
   }
@@ -163,5 +159,3 @@ const patroDataFlow = ai.defineFlow(
 export async function getPatroData(): Promise<PatroDataResponse> {
   return patroDataFlow();
 }
-
-    
