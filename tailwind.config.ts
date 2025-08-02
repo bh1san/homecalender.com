@@ -13,6 +13,8 @@ export default {
         body: ['Literata', 'serif'],
         headline: ['Literata', 'serif'],
         code: ['monospace'],
+        // Note: We don't specify a special font for flags,
+        // so it will fall back to the system's default emoji font.
       },
       colors: {
         background: 'hsl(var(--background))',

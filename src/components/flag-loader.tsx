@@ -23,7 +23,7 @@ const FlagLoader = ({ className }: { className?: string }) => {
   }, []);
 
   return (
-    <div className={cn("relative w-8 h-8 flex items-center justify-center", className)}>
+    <div className={cn("relative w-8 h-8 flex items-center justify-center font-sans", className)}>
       {flags.map((flag, index) => (
         <span
           key={flag}

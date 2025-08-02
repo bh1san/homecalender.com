@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { toBS, getNepaliMonthName, getNepaliDayOfWeek } from '@/lib/nepali-date-converter';
 import { getCalendarEvents } from '@/ai/flows/calendar-events-flow';
 import { CalendarEvent } from '@/ai/schemas';
@@ -34,6 +34,21 @@ interface DateTimeInfo {
     dayEvent: CalendarEvent | null;
 }
 
+const countryToTimezoneMap: { [key: string]: string } = {
+    "Nepal": "Asia/Kathmandu",
+    "United States": "America/New_York",
+    "United Kingdom": "Europe/London",
+    "India": "Asia/Kolkata",
+    // Add other countries as needed
+};
+
+const countryToTimezone = (country: string | null): string => {
+    if (country && countryToTimezoneMap[country]) {
+        return countryToTimezoneMap[country];
+    }
+    return "Asia/Kathmandu"; // Default
+}
+
 export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
   const [dateTime, setDateTime] = useState<DateTimeInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,44 +58,36 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
     setIsMounted(true);
   }, []);
 
-  const fetchDateAndTime = async () => {
+  const fetchDateAndTime = useCallback(async () => {
     setLoading(true);
     try {
-      const now = new Date();
-      const isNepal = country === 'Nepal' || country === null;
+        const effectiveCountry = country || "Nepal";
+        const timezone = countryToTimezone(effectiveCountry);
+        
+        // Use a reliable public API for time
+        const worldTimeResponse = await fetch(`https://worldtimeapi.org/api/timezone/${timezone}`);
+        if (!worldTimeResponse.ok) {
+            throw new Error(`Failed to fetch time for ${timezone}`);
+        }
+        const timeData = await worldTimeResponse.json();
+        const now = new Date(timeData.utc_datetime);
 
-      if (isNepal) {
-        // For Nepal, we always get the Nepal time and detailed events.
-        const nepaliTimeZone = 'Asia/Kathmandu';
-        const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true, timeZone: nepaliTimeZone });
+        const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true, timeZone: timezone });
+        const gregorianDateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: timezone });
         
-        // We need the accurate date in Nepal to fetch correct events.
-        const dateInNepal = new Date(now.toLocaleString('en-US', { timeZone: nepaliTimeZone }));
-        
-        const gregorianDateString = dateInNepal.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        
-        const bsDate = toBS(dateInNepal);
+        let dayEvent: CalendarEvent | null = null;
+        const bsDate = toBS(now);
 
-        const monthEventsData = await getCalendarEvents({ year: bsDate.year, month: bsDate.month });
-        const dayEvent = monthEventsData.month_events.find(e => e.day === bsDate.day) || null;
-        
+        if (effectiveCountry === 'Nepal') {
+            const monthEventsData = await getCalendarEvents({ year: bsDate.year, month: bsDate.month });
+            dayEvent = monthEventsData.month_events.find(e => e.day === bsDate.day) || null;
+        }
+
         setDateTime({ timeString, gregorianDateString, nepaliDate: bsDate, dayEvent });
-
-      } else {
-        // For other countries, just format the local time.
-        const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
-        const gregorianDateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-        setDateTime({ 
-            timeString: timeString, 
-            gregorianDateString: gregorianDateString, 
-            nepaliDate: toBS(new Date()), // Keep nepali date as a fallback, won't be displayed
-            dayEvent: null 
-        });
-      }
 
     } catch (error) {
         console.error("Failed to fetch date and time", error);
-        // Fallback to local client time on error.
+        // Fallback to local client time on error, though this can cause hydration issues.
         const localNow = new Date();
         const bsDate = toBS(localNow);
         const localTimeString = localNow.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
@@ -89,7 +96,7 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
     } finally {
         setLoading(false);
     }
-  };
+  }, [country]);
 
   useEffect(() => {
     if (!isMounted) return;
@@ -98,7 +105,7 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
     const intervalId = setInterval(fetchDateAndTime, 60000); // Refresh every minute
     
     return () => clearInterval(intervalId);
-  }, [country, isMounted]);
+  }, [isMounted, fetchDateAndTime]);
 
   if (loading || !dateTime) {
     return (
