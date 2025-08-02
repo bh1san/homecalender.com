@@ -16,6 +16,7 @@ import {
   GoldSilverSchema,
   ForexSchema,
   CurrentDateInfoResponse,
+  CurrentDateInfoResponseSchema,
   CalendarEventSchema,
   UpcomingEventSchema,
 } from '@/ai/schemas';
