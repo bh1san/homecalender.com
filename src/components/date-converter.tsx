@@ -59,7 +59,7 @@ export default function DateConverter() {
       });
 
       try {
-        const todayBS = NepaliCalendar.toBS(today);
+        const todayBS = (NepaliCalendar as any).default.toBS(today);
         setNepaliDate({
             year: String(todayBS.bs_year),
             month: String(todayBS.bs_month),
@@ -79,7 +79,7 @@ export default function DateConverter() {
     }
     setIsConvertingAD(true);
     try {
-        const bsDate = NepaliCalendar.adToBs(parseInt(year), parseInt(month), parseInt(day));
+        const bsDate = (NepaliCalendar as any).default.adToBs(parseInt(year), parseInt(month), parseInt(day));
         const monthName = nepaliMonths[bsDate.bs_month - 1];
         setNepaliResult(`${bsDate.bs_date} ${monthName}, ${bsDate.bs_year}`);
     } catch (e) {
@@ -99,7 +99,7 @@ export default function DateConverter() {
     }
     setIsConvertingBS(true);
     try {
-        const adDate = NepaliCalendar.bsToAd(parseInt(year), parseInt(month), parseInt(day));
+        const adDate = (NepaliCalendar as any).default.bsToAd(parseInt(year), parseInt(month), parseInt(day));
         const monthName = gregorianMonths[adDate.ad_month - 1];
         setGregorianResult(`${adDate.ad_date} ${monthName}, ${adDate.ad_year}`);
     } catch (e) {

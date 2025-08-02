@@ -27,7 +27,7 @@ export default function NepaliCalendarComponent({ today: initialToday, monthEven
 
     useEffect(() => {
         if (isMounted) {
-            const todayBS = NepaliCalendar.toBS(new Date());
+            const todayBS = (NepaliCalendar as any).default.toBS(new Date());
             setCurrentDate({ year: todayBS.bs_year, month: todayBS.bs_month });
         }
     }, [isMounted]);
@@ -36,7 +36,7 @@ export default function NepaliCalendarComponent({ today: initialToday, monthEven
         if (currentDate.year > 0) {
             setIsLoading(true);
             try {
-                const data = NepaliCalendar.getMonthData(currentDate.year, currentDate.month);
+                const data = (NepaliCalendar as any).default.getMonthData(currentDate.year, currentDate.month);
                 setMonthData(data);
             } catch (e) {
                 console.error("Failed to get month data", e);
@@ -99,7 +99,7 @@ export default function NepaliCalendarComponent({ today: initialToday, monthEven
         );
     }
     
-    const todayBS = NepaliCalendar.toBS(new Date());
+    const todayBS = (NepaliCalendar as any).default.toBS(new Date());
     const firstDayOfWeek = monthData.first_day; // 1 for Sunday, 2 for Monday..
     const calendarCells = [];
     for (let i = 1; i < firstDayOfWeek; i++) {
