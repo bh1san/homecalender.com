@@ -91,7 +91,7 @@ const patroDataFlow = ai.defineFlow(
     let todayData: CurrentDateInfoResponse | null = null;
     
     try {
-        const cal = new NepaliCalendar();
+        const cal = NepaliCalendar;
         const bsDate = cal.toBS(new Date());
 
         todayData = {

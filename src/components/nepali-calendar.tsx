@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { CalendarEvent, CurrentDateInfoResponse } from '@/ai/schemas';
 import { getNepaliMonthName, getNepaliNumber } from '@/lib/nepali-date-converter';
 import { Button } from './ui/button';
@@ -27,7 +27,7 @@ export default function NepaliCalendar({ today: initialToday, monthEvents: initi
 
     useEffect(() => {
         if (isMounted) {
-            const cal = new NepaliCalendarLib();
+            const cal = NepaliCalendarLib;
             const todayBS = cal.toBS(new Date());
             setCurrentDate({ year: todayBS.bs_year, month: todayBS.bs_month });
         }
@@ -37,7 +37,7 @@ export default function NepaliCalendar({ today: initialToday, monthEvents: initi
         if (currentDate.year > 0) {
             setIsLoading(true);
             try {
-                const cal = new NepaliCalendarLib();
+                const cal = NepaliCalendarLib;
                 const data = cal.getMonthData(currentDate.year, currentDate.month);
                 setMonthData(data);
             } catch (e) {
@@ -101,7 +101,7 @@ export default function NepaliCalendar({ today: initialToday, monthEvents: initi
         );
     }
     
-    const todayBS = new NepaliCalendarLib().toBS(new Date());
+    const todayBS = NepaliCalendarLib.toBS(new Date());
     const firstDayOfWeek = monthData.first_day; // 1 for Sunday, 2 for Monday..
     const calendarCells = [];
     for (let i = 1; i < firstDayOfWeek; i++) {
