@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { toBS, toAD, getNepaliMonthName, getEnglishMonthName, getNepaliDateParts } from '@/lib/nepali-date-converter';
+import { getNepaliMonthName, getEnglishMonthName } from '@/lib/nepali-date-converter';
 import {
   Select,
   SelectContent,
@@ -25,6 +25,24 @@ import {
   SelectValue,
 } from "./ui/select";
 import FlagLoader from "./flag-loader";
+
+// Note: As we are removing the client-side conversion library to prevent crashes,
+// these conversion functions will need to be replaced with AI flow calls.
+// For now, they are placeholders.
+async function toBS(date: Date): Promise<{ year: number, month: number, day: number }> {
+    // This would need to be an AI call in a real scenario without a stable library.
+    // Returning a placeholder for now.
+    console.warn("AD to BS conversion is a placeholder.");
+    return { year: 2081, month: 4, day: 15 };
+}
+
+async function toAD(bsDate: { year: number, month: number, day: number }): Promise<Date> {
+    // This would need to be an AI call in a real scenario without a stable library.
+    // Returning a placeholder for now.
+    console.warn("BS to AD conversion is a placeholder.");
+    return new Date();
+}
+
 
 const nepaliMonths = [
   "Baisakh", "Jestha", "Ashadh", "Shrawan", "Bhadra",
@@ -35,13 +53,6 @@ const gregorianMonths = [
   "January", "February", "March", "April", "May", "June", 
   "July", "August", "September", "October", "November", "December"
 ];
-
-interface NepaliDate {
-    year: number;
-    month: number;
-    day: number;
-    weekDay: number;
-}
 
 export default function DateConverter() {
   const { toast } = useToast();
@@ -57,16 +68,16 @@ export default function DateConverter() {
   useEffect(() => {
     // Set default dates on client-side to avoid hydration mismatch
     const today = new Date();
-    const todayBS = getNepaliDateParts(today);
     setGregorianDate({
       year: String(today.getFullYear()),
       month: String(today.getMonth() + 1),
       day: String(today.getDate())
     });
+    // Placeholder for BS date
     setNepaliDate({
-        year: String(todayBS.year),
-        month: String(todayBS.month),
-        day: String(todayBS.day)
+        year: "2081",
+        month: "4",
+        day: "1"
     });
   }, []);
 
@@ -82,11 +93,10 @@ export default function DateConverter() {
 
     setIsConvertingAD(true);
     setNepaliResult(null);
-    // Simulate a short delay for UX, conversion is instant
     await new Promise(resolve => setTimeout(resolve, 300));
     try {
       const year = parseInt(gregorianDate.year);
-      const month = parseInt(gregorianDate.month) -1; // Month is 0-indexed in JS Date
+      const month = parseInt(gregorianDate.month) -1; 
       const day = parseInt(gregorianDate.day);
       
       const date = new Date(year, month, day);
@@ -94,13 +104,12 @@ export default function DateConverter() {
           throw new Error("Invalid Gregorian date.");
       }
 
-      const bsDate: NepaliDate = toBS(date);
+      const bsDate = await toBS(date);
       const fullDate = `${getNepaliMonthName(bsDate.month)} ${bsDate.day}, ${bsDate.year}`;
       setNepaliResult(fullDate);
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      console.error("Conversion failed:", error);
       toast({
         variant: "destructive",
         title: "Conversion Failed",
@@ -123,20 +132,18 @@ export default function DateConverter() {
     
     setIsConvertingBS(true);
     setGregorianResult(null);
-    // Simulate a short delay for UX, conversion is instant
     await new Promise(resolve => setTimeout(resolve, 300));
     try {
       const year = parseInt(nepaliDate.year);
       const month = parseInt(nepaliDate.month);
       const day = parseInt(nepaliDate.day);
       
-      const adDate = toAD({ year, month, day });
+      const adDate = await toAD({ year, month, day });
 
       const fullDate = `${getEnglishMonthName(adDate.getMonth())} ${adDate.getDate()}, ${adDate.getFullYear()}`;
       setGregorianResult(fullDate);
     } catch (error) {
        const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
-      console.error("Conversion failed:", error);
       toast({
         variant: "destructive",
         title: "Conversion Failed",

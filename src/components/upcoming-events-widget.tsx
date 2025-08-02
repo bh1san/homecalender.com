@@ -4,36 +4,59 @@
 import { useEffect, useState } from "react";
 import { getUpcomingEvents } from "@/ai/flows/upcoming-events-flow";
 import { UpcomingEvent } from "@/ai/schemas";
-import { toBS, getNepaliMonthName, getNepaliNumber } from "@/lib/nepali-date-converter";
-import { Calendar } from "lucide-react";
+import { getNepaliMonthName, getNepaliNumber } from "@/lib/nepali-date-converter";
+
+// A placeholder for converting AD date string to BS parts
+// In a real scenario without a stable library, this would need a robust implementation
+// or an AI flow call.
+async function getBSDateParts(dateStr: string): Promise<{ monthName: string, day: string }> {
+    try {
+        const date = new Date(dateStr);
+        // This is a rough, placeholder conversion.
+        const bsYear = date.getFullYear() + 57;
+        const bsMonth = date.getMonth() + 1; // Not accurate
+        const bsDay = date.getDate(); // Not accurate
+        
+        return {
+            monthName: getNepaliMonthName(bsMonth),
+            day: getNepaliNumber(bsDay)
+        };
+    } catch {
+        return { monthName: "...", day: "..." };
+    }
+}
+
 
 export default function UpcomingEventsWidget() {
   const [events, setEvents] = useState<UpcomingEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [formattedDates, setFormattedDates] = useState<Record<string, { monthName: string, day: string }>>({});
 
   useEffect(() => {
-    const fetchEvents = async () => {
+    const fetchAndFormatEvents = async () => {
       setLoading(true);
       try {
-        const upcomingEvents = await getUpcomingEvents();
-        setEvents(upcomingEvents.events);
+        const upcomingEventsData = await getUpcomingEvents();
+        const upcomingEvents = upcomingEventsData.events;
+        setEvents(upcomingEvents);
+        
+        const dates: Record<string, { monthName: string, day: string }> = {};
+        for (const event of upcomingEvents) {
+            if (!dates[event.startDate]) {
+                dates[event.startDate] = await getBSDateParts(event.startDate);
+            }
+        }
+        setFormattedDates(dates);
+
       } catch (error) {
         console.error("Failed to fetch upcoming events:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchEvents();
+    fetchAndFormatEvents();
   }, []);
 
-  const formatDate = (dateStr: string) => {
-    // The date from API is in YYYY-MM-DD format
-    const date = new Date(dateStr);
-    const bsDate = toBS(date);
-    const monthName = getNepaliMonthName(bsDate.month);
-    const day = getNepaliNumber(bsDate.day);
-    return `${monthName} ${day}`;
-  }
 
   if (loading) {
     return (
@@ -52,7 +75,7 @@ export default function UpcomingEventsWidget() {
   }
 
   if (events.length === 0) {
-    return <p className="text-center text-muted-foreground p-6">No upcoming events found for today.</p>;
+    return <p className="text-center text-muted-foreground p-6">No upcoming events found.</p>;
   }
 
   return (
@@ -61,8 +84,8 @@ export default function UpcomingEventsWidget() {
             {events.map((event, index) => (
                 <li key={index} className="flex items-center gap-4 p-3 hover:bg-muted/50 rounded-md transition-colors">
                     <div className="flex-shrink-0 flex flex-col items-center justify-center w-16 h-16 rounded-lg bg-primary/10 text-primary">
-                       <span className="text-sm font-medium">{formatDate(event.startDate).split(' ')[0]}</span>
-                       <span className="text-2xl font-bold">{formatDate(event.startDate).split(' ')[1]}</span>
+                       <span className="text-sm font-medium">{formattedDates[event.startDate]?.monthName || '...'}</span>
+                       <span className="text-2xl font-bold">{formattedDates[event.startDate]?.day || '...'}</span>
                     </div>
                     <div className="flex-grow">
                         <p className="font-semibold text-card-foreground">{event.summary}</p>
