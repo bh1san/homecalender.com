@@ -81,6 +81,14 @@ export default function CurrentDateTime({ country, onDateLoaded }: CurrentDateTi
   }
 
   if (country !== "Nepal" || !dateInfo) {
+      if (!isMounted) {
+          return (
+             <div>
+                <div className="h-9 w-64 bg-white/20 animate-pulse rounded-md mb-2" />
+                <div className="h-5 w-32 bg-white/20 animate-pulse rounded-md" />
+            </div>
+          );
+      }
       const now = new Date();
       const gregorianDateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
       return (
@@ -93,6 +101,18 @@ export default function CurrentDateTime({ country, onDateLoaded }: CurrentDateTi
     
   const nepaliDateString = `${toNepaliNumber(dateInfo.bsDay)} ${getNepaliMonthName(dateInfo.bsMonth)} ${toNepaliNumber(dateInfo.bsYear)}, ${getNepaliDayOfWeek(dateInfo.bsWeekDay)}`;
   const gregorianDateString = `${getEnglishMonthName(dateInfo.adMonth)} ${dateInfo.adDay}, ${dateInfo.adYear}`;
+
+  if (!isMounted) {
+     return (
+        <div className="space-y-1 text-primary-foreground">
+            <h1 className="text-3xl font-bold">{nepaliDateString}</h1>
+            {dateInfo.tithi && <p className="text-lg">तिथि: {dateInfo.tithi}</p>}
+            {dateInfo.panchanga && <p className="text-lg">पञ्चाङ्ग: {dateInfo.panchanga}</p>}
+            <div className="h-7 w-32 bg-white/20 animate-pulse rounded-md" />
+            <p className="text-base">{gregorianDateString}</p>
+        </div>
+      );
+  }
 
   const nepaliTimeParts = timeString.split(/:| /);
   const nepaliTimeString = toNepaliNumber(`${nepaliTimeParts[0]}:${nepaliTimeParts[1]}`);
@@ -109,4 +129,3 @@ export default function CurrentDateTime({ country, onDateLoaded }: CurrentDateTi
     </div>
   );
 }
-
