@@ -32,16 +32,23 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
       nepaliDate: NepaliDate | null,
     } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+
     const effectiveCountry = country || 'Nepal';
 
     const fetchDateAndTime = async () => {
         setLoading(true);
         try {
             const timezone = countryToTimezone(effectiveCountry);
-            // Use a public proxy for WorldTimeAPI if direct access fails or for CORS issues in some environments
-            const tzResponse = await fetch(`https://worldtimeapi.org/api/timezone/${timezone}`);
+            // Use a public proxy for WorldTimeAPI to avoid CORS issues.
+            const tzResponse = await fetch(`https://cors-anywhere.herokuapp.com/https://worldtimeapi.org/api/timezone/${timezone}`);
             if (!tzResponse.ok) throw new Error(`Failed to fetch timezone data for ${timezone}.`);
             
             const timeData = await tzResponse.json();
@@ -71,7 +78,7 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
     
     fetchDateAndTime();
 
-  }, [country]);
+  }, [country, isMounted]);
 
   const countryToTimezone = (countryName: string) => {
       const map: { [key: string]: string } = {
@@ -131,7 +138,7 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
   const isNepal = country === 'Nepal' || country === null;
 
   const nepaliDateString = nepaliDate 
-    ? `${getNepaliDayOfWeek(nepaliDate.weekDay)}, ${getNepaliMonthName(nepaliDate.month)} ${toNepaliNumber(nepaliDate.day)}, ${toNepaliNumber(nepaliDate.year)}`
+    ? `${getNepaliDayOfWeek(nepaliDate.weekDay)} ${getNepaliMonthName(nepaliDate.month)} ${toNepaliNumber(nepaliDate.day)}, ${toNepaliNumber(nepaliDate.year)}`
     : '';
     
   const nepaliTimeParts = timeString.split(/:| /); // split by colon or space
