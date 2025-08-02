@@ -25,6 +25,7 @@ import { getFestivals } from "@/ai/flows/festival-flow";
 import { Calendar } from "@/components/ui/calendar";
 import LocationSelector from "@/components/location-selector";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import MotivationalQuote from "@/components/motivational-quote";
 
 const upcomingEvents = [
     { day: "15", month: "Jul", title: "World Youth Skills Day", relativeTime: "Today" },
@@ -86,7 +87,7 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 bg-accent/90 text-white p-4 rounded-lg shadow-md items-center">
             <CurrentDateTime country={location.country} />
             <div className="hidden sm:flex justify-end">
-                <Image src="https://placehold.co/400x100.png" alt="Ad Banner" width={400} height={100} data-ai-hint="game banner" className="rounded-md" />
+                <MotivationalQuote />
             </div>
         </div>
 
@@ -180,7 +181,7 @@ export default function Home() {
                                 <div className="flex-shrink-0 text-center">
                                     <div className="bg-primary text-primary-foreground font-bold p-2 rounded-t-md text-sm">{event.day}</div>
                                     <div className="bg-secondary text-secondary-foreground p-1 rounded-b-md text-xs">{event.month}</div>
-                                </div>
+                                 </div>
                                 <div>
                                     <p className="font-medium text-card-foreground">{event.title}</p>
                                     <p className="text-sm text-muted-foreground">{event.relativeTime}</p>
