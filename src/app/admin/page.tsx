@@ -53,8 +53,21 @@ type NewsArticle = {
 };
 
 export default function AdminPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [news, setNews] = useState<NewsArticle[]>(mockNews);
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
+
+  const handleLogin = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (password === "Bwcx123456") {
+      setIsAuthenticated(true);
+      setError("");
+    } else {
+      setError("Incorrect password. Please try again.");
+    }
+  };
 
   const handleEdit = (article: NewsArticle) => {
     setSelectedArticle(article);
@@ -78,12 +91,49 @@ export default function AdminPage() {
     console.log("Deleting article with id:", id);
   };
 
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-muted/40">
+        <Card className="w-full max-w-sm mx-4">
+          <CardHeader>
+            <CardTitle className="text-2xl">Admin Login</CardTitle>
+            <CardDescription>
+              Please enter the password to access the admin panel.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  required
+                />
+              </div>
+              {error && (
+                <p className="text-sm font-medium text-destructive">{error}</p>
+              )}
+              <Button type="submit" className="w-full">
+                Login
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-muted/40">
       <header className="bg-background border-b">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
                 <h1 className="text-2xl font-bold text-foreground">Admin Panel</h1>
+                 <Button variant="outline" onClick={() => setIsAuthenticated(false)}>Logout</Button>
             </div>
         </div>
       </header>
