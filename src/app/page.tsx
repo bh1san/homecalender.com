@@ -124,7 +124,7 @@ export default function Home() {
   }, [isNepal]);
 
   return (
-    <div className="min-h-screen bg-muted/40 font-body">
+    <>
       <Header navLinks={settings.navLinks} logoUrl={settings.logoUrl} isLoading={loadingSettings} />
       <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 bg-primary text-primary-foreground p-4 rounded-lg shadow-md items-center">
@@ -279,7 +279,7 @@ export default function Home() {
 
         </div>
       </main>
-    </div>
+    </>
   );
 }
 
