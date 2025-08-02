@@ -55,12 +55,7 @@ export default function NepaliCalendar({ today, monthEvents, isLoading }: Nepali
     
     const firstDayOfMonth = monthEvents[0];
     const dayOneDate = new Date(today.adYear, today.adMonth, firstDayOfMonth.gregorian_day || 1);
-    
-    // We need to calculate the weekday of the first Nepali day of the month.
-    // We have today's BS date and AD date and weekday.
-    // Let's find the weekday for day 1 of the BS month.
-    const dayOfWeekOfFirstBS = (today.bsWeekDay - (today.bsDay - 1)) % 7;
-    const firstDayOfWeek = dayOfWeekOfFirstBS < 0 ? dayOfWeekOfFirstBS + 7 : dayOfWeekOfFirstBS;
+    const firstDayOfWeek = dayOneDate.getDay(); // 0 for Sunday, 1 for Monday, etc.
 
     const calendarCells = [];
     for (let i = 0; i < firstDayOfWeek; i++) {
