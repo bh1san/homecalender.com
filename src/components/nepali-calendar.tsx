@@ -9,7 +9,7 @@ import { ChevronLeft, ChevronRight, Loader, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { useIsMounted } from '@/hooks/use-is-mounted';
-import NepaliCalendar from 'nepali-calendar-js';
+import NepaliCalendarLib from 'nepali-calendar-js';
 
 interface NepaliCalendarProps {
     today: CurrentDateInfoResponse | null | undefined;
@@ -27,7 +27,7 @@ export default function NepaliCalendar({ today: initialToday, monthEvents: initi
 
     useEffect(() => {
         if (isMounted) {
-            const cal = new NepaliCalendar();
+            const cal = new NepaliCalendarLib();
             const todayBS = cal.toBS(new Date());
             setCurrentDate({ year: todayBS.bs_year, month: todayBS.bs_month });
         }
@@ -37,7 +37,7 @@ export default function NepaliCalendar({ today: initialToday, monthEvents: initi
         if (currentDate.year > 0) {
             setIsLoading(true);
             try {
-                const cal = new NepaliCalendar();
+                const cal = new NepaliCalendarLib();
                 const data = cal.getMonthData(currentDate.year, currentDate.month);
                 setMonthData(data);
             } catch (e) {
@@ -101,7 +101,7 @@ export default function NepaliCalendar({ today: initialToday, monthEvents: initi
         );
     }
     
-    const todayBS = new NepaliCalendar().toBS(new Date());
+    const todayBS = new NepaliCalendarLib().toBS(new Date());
     const firstDayOfWeek = monthData.first_day; // 1 for Sunday, 2 for Monday..
     const calendarCells = [];
     for (let i = 1; i < firstDayOfWeek; i++) {
