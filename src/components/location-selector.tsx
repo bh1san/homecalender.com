@@ -28,7 +28,11 @@ const countries = [
 
 export default function LocationSelector({ onLocationChange }: LocationSelectorProps) {
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
-  const [isLocating, setIsLocating] = useState(false);
+  const [isLocating, setIsLocating] = useState(true); // Start locating on initial load
+
+  useEffect(() => {
+    handleDetectLocation();
+  }, []);
 
   const handleCountryChange = (country: string) => {
     setSelectedCountry(country);
@@ -49,17 +53,20 @@ export default function LocationSelector({ onLocationChange }: LocationSelectorP
             }
           } catch (error) {
             console.error("Error fetching country from location:", error);
+            handleCountryChange("United States"); // Fallback
           } finally {
             setIsLocating(false);
           }
         },
         (error) => {
           console.error("Geolocation error:", error);
+          handleCountryChange("United States"); // Fallback on error
           setIsLocating(false);
         }
       );
     } else {
       console.error("Geolocation is not supported by this browser.");
+      handleCountryChange("United States"); // Fallback if not supported
       setIsLocating(false);
     }
   };
@@ -85,3 +92,5 @@ export default function LocationSelector({ onLocationChange }: LocationSelectorP
     </div>
   );
 }
+
+    

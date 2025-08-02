@@ -64,19 +64,11 @@ export default function NepaliCalendar() {
 
   return (
     <div className="w-full">
-      <div className="flex flex-row items-center justify-between mb-4 px-2">
-        <div className="flex items-center space-x-2">
-           <Button variant="ghost" size="icon" onClick={handlePrevMonth} aria-label="Previous month">
+      <div className="flex flex-col sm:flex-row items-center justify-between mb-4 px-2 gap-4">
+        <div className="flex items-center space-x-1">
+           <Button variant="ghost" size="icon" onClick={handlePrevMonth} aria-label="Previous month" className="transition-transform hover:scale-110">
             <ChevronLeft className="h-5 w-5" />
           </Button>
-            <Select value={String(currentDate.year)} onValueChange={(value) => setCurrentDate(d => ({...d, year: Number(value)}))}>
-                <SelectTrigger className="w-[100px] font-bold">
-                    <SelectValue placeholder="Year" />
-                </SelectTrigger>
-                <SelectContent>
-                    {years.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
-                </SelectContent>
-            </Select>
             <Select value={String(currentDate.month)} onValueChange={(value) => setCurrentDate(d => ({...d, month: Number(value)}))}>
                 <SelectTrigger className="w-[120px] font-bold">
                     <SelectValue placeholder="Month" />
@@ -85,18 +77,27 @@ export default function NepaliCalendar() {
                     {nepaliMonths.map((m, i) => <SelectItem key={i} value={String(i)}>{m}</SelectItem>)}
                 </SelectContent>
             </Select>
-           <Button variant="ghost" size="icon" onClick={handleNextMonth} aria-label="Next month">
+            <Select value={String(currentDate.year)} onValueChange={(value) => setCurrentDate(d => ({...d, year: Number(value)}))}>
+                <SelectTrigger className="w-[100px] font-bold">
+                    <SelectValue placeholder="Year" />
+                </SelectTrigger>
+                <SelectContent>
+                    {years.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                </SelectContent>
+            </Select>
+           <Button variant="ghost" size="icon" onClick={handleNextMonth} aria-label="Next month" className="transition-transform hover:scale-110">
             <ChevronRight className="h-5 w-5" />
           </Button>
         </div>
-        <div className="font-bold text-lg text-gray-700">
-          {currentDate.year} {currentMonthName} | {new Date(currentDate.year-57, currentDate.month, 1).toLocaleString('default', { month: 'short' })} / {new Date(currentDate.year-56, currentDate.month, 1).toLocaleString('default', { month: 'short' })} {new Date(currentDate.year-57, 1, 1).getFullYear()}
+        <div className="font-bold text-lg text-gray-700 text-right">
+          {currentDate.year} {currentMonthName}
+          <div className="text-sm font-normal text-muted-foreground">{new Date(currentDate.year-57, currentDate.month, 1).toLocaleString('default', { month: 'long' })} / {new Date(currentDate.year-56, currentDate.month, 1).toLocaleString('default', { month: 'long' })} {new Date(currentDate.year-57, 1, 1).getFullYear()}</div>
         </div>
       </div>
-      <div>
+      <div className="animate-in fade-in duration-500">
         <div className="grid grid-cols-7 gap-1 text-center">
           {weekDays.map(day => (
-            <div key={day} className="font-semibold text-gray-600 text-sm py-2">{day}</div>
+            <div key={day} className="font-semibold text-gray-600 text-sm py-2">{day.substring(0,3)}</div>
           ))}
         </div>
         <div className="grid grid-cols-7 gap-1 text-center">
@@ -106,14 +107,14 @@ export default function NepaliCalendar() {
                 <button
                   onClick={() => setSelectedDay(day)}
                   className={cn(
-                    "flex flex-col items-center justify-center w-full h-full rounded-md transition-colors duration-200 ease-in-out",
-                    day === selectedDay ? "bg-red-600 text-white" : "hover:bg-gray-100",
-                    "focus:outline-none focus:ring-1 focus:ring-red-500"
+                    "flex flex-col items-center justify-center w-full h-full rounded-md transition-all duration-300 ease-in-out transform hover:scale-105",
+                    day === selectedDay ? "bg-red-600 text-white shadow-lg" : "hover:bg-gray-100",
+                    "focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
                   )}
                 >
                   <span className="text-lg font-bold">{toNepaliNumber(day)}</span>
                   <span className="text-xs text-gray-500">{new Date(2025, 5, 14 + day).getDate()}</span>
-                  { day === 1 && <span className="text-[10px] text-red-500 truncate">अन्तर्राष्ट्रिय बुवा दिवस</span>}
+                  { day === 1 && <span className="text-[10px] text-red-500 truncate">बुवा दिवस</span>}
                 </button>
               ) : (
                 <div className="w-full h-full" />
@@ -125,3 +126,5 @@ export default function NepaliCalendar() {
     </div>
   );
 }
+
+    

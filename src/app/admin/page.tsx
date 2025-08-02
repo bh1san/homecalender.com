@@ -66,6 +66,7 @@ export default function AdminPage() {
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
   const [navLinks, setNavLinks] = useState<string[]>(initialNavLinks);
   const [newNavLink, setNewNavLink] = useState("");
+  const [logoUrl, setLogoUrl] = useState("https://placehold.co/200x50.png");
 
   const handleLogin = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -217,7 +218,7 @@ export default function AdminPage() {
                     </div>
                     <div className="space-y-2">
                         {navLinks.map(link => (
-                            <div key={link} className="flex items-center justify-between p-2 rounded-md bg-muted">
+                            <div key={link} className="flex items-center justify-between p-2 rounded-md bg-muted hover:bg-muted/80 transition-colors">
                                 <span className="font-medium">{link}</span>
                                 <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteNavLink(link)}>
                                     <Trash2 className="h-4 w-4" />
@@ -225,6 +226,27 @@ export default function AdminPage() {
                             </div>
                         ))}
                     </div>
+                </CardContent>
+            </Card>
+             <Card>
+                <CardHeader>
+                    <CardTitle>Logo Management</CardTitle>
+                    <CardDescription>Update the site logo by providing a URL.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                     <div className="space-y-2">
+                        <Label htmlFor="logo-url">Logo Image URL</Label>
+                        <Input 
+                            id="logo-url"
+                            value={logoUrl} 
+                            onChange={(e) => setLogoUrl(e.target.value)}
+                            placeholder="https://example.com/logo.png"
+                        />
+                     </div>
+                     <div className="mt-4">
+                        <p className="text-sm font-medium mb-2">Current Logo:</p>
+                        <Image src={logoUrl} alt="Current Logo" width={200} height={50} className="rounded-md object-contain border p-2" />
+                     </div>
                 </CardContent>
             </Card>
         </div>
@@ -267,3 +289,5 @@ export default function AdminPage() {
     </div>
   );
 }
+
+    

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { ArrowRightLeft, CalendarDays, PartyPopper, Search, Gift, History, Heart, User, MapPin } from "lucide-react";
+import { ArrowRightLeft, CalendarDays, PartyPopper, Search, Gift, History, Heart, User, MapPin, Menu } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -24,6 +24,7 @@ import { useEffect, useState, useMemo } from "react";
 import { getFestivals } from "@/ai/flows/festival-flow";
 import { Calendar } from "@/components/ui/calendar";
 import LocationSelector from "@/components/location-selector";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 const upcomingEvents = [
     { day: "15", month: "Jul", title: "World Youth Skills Day", relativeTime: "Today" },
@@ -42,6 +43,7 @@ export default function Home() {
   const [festivals, setFestivals] = useState<Festival[]>([]);
   const [loading, setLoading] = useState(true);
   const [navLinks, setNavLinks] = useState<string[]>(initialNavLinks);
+  const [logoUrl, setLogoUrl] = useState("https://placehold.co/200x50.png");
 
   const isNepal = useMemo(() => location.country === 'Nepal', [location.country]);
 
@@ -71,7 +73,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      <Header navLinks={navLinks} />
+      <Header navLinks={navLinks} logoUrl={logoUrl} />
       <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-4">
             <LocationSelector onLocationChange={(country) => setLocation({ country })} />
@@ -88,11 +90,11 @@ export default function Home() {
             {loading && !newsItems.length ? (
                 <div className="flex space-x-4 overflow-x-auto pb-4">
                     {[...Array(8)].map((_, index) => (
-                        <div key={index} className="flex-shrink-0 w-48 bg-card/80 rounded-lg shadow-md overflow-hidden">
-                             <div className="w-full h-32 bg-muted animate-pulse" />
+                        <div key={index} className="flex-shrink-0 w-48 bg-card/80 rounded-lg shadow-md overflow-hidden animate-pulse">
+                             <div className="w-full h-32 bg-muted" />
                             <div className="p-3">
-                                 <div className="h-4 bg-muted-foreground/20 rounded w-3/4 mb-2 animate-pulse" />
-                                 <div className="h-4 bg-muted-foreground/20 rounded w-1/2 animate-pulse" />
+                                 <div className="h-4 bg-muted-foreground/20 rounded w-3/4 mb-2" />
+                                 <div className="h-4 bg-muted-foreground/20 rounded w-1/2" />
                             </div>
                         </div>
                     ))}
@@ -101,7 +103,7 @@ export default function Home() {
                 newsItems.length > 0 && (
                     <div className="flex space-x-4 overflow-x-auto pb-4">
                         {newsItems.map((item, index) => (
-                            <div key={index} className="flex-shrink-0 w-48 bg-card/80 rounded-lg shadow-md overflow-hidden">
+                            <div key={index} className="flex-shrink-0 w-48 bg-card/80 rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105">
                                 <Image src={item.imageDataUri} alt={item.title} width={192} height={128} className="w-full h-32 object-cover" />
                                 <div className="p-3">
                                     <p className="text-sm font-medium text-card-foreground leading-tight">{item.title}</p>
@@ -159,7 +161,7 @@ export default function Home() {
                 <CardContent>
                     <div className="space-y-4">
                         {upcomingEvents.map(event => (
-                            <div key={event.title} className="flex items-start gap-4">
+                            <div key={event.title} className="flex items-start gap-4 p-2 rounded-lg transition-colors hover:bg-primary/10">
                                 <div className="flex-shrink-0 text-center">
                                     <div className="bg-primary text-primary-foreground font-bold p-2 rounded-t-md text-sm">{event.day}</div>
                                     <div className="bg-secondary text-secondary-foreground p-1 rounded-b-md text-xs">{event.month}</div>
@@ -175,10 +177,10 @@ export default function Home() {
             </Card>
 
             <div className="grid grid-cols-2 gap-4">
-                <Button variant="outline" className="justify-start bg-card/80 backdrop-blur-sm"><Gift className="mr-2 text-pink-500"/> Remit</Button>
-                <Button variant="outline" className="justify-start bg-card/80 backdrop-blur-sm"><History className="mr-2 text-green-500"/> Recharge</Button>
-                <Button variant="outline" className="justify-start bg-card/80 backdrop-blur-sm"><Heart className="mr-2 text-blue-500"/> Gifts</Button>
-                <Button variant="outline" className="justify-start bg-card/80 backdrop-blur-sm"><CalendarDays className="mr-2 text-red-500"/> Holidays</Button>
+                <Button variant="outline" className="justify-start bg-card/80 backdrop-blur-sm transition-transform hover:scale-105"><Gift className="mr-2 text-pink-500"/> Remit</Button>
+                <Button variant="outline" className="justify-start bg-card/80 backdrop-blur-sm transition-transform hover:scale-105"><History className="mr-2 text-green-500"/> Recharge</Button>
+                <Button variant="outline" className="justify-start bg-card/80 backdrop-blur-sm transition-transform hover:scale-105"><Heart className="mr-2 text-blue-500"/> Gifts</Button>
+                <Button variant="outline" className="justify-start bg-card/80 backdrop-blur-sm transition-transform hover:scale-105"><CalendarDays className="mr-2 text-red-500"/> Holidays</Button>
             </div>
             
             <Card className="bg-card/80 backdrop-blur-sm">
@@ -200,27 +202,42 @@ export default function Home() {
   );
 }
 
-function Header({ navLinks }: { navLinks: string[] }) {
+function Header({ navLinks, logoUrl }: { navLinks: string[], logoUrl: string }) {
     return (
         <header className="bg-accent/90 text-white shadow-md backdrop-blur-sm sticky top-0 z-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex items-center justify-between h-16">
-                    <div className="flex items-center space-x-4">
-                        <div className="flex items-center space-x-1">
-                            <span className="text-2xl font-bold">#</span>
-                            <span className="font-bold text-xl">HOMECALENDER.COM</span>
-                        </div>
-                        <nav className="hidden md:flex items-center space-x-4">
-                            {navLinks.map(link => (
-                                <Link key={link} href="#" className="text-sm font-medium hover:underline">
-                                    {link}
-                                </Link>
-                            ))}
-                        </nav>
-                    </div>
+                    <Link href="/">
+                        <Image src={logoUrl} alt="HomeCalender Logo" width={200} height={40} className="object-contain" priority />
+                    </Link>
+                    <nav className="hidden md:flex items-center space-x-4">
+                        {navLinks.map(link => (
+                            <Link key={link} href="#" className="text-sm font-medium hover:underline transition-transform hover:scale-110">
+                                {link}
+                            </Link>
+                        ))}
+                    </nav>
                     <div className="flex items-center space-x-4">
                         <Button variant="outline" size="sm" className="bg-transparent border-white text-white hover:bg-white hover:text-accent-foreground">EN</Button>
-                        <User className="h-6 w-6"/>
+                        <User className="h-6 w-6 cursor-pointer hover:text-primary-foreground/80"/>
+                    </div>
+                    <div className="md:hidden">
+                        <Sheet>
+                            <SheetTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                    <Menu className="h-6 w-6" />
+                                </Button>
+                            </SheetTrigger>
+                            <SheetContent side="left">
+                                <nav className="flex flex-col space-y-4 mt-8">
+                                    {navLinks.map(link => (
+                                        <Link key={link} href="#" className="text-lg font-medium hover:underline">
+                                            {link}
+                                        </Link>
+                                    ))}
+                                </nav>
+                            </SheetContent>
+                        </Sheet>
                     </div>
                 </div>
             </div>
@@ -235,3 +252,5 @@ function Header({ navLinks }: { navLinks: string[] }) {
         </header>
     )
 }
+
+    
