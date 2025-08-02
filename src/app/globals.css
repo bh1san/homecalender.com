@@ -4,25 +4,25 @@
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
+    --background: 14 20% 97%; /* Off-white: #F2F0F0 */
     --foreground: 240 5% 10%;
     --card: 0 0% 100%;
     --card-foreground: 240 5% 10%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 5% 10%;
-    --primary: 0 72% 51%;
+    --primary: 0 60% 41%; /* Deep Red: #A62A2A */
     --primary-foreground: 0 0% 98%;
     --secondary: 0 0% 96.1%;
     --secondary-foreground: 240 5% 10%;
     --muted: 0 0% 96.1%;
     --muted-foreground: 240 4% 46%;
-    --accent: 240 5% 46%;
+    --accent: 0 57% 56%; /* Lighter Red: #D44B4B */
     --accent-foreground: 0 0% 98%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 89.8%;
     --input: 0 0% 89.8%;
-    --ring: 0 72% 51%;
+    --ring: 0 60% 41%; /* Deep Red: #A62A2A */
     --chart-1: 221 70% 55%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -37,19 +37,19 @@
     --card-foreground: 0 0% 98%;
     --popover: 240 5% 10%;
     --popover-foreground: 0 0% 98%;
-    --primary: 0 72% 51%;
+    --primary: 0 60% 51%; /* Slightly brighter red for dark mode */
     --primary-foreground: 0 0% 98%;
     --secondary: 0 0% 14.9%;
     --secondary-foreground: 0 0% 98%;
     --muted: 0 0% 14.9%;
     --muted-foreground: 0 0% 63.9%;
-    --accent: 240 5% 56%;
+    --accent: 0 57% 56%; /* Lighter Red */
     --accent-foreground: 0 0% 9%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 14.9%;
     --input: 0 0% 14.9%;
-    --ring: 0 72% 51%;
+    --ring: 0 60% 51%;
     --chart-1: 221 70% 65%;
     --chart-2: 160 60% 55%;
     --chart-3: 30 80% 65%;
