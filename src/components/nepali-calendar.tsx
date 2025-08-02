@@ -18,8 +18,14 @@ interface NepaliCalendarProps {
 const WEEK_DAYS_NP = ["आइत", "सोम", "मंगल", "बुध", "बिहि", "शुक्र", "शनि"];
 
 export default function NepaliCalendar({ today }: NepaliCalendarProps) {
-    const [currentYear, setCurrentYear] = useState(today?.bsYear || new Date().getFullYear() + 57);
-    const [currentMonth, setCurrentMonth] = useState(today?.bsMonth || 1);
+    const [currentDate, setCurrentDate] = useState(() => {
+        if (today) {
+            return { year: today.bsYear, month: today.bsMonth };
+        }
+        const fallbackDate = toBS(new Date());
+        return { year: fallbackDate.year, month: fallbackDate.month };
+    });
+    
     const [monthData, setMonthData] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -37,44 +43,43 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
     }, []);
     
     useEffect(() => {
-        if (today) {
-            setCurrentYear(today.bsYear);
-            setCurrentMonth(today.bsMonth);
-            fetchMonthData(today.bsYear, today.bsMonth);
-        } else {
-            const fallbackDate = toBS(new Date());
-            setCurrentYear(fallbackDate.year);
-            setCurrentMonth(fallbackDate.month);
-            fetchMonthData(fallbackDate.year, fallbackDate.month);
+        fetchMonthData(currentDate.year, currentDate.month);
+    }, [currentDate, fetchMonthData]);
+    
+    useEffect(() => {
+        if (today && (currentDate.year !== today.bsYear || currentDate.month !== today.bsMonth)) {
+             // If today's date is loaded and not in the current view, switch to it.
+             // This can be adapted if we want to stay on the user-navigated month.
         }
-    }, [today, fetchMonthData]);
+    }, [today, currentDate]);
+
 
     const handlePrevMonth = () => {
-        let newMonth = currentMonth - 1;
-        let newYear = currentYear;
-        if (newMonth < 1) {
-            newMonth = 12;
-            newYear--;
-        }
-        setCurrentMonth(newMonth);
-        setCurrentYear(newYear);
-        fetchMonthData(newYear, newMonth);
+        setCurrentDate(prev => {
+            let newMonth = prev.month - 1;
+            let newYear = prev.year;
+            if (newMonth < 1) {
+                newMonth = 12;
+                newYear--;
+            }
+            return { year: newYear, month: newMonth };
+        });
     };
 
     const handleNextMonth = () => {
-        let newMonth = currentMonth + 1;
-        let newYear = currentYear;
-        if (newMonth > 12) {
-            newMonth = 1;
-            newYear++;
-        }
-        setCurrentMonth(newMonth);
-        setCurrentYear(newYear);
-        fetchMonthData(newYear, newMonth);
+        setCurrentDate(prev => {
+            let newMonth = prev.month + 1;
+            let newYear = prev.year;
+            if (newMonth > 12) {
+                newMonth = 1;
+                newYear++;
+            }
+            return { year: newYear, month: newMonth };
+        });
     };
 
-    const firstDay = getFirstDayOfMonthBS(currentYear, currentMonth);
-    const daysInMonth = getDaysInMonthBS(currentYear, currentMonth);
+    const firstDay = getFirstDayOfMonthBS(currentDate.year, currentDate.month);
+    const daysInMonth = getDaysInMonthBS(currentDate.year, currentDate.month);
 
     const calendarCells = [];
     for (let i = 0; i < firstDay; i++) {
@@ -83,24 +88,23 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
 
     for (let day = 1; day <= daysInMonth; day++) {
         const eventData = monthData.find(e => e.day === day);
-        const isToday = today && day === today.bsDay && currentMonth === today.bsMonth && currentYear === today.bsYear;
+        const isToday = today && day === today.bsDay && currentDate.month === today.bsMonth && currentDate.year === today.bsYear;
         
         const cellContent = (
              <div className={cn(
                 "relative flex flex-col p-1.5 border rounded-md min-h-[100px] transition-colors duration-200 group",
-                eventData?.is_holiday && !isToday ? "bg-red-50 dark:bg-red-950/20" : "bg-card hover:bg-muted/50"
+                eventData?.is_holiday && !isToday ? "bg-red-50 dark:bg-red-950/20" : "bg-card hover:bg-muted/50",
+                isToday && "ring-2 ring-offset-2 ring-orange-500 dark:ring-orange-400"
             )}>
                 <div className="flex justify-between items-start">
                     <span className={cn(
-                        "text-xs sm:text-sm font-semibold",
-                         isToday ? "text-orange-900" : "text-muted-foreground",
+                        "text-xs sm:text-sm font-semibold text-muted-foreground",
                          eventData?.is_holiday ? "text-destructive" : ""
                     )}>
                         {eventData?.gregorian_day}
                     </span>
                     <span className={cn(
-                        "text-lg sm:text-xl font-bold",
-                         isToday ? "text-orange-900" : "text-foreground",
+                        "text-lg sm:text-xl font-bold text-foreground",
                          eventData?.is_holiday ? "text-destructive" : ""
                     )}>
                         {getNepaliNumber(day)}
@@ -111,7 +115,6 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
                          <p className="text-xs text-foreground truncate">{eventData.tithi}</p>
                     )}
                 </div>
-
                 {isToday && (
                     <div className="absolute inset-0 flex items-center justify-center -z-10">
                         <div className="w-14 h-14 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full opacity-50 group-hover:opacity-70 transition-opacity" />
@@ -130,7 +133,7 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
                         <PopoverTrigger asChild>{cellContent}</PopoverTrigger>
                         <PopoverContent className="w-60 p-4" align="start">
                             <div className="space-y-2">
-                                <h4 className="font-bold text-lg text-primary">{getNepaliNumber(day)} {getNepaliMonthName(currentMonth)}</h4>
+                                <h4 className="font-bold text-lg text-primary">{getNepaliNumber(day)} {getNepaliMonthName(currentDate.month)}</h4>
                                 {eventData.tithi && <p className="text-sm text-muted-foreground font-semibold">{eventData.tithi}</p>}
                                 <hr />
                                 {eventData.events.length > 0 ? (
@@ -160,7 +163,7 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
                     <ChevronLeft className="h-5 w-5" />
                 </Button>
                 <h2 className="text-xl sm:text-2xl font-bold text-center text-primary">
-                    {getNepaliMonthName(currentMonth)} {getNepaliNumber(currentYear)}
+                    {getNepaliMonthName(currentDate.month)} {getNepaliNumber(currentDate.year)}
                 </h2>
                 <Button variant="outline" size="icon" onClick={handleNextMonth} disabled={loading}>
                     <ChevronRight className="h-5 w-5" />
@@ -168,7 +171,7 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
             </div>
             
             <div className="grid grid-cols-7 gap-1 text-center font-bold text-sm text-muted-foreground mb-2">
-                {WEEK_DAYS_NP.map(day => <div key={day} className="py-2">{day}</div>)}
+                {WEEK_DAYS_NP.map(day => <div key={day} className="py-2 font-bold">{day}</div>)}
             </div>
             
             {loading ? (

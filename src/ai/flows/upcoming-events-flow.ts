@@ -26,7 +26,7 @@ const upcomingEventsPrompt = ai.definePrompt({
   output: {schema: UpcomingEventsResponseSchema},
   prompt: `You are an expert iCalendar parser. Parse the provided iCalendar data and extract all events that occur on or after the specified current date.
 
-Return a list of the next 8 upcoming events, sorted by date.
+Return a list of the next 8 upcoming events, sorted by date in ascending order.
 
 For each event, provide:
 1.  'summary': The event's summary or title.
