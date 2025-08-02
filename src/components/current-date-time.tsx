@@ -43,9 +43,10 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
     setIsMounted(true);
   }, []);
 
-  const countryToTimezone = (countryName: string) => {
+  const countryToTimezone = (countryName: string | null): string => {
+      if (!countryName) return 'Asia/Kathmandu';
       const map: { [key: string]: string } = {
-          'United States': 'America/New_York', 'United Kingdom': 'Europe/London', 'India': 'Asia/Kolkata', 'Australia': 'Australia/Sydney', 'Canada': 'America/Toronto', 'Japan': 'Asia/Tokyo', 'China': 'Asia/Shanghai', 'Germany': 'Europe/Berlin', 'France': 'Europe/Paris', 'Brazil': 'America/Sao_Paulo', 'South Africa': 'Africa/Johannesburg', 'Nigeria': 'Africa/Lagos', 'Egypt': 'Africa/Cairo', 'Russia': 'Europe/Moscow', 'United Arab Emirates': 'Asia/Dubai', 'Saudi Arabia': 'Asia/Riyadh', 'Argentina': 'America/Argentina/Buenos_Aires', 'Bahrain': 'Asia/Bahrain', 'Bangladesh': 'Asia/Dhaka', 'Indonesia': 'Asia/Jakarta', 'Italy': 'Europe/Rome', 'Kuwait': 'Asia/Kuwait', 'Mexico': 'America/Mexico_City', 'Netherlands': 'Europe/Amsterdam', 'Oman': 'Asia/Muscat', 'Pakistan': 'Asia/Karachi', 'Philippines': 'Asia/Manila', 'Qatar': 'Asia/Qatar', 'South Korea': 'Asia/Seoul', 'Spain': 'Europe/Madrid', 'Thailand': 'Asia/Bangkok', 'Turkey': 'Europe/Istanbul', 'Vietnam': 'Asia/Ho_Chi_Minh',
+          'United States': 'America/New_York', 'United Kingdom': 'Europe/London', 'India': 'Asia/Kolkata', 'Australia': 'Australia/Sydney', 'Canada': 'America/Toronto', 'Japan': 'Asia/Tokyo', 'China': 'Asia/Shanghai', 'Germany': 'Europe/Berlin', 'France': 'Europe/Paris', 'Brazil': 'America/Sao_Paulo', 'South Africa': 'Africa/Johannesburg', 'Nigeria': 'Africa/Lagos', 'Egypt': 'Africa/Cairo', 'Russia': 'Europe/Moscow', 'United Arab Emirates': 'Asia/Dubai', 'Saudi Arabia': 'Asia/Riyadh', 'Argentina': 'America/Argentina/Buenos_Aires', 'Bahrain': 'Asia/Bahrain', 'Bangladesh': 'Asia/Dhaka', 'Indonesia': 'Asia/Jakarta', 'Italy': 'Europe/Rome', 'Kuwait': 'Asia/Kuwait', 'Mexico': 'America/Mexico_City', 'Netherlands': 'Europe/Amsterdam', 'Oman': 'Asia/Muscat', 'Pakistan': 'Asia/Karachi', 'Philippines': 'Asia/Manila', 'Qatar': 'Asia/Qatar', 'South Korea': 'Asia/Seoul', 'Spain': 'Europe/Madrid', 'Thailand': 'Asia/Bangkok', 'Turkey': 'Europe/Istanbul', 'Vietnam': 'Asia/Ho_Chi_Minh', 'Nepal': 'Asia/Kathmandu'
       };
       return map[countryName] || 'Etc/UTC';
   }
@@ -53,28 +54,30 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
   const fetchDateAndTime = async () => {
     setLoading(true);
     try {
+        const timezone = countryToTimezone(country);
+        // Using a reliable public API to get timezone-accurate date, as client-side date can be unreliable.
+        const response = await fetch(`https://worldtimeapi.org/api/timezone/${timezone}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch time data');
+        }
+        const data = await response.json();
+        const now = new Date(data.utc_datetime);
+
         const isNepal = country === 'Nepal' || country === null;
-        let now: Date;
-        let gregorianDateString: string;
-        let timeString: string;
 
         if (isNepal) {
-            const timezone = 'Asia/Kathmandu';
-            now = new Date(new Date().toLocaleString("en-US", { timeZone: timezone }));
             const bsDate = toBS(now);
-            const adDate = toAD(bsDate);
-            gregorianDateString = adDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-            timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
-            
+            const gregorianDateString = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
+
             const monthEventsData = await getCalendarEvents({ year: bsDate.year, month: bsDate.month });
             const dayEvent = monthEventsData.month_events.find(e => e.day === bsDate.day) || null;
+            
             setDateTime({ timeString, gregorianDateString, nepaliDate: bsDate, dayEvent });
 
         } else {
-             const worldTimezone = countryToTimezone(country!);
-             now = new Date(new Date().toLocaleString("en-US", { timeZone: worldTimezone }));
-             timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
-             gregorianDateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+             const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
+             const gregorianDateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
              setDateTime({ 
                  timeString: timeString, 
                  gregorianDateString: gregorianDateString, 
@@ -85,7 +88,7 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
 
     } catch (error) {
         console.error("Failed to fetch date and time", error);
-        // Fallback to local client time if API fails
+        // Fallback to local client time on error, though it may be inaccurate.
         const localNow = new Date();
         const bsDate = toBS(localNow);
         const localTimeString = localNow.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
@@ -100,10 +103,7 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
     if (!isMounted) return;
     
     fetchDateAndTime();
-    const interval = setInterval(fetchDateAndTime, 60000); // Refresh every minute
-
-    return () => clearInterval(interval);
-
+    // No need for interval since we are displaying a static date
   }, [country, isMounted]);
 
   if (loading || !dateTime) {
