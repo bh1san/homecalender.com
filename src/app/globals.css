@@ -64,10 +64,5 @@
   }
   body {
     @apply bg-background text-foreground;
-    background-image: url('https://upload.wikimedia.org/wikipedia/commons/9/9b/Flag_of_Nepal.gif');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
   }
 }
