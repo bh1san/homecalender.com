@@ -86,64 +86,13 @@ const patroDataFlow = ai.defineFlow(
         return cachedData;
     }
 
-    console.log("Generating data using nepali-calendar-js and AI...");
+    console.log("Generating data using AI...");
     
-    let todayData: CurrentDateInfoResponse | null = null;
-    
-    try {
-        const cal = NepaliCalendar;
-        const bsDate = cal.toBS(new Date());
-
-        todayData = {
-            bsYear: bsDate.bs_year,
-            bsMonth: bsDate.bs_month,
-            bsDay: bsDate.bs_date,
-            bsWeekDay: bsDate.bs_day_of_week - 1, // Theirs is 1-7, we use 0-6
-            adYear: bsDate.ad_year,
-            adMonth: bsDate.ad_month - 1, // Theirs is 1-12, we use 0-11
-            adDay: bsDate.ad_date,
-            day: bsDate.bs_date,
-            tithi: 'N/A', // Library does not provide this
-            events: [], // Library does not provide this
-            is_holiday: false, // Library does not provide this
-            panchanga: '', // Library does not provide this
-        };
-    } catch (error) {
-         console.warn("nepali-calendar-js failed. Full AI fallback will be used.", error instanceof Error ? error.message : error);
-    }
-    
-    // If local calendar failed, or we need other data, use AI.
-    if (!todayData) {
-        const aiData = await generateAllDataFromAI();
-        setInCache(cacheKey, aiData);
-        return aiData;
-    }
-    
-    // Generate only the remaining data from AI.
-    console.log("Local calendar data successful, generating remaining data from AI...");
-    const aiResponse = await scraperPrompt().then(r => r.output).catch(e => {
-        console.error("AI call to scraperPrompt failed:", e);
-        return null;
-    });
-    
-    const response: PatroDataResponse = {
-        horoscope: aiResponse?.horoscope || [],
-        goldSilver: aiResponse?.goldSilver || null,
-        forex: aiResponse?.forex || [],
-        today: { // Mix local and AI data for today
-            ...todayData,
-            tithi: aiResponse?.today?.tithi ?? 'N/A',
-            events: aiResponse?.today?.events ?? [],
-            is_holiday: aiResponse?.today?.is_holiday ?? false,
-            panchanga: aiResponse?.today?.panchanga ?? '',
-        },
-        monthEvents: aiResponse?.monthEvents || [], // AI still needed for full month events
-        upcomingEvents: aiResponse?.upcomingEvents || [],
-    };
-
-    setInCache(cacheKey, response);
-
-    return response;
+    // Generate all data from AI. The local calendar library will be used on the client-side
+    // to ensure accuracy and avoid hydration issues.
+    const aiData = await generateAllDataFromAI();
+    setInCache(cacheKey, aiData);
+    return aiData;
   }
 );
 

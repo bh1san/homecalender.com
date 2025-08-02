@@ -50,6 +50,7 @@ export default function DateConverter() {
   const [isConvertingBS, setIsConvertingBS] = useState(false);
 
   useEffect(() => {
+    // This effect runs only on the client to avoid hydration errors
     if (isMounted) {
       const today = new Date();
       setGregorianDate({
@@ -58,13 +59,17 @@ export default function DateConverter() {
         day: String(today.getDate())
       });
 
-      const cal = NepaliCalendar;
-      const todayBS = cal.toBS(today);
-      setNepaliDate({
-          year: String(todayBS.bs_year),
-          month: String(todayBS.bs_month),
-          day: String(todayBS.bs_date)
-      });
+      try {
+        const cal = NepaliCalendar;
+        const todayBS = cal.toBS(today);
+        setNepaliDate({
+            year: String(todayBS.bs_year),
+            month: String(todayBS.bs_month),
+            day: String(todayBS.bs_date)
+        });
+      } catch (e) {
+         console.error("Failed to get BS date", e);
+      }
     }
   }, [isMounted]);
 

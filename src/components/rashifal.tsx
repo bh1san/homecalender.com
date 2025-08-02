@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useState, useEffect } from 'react';
+import { useIsMounted } from '@/hooks/use-is-mounted';
 
 interface RashifalProps {
     loading: boolean;
@@ -18,15 +19,16 @@ interface RashifalProps {
 
 export default function Rashifal({ loading, horoscope }: RashifalProps) {
     const [selectedRashi, setSelectedRashi] = useState<Horoscope | null>(null);
+    const isMounted = useIsMounted();
 
     useEffect(() => {
         // Set the default rashi on the client side to avoid hydration mismatch
-        if (horoscope && horoscope.length > 0 && !selectedRashi) {
+        if (isMounted && horoscope && horoscope.length > 0 && !selectedRashi) {
             setSelectedRashi(horoscope[0]);
         }
-    }, [horoscope, selectedRashi]);
+    }, [isMounted, horoscope, selectedRashi]);
 
-    if (loading) {
+    if (loading || !isMounted) {
         return (
             <div className="space-y-3">
                 <div className="h-10 w-full bg-muted/50 animate-pulse rounded-md" />
