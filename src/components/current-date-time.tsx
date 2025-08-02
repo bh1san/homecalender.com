@@ -21,12 +21,11 @@ const toNepaliNumber = (num: number | string) => {
 
 export default function CurrentDateTime({ country, today }: CurrentDateTimeProps) {
   const [timeString, setTimeString] = useState("");
-  const [isMounted, setIsMounted] = useState(false);
   const [gregorianDateString, setGregorianDateString] = useState("");
+  const [isMounted, setIsMounted] = useState(false);
   
   useEffect(() => {
     setIsMounted(true);
-
     const intervalId = setInterval(() => {
       const timezone = country === "Nepal" ? "Asia/Kathmandu" : undefined;
       const now = new Date();

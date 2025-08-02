@@ -1,8 +1,8 @@
 
 'use server';
 /**
- * @fileOverview A flow for fetching data like horoscopes, gold/silver prices, and forex rates using hamro-patro-scraper.
- * It also fetches today's date info and upcoming events.
+ * @fileOverview A flow for fetching data like horoscopes, gold/silver prices, and forex rates using Genkit AI.
+ * It also fetches today's date info and upcoming events from the Nepali Calendar API.
  *
  * - getPatroData - A function that fetches all daily data for the app.
  */
@@ -11,20 +11,36 @@ import {z} from 'genkit';
 import { 
   PatroDataResponse, 
   PatroDataResponseSchema, 
-  Horoscope,
-  GoldSilver,
-  Forex,
+  HoroscopeSchema,
+  GoldSilverSchema,
+  ForexSchema,
   UpcomingEventSchema,
   CurrentDateInfoResponse
 } from '@/ai/schemas';
 import { getTodaysInfoFromApi } from '@/services/nepali-date';
-import { getHoroscope, getGoldPrices, getExchangeRates } from 'hamro-patro-scraper';
 
 // In-memory cache for patro data, specific to Nepal
 let patroDataCache: PatroDataResponse | null = null;
 let lastFetchTime: number | null = null;
 
 const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
+
+const ScraperDataSchema = z.object({
+    horoscope: z.array(HoroscopeSchema).describe("A list of 12 horoscopes for each rashi."),
+    goldSilver: GoldSilverSchema.describe("A list of gold and silver prices."),
+    forex: z.array(ForexSchema).describe("A list of foreign exchange rates against NPR."),
+});
+
+const scraperPrompt = ai.definePrompt({
+    name: 'scraperPrompt',
+    output: { schema: ScraperDataSchema },
+    prompt: `You are a data provider for a Nepali calendar application. Generate a complete and realistic set of data for today.
+    
+    1.  **Horoscope (Rashifal):** Generate a unique, plausible-sounding horoscope for all 12 rashi (zodiac signs: Mesh, Brish, Mithun, Karkat, Simha, Kanya, Tula, Brishchik, Dhanu, Makar, Kumbha, Meen).
+    2.  **Gold/Silver Prices:** Provide realistic prices for Fine Gold (99.9%), Tejabi Gold, and Silver in Nepalese Rupees (NPR) per Tola.
+    3.  **Foreign Exchange (Forex):** Provide a list of buy and sell rates for at least 15 major currencies against NPR. Include the currency name, ISO3 code, unit, and a flag image URL (use a valid flag provider URL).
+    `
+});
 
 const patroDataFlow = ai.defineFlow(
   {
@@ -39,25 +55,17 @@ const patroDataFlow = ai.defineFlow(
         return patroDataCache;
     }
 
-    console.log("Fetching data from APIs and scraper...");
+    console.log("Fetching data from APIs and AI...");
     
     // Fetch from API and Scraper in parallel
-    const [apiData, horoscopeData, goldSilverData, forexData] = await Promise.all([
+    const [apiData, scraperResponse] = await Promise.all([
       getTodaysInfoFromApi().catch(e => {
         console.error("API call to getTodaysInfoFromApi failed:", e);
         return null;
       }),
-      getHoroscope().catch(e => {
-        console.error("Scraper call to getHoroscope failed:", e);
-        return [];
-      }),
-      getGoldPrices().catch(e => {
-        console.error("Scraper call to getGoldPrices failed:", e);
+      scraperPrompt().then(r => r.output).catch(e => {
+        console.error("AI call to scraperPrompt failed:", e);
         return null;
-      }),
-      getExchangeRates().catch(e => {
-        console.error("Scraper call to getExchangeRates failed:", e);
-        return [];
       }),
     ]);
 
@@ -91,31 +99,10 @@ const patroDataFlow = ai.defineFlow(
             .slice(0, 8);
     }
     
-    let mappedGoldSilver: GoldSilver | null = null;
-    if (goldSilverData) {
-        mappedGoldSilver = {
-            fineGold: { 
-                item: 'Fine Gold', 
-                price: goldSilverData.fineGold || 'N/A', 
-                unit: 'Tola' 
-            },
-            tejabiGold: { 
-                item: 'Tejabi Gold', 
-                price: goldSilverData.tejabiGold || 'N/A', 
-                unit: 'Tola' 
-            },
-            silver: { 
-                item: 'Silver', 
-                price: goldSilverData.silver || 'N/A', 
-                unit: 'Tola' 
-            },
-        }
-    }
-    
     const response: PatroDataResponse = {
-        horoscope: horoscopeData,
-        goldSilver: mappedGoldSilver,
-        forex: forexData,
+        horoscope: scraperResponse?.horoscope || [],
+        goldSilver: scraperResponse?.goldSilver || null,
+        forex: scraperResponse?.forex || [],
         today: today,
         upcomingEvents: upcomingEvents,
     };
