@@ -28,6 +28,8 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     if (!country) {
       setLoading(false);
       return;
@@ -36,14 +38,18 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
     const fetchDateAndTime = async () => {
         setLoading(true);
         try {
-            const tzResponse = await fetch(`https://worldtimeapi.org/api/timezone/${countryToTimezone(country)}`);
-            if (!tzResponse.ok) throw new Error('Failed to fetch timezone.');
+            const timezone = countryToTimezone(country);
+            // Use a public proxy for WorldTimeAPI if direct access fails or for CORS issues in some environments
+            const tzResponse = await fetch(`https://worldtimeapi.org/api/timezone/${timezone}`);
+            if (!tzResponse.ok) throw new Error(`Failed to fetch timezone data for ${timezone}.`);
             
             const timeData = await tzResponse.json();
+            if (!isMounted) return;
+
             const now = new Date(timeData.datetime);
 
-            const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
-            const dateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true, timeZone: timezone });
+            const dateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: timezone });
 
             if (country === 'Nepal') {
                 const result = await convertDate({
@@ -52,22 +58,27 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
                     month: now.getMonth() + 1,
                     day: now.getDate()
                 });
-                setDateTime({ timeString, dateString, nepaliDate: result });
+                if (isMounted) setDateTime({ timeString, dateString, nepaliDate: result });
             } else {
-                 setDateTime({ timeString, dateString, nepaliDate: null });
+                 if (isMounted) setDateTime({ timeString, dateString, nepaliDate: null });
             }
         } catch (error) {
             console.error("Failed to fetch date and time", error);
+            // Fallback to local time if API fails
             const now = new Date();
             const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
             const dateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            setDateTime({ timeString, dateString, nepaliDate: null });
+            if (isMounted) setDateTime({ timeString, dateString, nepaliDate: null });
         } finally {
-            setLoading(false);
+            if (isMounted) setLoading(false);
         }
     };
     
     fetchDateAndTime();
+
+    return () => {
+        isMounted = false;
+    }
   }, [country]);
 
   const countryToTimezone = (countryName: string) => {
@@ -79,6 +90,33 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
           'Australia': 'Australia/Sydney',
           'Canada': 'America/Toronto',
           'Japan': 'Asia/Tokyo',
+          'China': 'Asia/Shanghai',
+          'Germany': 'Europe/Berlin',
+          'France': 'Europe/Paris',
+          'Brazil': 'America/Sao_Paulo',
+          'South Africa': 'Africa/Johannesburg',
+          'Nigeria': 'Africa/Lagos',
+          'Egypt': 'Africa/Cairo',
+          'Russia': 'Europe/Moscow',
+          'United Arab Emirates': 'Asia/Dubai',
+          'Saudi Arabia': 'Asia/Riyadh',
+          'Argentina': 'America/Argentina/Buenos_Aires',
+          'Bahrain': 'Asia/Bahrain',
+          'Bangladesh': 'Asia/Dhaka',
+          'Indonesia': 'Asia/Jakarta',
+          'Italy': 'Europe/Rome',
+          'Kuwait': 'Asia/Kuwait',
+          'Mexico': 'America/Mexico_City',
+          'Netherlands': 'Europe/Amsterdam',
+          'Oman': 'Asia/Muscat',
+          'Pakistan': 'Asia/Karachi',
+          'Philippines': 'Asia/Manila',
+          'Qatar': 'Asia/Qatar',
+          'South Korea': 'Asia/Seoul',
+          'Spain': 'Europe/Madrid',
+          'Thailand': 'Asia/Bangkok',
+          'Turkey': 'Europe/Istanbul',
+          'Vietnam': 'Asia/Ho_Chi_Minh',
       };
       return map[countryName] || 'Etc/UTC';
   }
@@ -104,8 +142,8 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
     ? `${toNepaliNumber(nepaliDate.day)} ${nepaliDate.month} ${toNepaliNumber(nepaliDate.year)}, ${nepaliDate.weekday}`
     : dateString;
     
-  const nepaliTimeParts = timeString.split(':');
-  const nepaliTimeString = toNepaliNumber(`${nepaliTimeParts[0]}:${nepaliTimeParts[1].substring(0,2)}`);
+  const nepaliTimeParts = timeString.split(/:| /); // split by colon or space
+  const nepaliTimeString = toNepaliNumber(`${nepaliTimeParts[0]}:${nepaliTimeParts[1]}`);
   const timeSuffix = timeString.slice(-2);
   const localizedTimePrefix = timeSuffix === 'AM' ? 'बिहानको' : 'बेलुकीको';
 
@@ -121,3 +159,5 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
     </div>
   );
 }
+
+    

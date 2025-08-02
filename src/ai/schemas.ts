@@ -1,3 +1,4 @@
+
 /**
  * @fileOverview Defines the Zod schemas and TypeScript types for the AI flows.
  */
@@ -22,15 +23,6 @@ export const NewsResponseSchema = z.object({
     .describe('A list of 8 recent news headlines from a country with generated images.'),
 });
 export type NewsResponse = z.infer<typeof NewsResponseSchema>;
-
-export const NewsArticleSchema = z.object({
-  title: z.string().describe('The full title of the news article.'),
-  content: z.string().describe('The full content of the news article, formatted as Markdown with at least 5 paragraphs.'),
-  imageDataUri: z.string().describe('A relevant, generated image for the article as a data URI.'),
-  category: z.string().describe('The category of the news article (e.g., Politics, Sports).'),
-  publishedDate: z.string().describe("The publication date of the article in 'Month Day, Year' format."),
-});
-export type NewsArticle = z.infer<typeof NewsArticleSchema>;
 
 // Festival Schemas
 export const FestivalSchema = z.object({
@@ -83,3 +75,5 @@ export const CalendarEventsResponseSchema = z.object({
     month_events: z.array(CalendarEventSchema).describe("A list of all events for the given month."),
 });
 export type CalendarEventsResponse = z.infer<typeof CalendarEventsResponseSchema>;
+
+    
