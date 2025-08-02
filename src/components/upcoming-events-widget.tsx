@@ -4,18 +4,8 @@
 import { useEffect, useState } from "react";
 import { getUpcomingEvents } from "@/ai/flows/upcoming-events-flow";
 import { UpcomingEvent } from "@/ai/schemas";
-import { toBS, getNepaliMonthName } from "@/lib/nepali-date-converter";
+import { toBS, getNepaliMonthName, getNepaliNumber } from "@/lib/nepali-date-converter";
 import { Calendar } from "lucide-react";
-
-const toNepaliNumber = (num: number | string) => {
-    const nepaliDigits = ["०", "१", "२", "३", "४", "५", "६", "७", "८", "९"];
-    return String(num).split("").map(char => {
-        if (!isNaN(parseInt(char))) {
-            return nepaliDigits[parseInt(char)];
-        }
-        return char;
-    }).join("");
-}
 
 export default function UpcomingEventsWidget() {
   const [events, setEvents] = useState<UpcomingEvent[]>([]);
@@ -23,6 +13,7 @@ export default function UpcomingEventsWidget() {
 
   useEffect(() => {
     const fetchEvents = async () => {
+      setLoading(true);
       try {
         const upcomingEvents = await getUpcomingEvents();
         setEvents(upcomingEvents.events);
@@ -36,10 +27,11 @@ export default function UpcomingEventsWidget() {
   }, []);
 
   const formatDate = (dateStr: string) => {
+    // The date from iCal is in YYYYMMDD format, but JS needs separators.
     const date = new Date(dateStr);
     const bsDate = toBS(date);
     const monthName = getNepaliMonthName(bsDate.month);
-    const day = toNepaliNumber(bsDate.day);
+    const day = getNepaliNumber(bsDate.day);
     return `${monthName} ${day}`;
   }
 
