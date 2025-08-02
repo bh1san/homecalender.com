@@ -27,7 +27,8 @@ export type NewsResponse = z.infer<typeof NewsResponseSchema>;
 // Festival Schemas
 export const FestivalSchema = z.object({
   name: z.string().describe("The name of the festival."),
-  date: z.string().describe("The date or date range of the festival."),
+  displayDate: z.string().describe("The human-readable date or date range of the festival."),
+  gregorianStartDate: z.string().describe("The Gregorian start date in YYYY-MM-DD format."),
   description: z.string().describe("A brief description of the festival."),
 });
 export type Festival = z.infer<typeof FestivalSchema>;

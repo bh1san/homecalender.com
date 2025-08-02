@@ -22,7 +22,7 @@ export default function FestivalList({ festivals }: FestivalListProps) {
                 <PartyPopper className="h-5 w-5 text-primary" />
                 <div className="text-left">
                   <span>{festival.name}</span>
-                  <p className="text-sm font-light text-muted-foreground">{festival.date}</p>
+                  <p className="text-sm font-light text-muted-foreground">{festival.displayDate}</p>
                 </div>
               </div>
             </AccordionTrigger>

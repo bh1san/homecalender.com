@@ -17,7 +17,12 @@ const festivalPrompt = ai.definePrompt({
   name: 'festivalPrompt',
   input: {schema: FestivalGenerationInputSchema},
   output: {schema: FestivalResponseSchema},
-  prompt: `You are a cultural expert. Generate a list of the 7 most important or popular festivals for {{country}}. Include festivals that are current or upcoming in the next few months. For each festival, provide its name, a typical date or date range (e.g., "October 31", "March", "Late September"), and a brief, engaging description.`,
+  prompt: `You are a cultural expert. Generate a list of the 7 most important or popular festivals for {{country}}. Include festivals that are current or upcoming in the next few months.
+For each festival, provide:
+1.  'name': The name of the festival.
+2.  'displayDate': A typical, human-readable date or date range (e.g., "October 31", "March", "Late September", "Kartik 5-15").
+3.  'gregorianStartDate': The estimated Gregorian start date for the current or next upcoming instance of the festival, in a strict YYYY-MM-DD format.
+4.  'description': A brief, engaging description.`,
 });
 
 const festivalFlow = ai.defineFlow(

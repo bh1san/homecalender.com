@@ -25,7 +25,7 @@ import { Calendar } from "@/components/ui/calendar";
 import LocationSelector from "@/components/location-selector";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import MotivationalQuote from "@/components/motivational-quote";
-import { format, differenceInDays } from 'date-fns';
+import { format, differenceInDays, parseISO } from 'date-fns';
 import { User } from "lucide-react";
 
 type Settings = {
@@ -35,24 +35,9 @@ type Settings = {
 
 const parseFestivalDate = (dateString: string) => {
     try {
-        const now = new Date();
-        const year = now.getFullYear();
-        // Try to parse dates like "Month Day" e.g. "August 15" or "October 31"
-        let date = new Date(`${dateString} ${year}`);
-
-        if (isNaN(date.getTime())) {
-             // Fallback for formats like "March", "Late September", "February/March"
-            const monthName = dateString.split(/[\s/]+/)[0].trim();
-            date = new Date(`${monthName} 1 ${year}`);
-        }
-
+        // The date comes in YYYY-MM-DD format, so parseISO can handle it directly.
+        const date = parseISO(dateString);
         if (isNaN(date.getTime())) return null;
-
-        // If the parsed date is more than a month in the past, assume it's for the next year
-        if (differenceInDays(date, now) < -30) {
-            date.setFullYear(year + 1);
-        }
-        
         return date;
     } catch {
         return null;
@@ -99,7 +84,7 @@ export default function Home() {
     return festivals
         .map(festival => ({
             ...festival,
-            parsedDate: parseFestivalDate(festival.date),
+            parsedDate: parseFestivalDate(festival.gregorianStartDate),
         }))
         .filter(event => event.parsedDate && differenceInDays(event.parsedDate, now) >= 0)
         .sort((a, b) => a.parsedDate!.getTime() - b.parsedDate!.getTime())
