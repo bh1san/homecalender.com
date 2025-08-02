@@ -43,58 +43,6 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
     setIsMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (!isMounted) return;
-
-    const fetchDateAndTime = async () => {
-        setLoading(true);
-        try {
-            const timezone = 'Asia/Kathmandu';
-            const now = new Date(new Date().toLocaleString("en-US", { timeZone: timezone }));
-
-            const bsDate = toBS(now);
-            const adDate = toAD(bsDate);
-
-            const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
-            const gregorianDateString = adDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
-            if (country === 'Nepal' || country === null) {
-                const monthEventsData = await getCalendarEvents({ year: bsDate.year, month: bsDate.month });
-                const dayEvent = monthEventsData.month_events.find(e => e.day === bsDate.day) || null;
-                setDateTime({ timeString, gregorianDateString, nepaliDate: bsDate, dayEvent });
-            } else {
-                 const worldTimezone = countryToTimezone(country);
-                 const worldNow = new Date(new Date().toLocaleString("en-US", { timeZone: worldTimezone }));
-                 const worldTimeString = worldNow.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
-                 const worldDateString = worldNow.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-                 setDateTime({ 
-                     timeString: worldTimeString, 
-                     gregorianDateString: worldDateString, 
-                     nepaliDate: bsDate, // keep nepali date as a fallback, won't be displayed
-                     dayEvent: null 
-                });
-            }
-
-        } catch (error) {
-            console.error("Failed to fetch date and time", error);
-            // Fallback to local time if API fails
-            const now = new Date();
-            const bsDate = toBS(now);
-            const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
-            const gregorianDateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            setDateTime({ timeString, gregorianDateString, nepaliDate: bsDate, dayEvent: null });
-        } finally {
-            setLoading(false);
-        }
-    };
-    
-    fetchDateAndTime();
-    const interval = setInterval(fetchDateAndTime, 60000); // Refresh every minute
-
-    return () => clearInterval(interval);
-
-  }, [country, isMounted]);
-
   const countryToTimezone = (countryName: string) => {
       const map: { [key: string]: string } = {
           'United States': 'America/New_York', 'United Kingdom': 'Europe/London', 'India': 'Asia/Kolkata', 'Australia': 'Australia/Sydney', 'Canada': 'America/Toronto', 'Japan': 'Asia/Tokyo', 'China': 'Asia/Shanghai', 'Germany': 'Europe/Berlin', 'France': 'Europe/Paris', 'Brazil': 'America/Sao_Paulo', 'South Africa': 'Africa/Johannesburg', 'Nigeria': 'Africa/Lagos', 'Egypt': 'Africa/Cairo', 'Russia': 'Europe/Moscow', 'United Arab Emirates': 'Asia/Dubai', 'Saudi Arabia': 'Asia/Riyadh', 'Argentina': 'America/Argentina/Buenos_Aires', 'Bahrain': 'Asia/Bahrain', 'Bangladesh': 'Asia/Dhaka', 'Indonesia': 'Asia/Jakarta', 'Italy': 'Europe/Rome', 'Kuwait': 'Asia/Kuwait', 'Mexico': 'America/Mexico_City', 'Netherlands': 'Europe/Amsterdam', 'Oman': 'Asia/Muscat', 'Pakistan': 'Asia/Karachi', 'Philippines': 'Asia/Manila', 'Qatar': 'Asia/Qatar', 'South Korea': 'Asia/Seoul', 'Spain': 'Europe/Madrid', 'Thailand': 'Asia/Bangkok', 'Turkey': 'Europe/Istanbul', 'Vietnam': 'Asia/Ho_Chi_Minh',
@@ -102,6 +50,61 @@ export default function CurrentDateTime({ country }: CurrentDateTimeProps) {
       return map[countryName] || 'Etc/UTC';
   }
 
+  const fetchDateAndTime = async () => {
+    setLoading(true);
+    try {
+        const isNepal = country === 'Nepal' || country === null;
+        let now: Date;
+        let gregorianDateString: string;
+        let timeString: string;
+
+        if (isNepal) {
+            const timezone = 'Asia/Kathmandu';
+            now = new Date(new Date().toLocaleString("en-US", { timeZone: timezone }));
+            const bsDate = toBS(now);
+            const adDate = toAD(bsDate);
+            gregorianDateString = adDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
+            
+            const monthEventsData = await getCalendarEvents({ year: bsDate.year, month: bsDate.month });
+            const dayEvent = monthEventsData.month_events.find(e => e.day === bsDate.day) || null;
+            setDateTime({ timeString, gregorianDateString, nepaliDate: bsDate, dayEvent });
+
+        } else {
+             const worldTimezone = countryToTimezone(country!);
+             now = new Date(new Date().toLocaleString("en-US", { timeZone: worldTimezone }));
+             timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
+             gregorianDateString = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+             setDateTime({ 
+                 timeString: timeString, 
+                 gregorianDateString: gregorianDateString, 
+                 nepaliDate: toBS(new Date()), // Keep nepali date as a fallback, won't be displayed
+                 dayEvent: null 
+            });
+        }
+
+    } catch (error) {
+        console.error("Failed to fetch date and time", error);
+        // Fallback to local client time if API fails
+        const localNow = new Date();
+        const bsDate = toBS(localNow);
+        const localTimeString = localNow.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
+        const localGregorianDateString = localNow.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        setDateTime({ timeString: localTimeString, gregorianDateString: localGregorianDateString, nepaliDate: bsDate, dayEvent: null });
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isMounted) return;
+    
+    fetchDateAndTime();
+    const interval = setInterval(fetchDateAndTime, 60000); // Refresh every minute
+
+    return () => clearInterval(interval);
+
+  }, [country, isMounted]);
 
   if (loading || !dateTime) {
     return (
