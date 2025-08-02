@@ -90,13 +90,13 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
              <div key={day} className={cn(
                 "relative flex flex-col justify-between p-1.5 border rounded-md min-h-[100px] transition-colors duration-200",
                 isToday ? "bg-primary/20 border-primary shadow-lg" : "bg-card hover:bg-muted/50",
-                eventData?.is_holiday ? "bg-destructive-foreground" : ""
+                eventData?.is_holiday && !isToday ? "bg-red-50 dark:bg-red-950/20" : ""
             )}>
                 <div className="flex justify-between items-start">
                     <span className={cn(
                         "text-xs sm:text-sm font-semibold",
-                        isToday ? "text-primary" : "text-muted-foreground",
-                        eventData?.is_holiday ? "text-destructive" : ""
+                         isToday ? "text-primary-foreground" : "text-muted-foreground",
+                         eventData?.is_holiday ? "text-destructive" : ""
                     )}>
                         {eventData?.gregorian_day}
                     </span>
@@ -108,19 +108,17 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
                         {getNepaliNumber(day)}
                     </span>
                 </div>
-                <div className="flex-grow flex flex-col justify-end">
-                    {eventData && (
-                        <div className="text-center">
-                            <p className="text-xs text-foreground truncate">{eventData.tithi}</p>
-                            {eventData.events.length > 0 && (
-                                <Badge 
-                                    variant={eventData.is_holiday ? "destructive" : "secondary"}
-                                    className="mt-1 w-full justify-center text-xs truncate"
-                                >
-                                    {eventData.events[0]}
-                                </Badge>
-                            )}
-                        </div>
+                <div className="flex-grow flex flex-col justify-end text-center">
+                    {eventData?.tithi && (
+                         <p className="text-xs text-foreground truncate">{eventData.tithi}</p>
+                    )}
+                    {eventData && eventData.events.length > 0 && (
+                        <Badge 
+                            variant={eventData.is_holiday ? "destructive" : "secondary"}
+                            className="mt-1 w-full justify-center text-xs truncate"
+                        >
+                            {eventData.events[0]}
+                        </Badge>
                     )}
                 </div>
             </div>
@@ -133,7 +131,7 @@ export default function NepaliCalendar({ today }: NepaliCalendarProps) {
                     <PopoverContent className="w-60 p-4" align="start">
                         <div className="space-y-2">
                              <h4 className="font-medium leading-none">{getNepaliNumber(day)} {getNepaliMonthName(currentMonth)}</h4>
-                             <p className="text-sm text-muted-foreground">{eventData.tithi}</p>
+                             {eventData.tithi && <p className="text-sm text-muted-foreground">{eventData.tithi}</p>}
                              <hr />
                              {eventData.events.map((e, i) => <p key={i} className="text-sm">{e}</p>)}
                              {eventData.panchanga && <p className="text-xs text-muted-foreground pt-2">{eventData.panchanga}</p>}
