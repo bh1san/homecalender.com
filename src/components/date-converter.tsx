@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ArrowRightLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { toBS, toAD, getNepaliMonthName, getEnglishMonthName } from '@/lib/nepali-date-converter';
+import { toBS, toAD, getNepaliMonthName, getEnglishMonthName, getNepaliDateParts } from '@/lib/nepali-date-converter';
 import {
   Select,
   SelectContent,
@@ -46,13 +46,29 @@ interface NepaliDate {
 export default function DateConverter() {
   const { toast } = useToast();
   
-  const [gregorianDate, setGregorianDate] = useState({ year: "2024", month: "7", day: "15" });
+  const [gregorianDate, setGregorianDate] = useState({ year: "", month: "", day: "" });
   const [nepaliResult, setNepaliResult] = useState<string | null>(null);
   const [isConvertingAD, setIsConvertingAD] = useState(false);
 
-  const [nepaliDate, setNepaliDate] = useState({ year: "2081", month: "4", day: "1" });
+  const [nepaliDate, setNepaliDate] = useState({ year: "", month: "", day: "" });
   const [gregorianResult, setGregorianResult] = useState<string | null>(null);
   const [isConvertingBS, setIsConvertingBS] = useState(false);
+
+  useEffect(() => {
+    // Set default dates on client-side to avoid hydration mismatch
+    const today = new Date();
+    const todayBS = getNepaliDateParts(today);
+    setGregorianDate({
+      year: String(today.getFullYear()),
+      month: String(today.getMonth() + 1),
+      day: String(today.getDate())
+    });
+    setNepaliDate({
+        year: String(todayBS.year),
+        month: String(todayBS.month),
+        day: String(todayBS.day)
+    });
+  }, []);
 
   const handleGregorianToNepali = async () => {
     if (!gregorianDate.year || !gregorianDate.month || !gregorianDate.day) {
