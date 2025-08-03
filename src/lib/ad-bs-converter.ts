@@ -108,65 +108,47 @@ const END_AD_YEAR = 2034;
 const START_AD_MONTH = 4;
 const START_AD_DAY = 14;
 
-const bsMonthFirstDay = [0, 1, 17, 17, 18, 19, 20, 21, 21, 22, 22, 21, 21];
 
 export function adToBs(year: number, month: number, day: number) {
     if (year < START_AD_YEAR || year >= END_AD_YEAR) {
         throw new Error(`Date out of range. Please provide an AD year between ${START_AD_YEAR} and ${END_AD_YEAR-1}.`);
     }
 
-    let bsYear = year + 57;
-    let bsMonth = (month + 9) % 12;
-    bsMonth = bsMonth === 0 ? 12 : bsMonth;
+    const epochAdDate = new Date(START_AD_YEAR, START_AD_MONTH - 1, START_AD_DAY);
+    const todayAdDate = new Date(year, month - 1, day);
+    
+    // Calculate difference in days
+    const diffDays = Math.floor((todayAdDate.getTime() - epochAdDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    let bsYear = START_BS_YEAR;
+    let bsMonth = 1;
     let bsDay = 1;
 
-    if (month < 4) {
-        bsYear -= 1;
-    } else if (month === 4) {
-        const bsYearIndexCheck = bsYear - START_BS_YEAR;
-        if (nepaliMonthDays[bsYearIndexCheck]) {
-            const bsNewYearDay = nepaliMonthDays[bsYearIndexCheck][0] - 15;
-            if (day < bsNewYearDay) {
-                bsYear -= 1;
+    let totalDays = 0;
+    
+    // Find the BS year and month
+    for (let i = 0; i < nepaliMonthDays.length; i++) {
+        let daysInCurrentBsYear = 0;
+        for (let j = 0; j < 12; j++) {
+            daysInCurrentBsYear += nepaliMonthDays[i][j];
+        }
+
+        if (totalDays + daysInCurrentBsYear > diffDays) {
+            bsYear = START_BS_YEAR + i;
+            let daysInMonthCounter = 0;
+            for (let j = 0; j < 12; j++) {
+                if (totalDays + daysInMonthCounter + nepaliMonthDays[i][j] > diffDays) {
+                    bsMonth = j + 1;
+                    bsDay = diffDays - (totalDays + daysInMonthCounter) + 1;
+                    return { year: bsYear, month: bsMonth, day: bsDay };
+                }
+                daysInMonthCounter += nepaliMonthDays[i][j];
             }
         }
+        totalDays += daysInCurrentBsYear;
     }
 
-    const bsYearIndex = bsYear - START_BS_YEAR;
-    if (!nepaliMonthDays[bsYearIndex]) {
-        throw new Error(`Date out of range. BS year ${bsYear} is not supported.`);
-    }
-
-    let totalEngDays = 0;
-    for (let i = 0; i < month - 1; i++) {
-        totalEngDays += englishMonthDays[i];
-    }
-    totalEngDays += day;
-
-    let isLeapYear = false;
-    if ((year % 4 === 0 && year % 100 !== 0) || year % 400 === 0) {
-        isLeapYear = true;
-    }
-    if (isLeapYear && month > 2) {
-        totalEngDays++;
-    }
-
-    let totalNepDays = bsMonthFirstDay[month] || 0;
-
-    let k = month > 3 ? 1 : 0;
-    bsMonth = 0;
-    let tempDays = 0;
-
-    for (let i = 0; i < 12; i++) {
-        tempDays += nepaliMonthDays[bsYearIndex][i];
-        if (totalEngDays <= tempDays + totalNepDays) {
-            bsMonth = i + 1;
-            bsDay = totalEngDays - (tempDays - nepaliMonthDays[bsYearIndex][i]) - totalNepDays;
-            break;
-        }
-    }
-
-    return { year: bsYear, month: bsMonth, day: bsDay };
+    throw new Error("Could not convert the date. The AD date is likely out of the supported BS range.");
 }
 
 
