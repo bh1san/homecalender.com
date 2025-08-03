@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { CalendarEvent, CurrentDateInfoResponse } from '@/ai/schemas';
+import { CalendarEvent } from '@/ai/schemas';
 import { getNepaliMonthName, getNepaliNumber } from '@/lib/nepali-date-converter';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight, Loader, Info } from 'lucide-react';
@@ -13,8 +13,6 @@ import { adToBs, bsToAd, getMonthDays } from '@/lib/ad-bs-converter';
 import { useToast } from '@/hooks/use-toast';
 
 interface NepaliCalendarProps {
-    today: CurrentDateInfoResponse | null | undefined;
-    monthEvents: CalendarEvent[] | null | undefined;
     isLoading: boolean;
 }
 
@@ -29,13 +27,16 @@ interface CalendarDate {
 
 const WEEK_DAYS_NP = ["आइत", "सोम", "मंगल", "बुध", "बिहि", "शुक्र", "शनि"];
 
-export default function NepaliCalendarComponent({ monthEvents, isLoading: initialIsLoading }: NepaliCalendarProps) {
+export default function NepaliCalendarComponent({ isLoading: initialIsLoading }: NepaliCalendarProps) {
     const isMounted = useIsMounted();
     const { toast } = useToast();
     // Start with a fixed default date on the server
     const [currentBS, setCurrentBS] = useState({ year: 2081, month: 4 });
     const [calendarData, setCalendarData] = useState<(CalendarDate | null)[]>([]);
     const [clientToday, setClientToday] = useState<{ year: number, month: number, day: number} | null>(null);
+
+    // Mock month events for now. In a real app, this would be fetched.
+    const [monthEvents, setMonthEvents] = useState<CalendarEvent[]>([]);
 
     useEffect(() => {
         // Only run this effect on the client after mounting

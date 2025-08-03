@@ -3,14 +3,9 @@
 
 import { useState, useEffect } from 'react';
 import { getNepaliMonthName, getNepaliDayOfWeek, getEnglishMonthName, getNepaliNumber } from '@/lib/nepali-date-converter';
-import { CurrentDateInfoResponse } from '@/ai/schemas';
 import { useIsMounted } from '@/hooks/use-is-mounted';
 import { adToBs } from '@/lib/ad-bs-converter';
 import { useToast } from '@/hooks/use-toast';
-
-interface CurrentDateTimeProps {
-  today: CurrentDateInfoResponse | null | undefined;
-}
 
 interface ClientToday {
     bsYear: number;
@@ -20,10 +15,12 @@ interface ClientToday {
     adYear: number;
     adMonth: number;
     adDate: number;
+    tithi?: string;
+    panchanga?: string;
 }
 
 
-export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
+export default function CurrentDateTime() {
   const [timeString, setTimeString] = useState("");
   const [clientToday, setClientToday] = useState<ClientToday | null>(null);
   const isMounted = useIsMounted();
@@ -85,8 +82,8 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
   return (
     <div className="space-y-1 text-primary-foreground">
         <h1 className="text-3xl font-bold">{nepaliDateStr}</h1>
-        {today?.tithi && today.tithi !== 'N/A' && <p className="text-lg">तिथि: {today.tithi}</p>}
-        {today?.panchanga && <p className="text-lg">पञ्चाङ्ग: {today.panchanga}</p>}
+        {clientToday?.tithi && clientToday.tithi !== 'N/A' && <p className="text-lg">तिथि: {clientToday.tithi}</p>}
+        {clientToday?.panchanga && <p className="text-lg">पञ्चाङ्ग: {clientToday.panchanga}</p>}
         {timeString && <p className="text-lg">{`${localizedTimePrefix} ${nepaliTimeString}`}</p>}
         <p className="text-base">{gregorianDateStr}</p>
     </div>

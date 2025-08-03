@@ -1,14 +1,37 @@
 
 "use client";
 
+import { useState, useEffect } from 'react';
 import { getNepaliMonthName, getNepaliNumber } from "@/lib/nepali-date-converter";
 import { UpcomingEvent } from "@/ai/schemas";
 import { Badge } from "./ui/badge";
+import { useIsMounted } from '@/hooks/use-is-mounted';
 
 interface UpcomingEventsWidgetProps {
     loading: boolean;
-    events?: UpcomingEvent[];
 }
+
+// Mock function to generate upcoming events.
+// In a real app, this might come from a more sophisticated source or an API.
+const getClientSideUpcomingEvents = (): UpcomingEvent[] => {
+    // This function will only run on the client
+    const today = new Date();
+    const events: UpcomingEvent[] = [];
+
+    for (let i = 0; i < 8; i++) {
+        const futureDate = new Date(today);
+        futureDate.setDate(today.getDate() + (i * 4) + 5); // Spread events out a bit
+        
+        const event: UpcomingEvent = {
+            summary: `Sample Event ${i + 1}`,
+            startDate: futureDate.toISOString().split('T')[0], // YYYY-MM-DD
+            isHoliday: Math.random() > 0.8 // Randomly make some holidays
+        };
+        events.push(event);
+    }
+    return events;
+}
+
 
 function getADDateParts(dateStr: string): { month: number, day: number, year: number } {
     try {
@@ -20,9 +43,17 @@ function getADDateParts(dateStr: string): { month: number, day: number, year: nu
 }
 
 
-export default function UpcomingEventsWidget({ loading, events }: UpcomingEventsWidgetProps) {
+export default function UpcomingEventsWidget({ loading: initialLoading }: UpcomingEventsWidgetProps) {
+  const isMounted = useIsMounted();
+  const [events, setEvents] = useState<UpcomingEvent[]>([]);
 
-  if (loading) {
+  useEffect(() => {
+    if (isMounted) {
+      setEvents(getClientSideUpcomingEvents());
+    }
+  }, [isMounted]);
+
+  if (!isMounted || initialLoading) {
     return (
       <div className="space-y-4 p-4">
         {[...Array(5)].map((_, i) => (
