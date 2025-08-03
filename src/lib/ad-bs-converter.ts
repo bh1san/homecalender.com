@@ -97,7 +97,6 @@ const nepaliMonthDays = [
   [31, 31, 32, 32, 31, 31, 30, 30, 29, 30, 30, 30], // 2089
   [31, 32, 31, 32, 31, 31, 30, 30, 29, 30, 30, 30], // 2090
 ];
-const englishMonthDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 const START_BS_YEAR = 2000;
 const END_BS_YEAR = 2090;
@@ -110,23 +109,18 @@ const START_AD_DAY = 14;
 
 
 export function adToBs(year: number, month: number, day: number) {
-    if (year < START_AD_YEAR || year >= END_AD_YEAR) {
+    if (year < START_AD_YEAR || (year === END_AD_YEAR - 1 && (month > START_AD_MONTH || (month === START_AD_MONTH && day >= START_AD_DAY))) || year >= END_AD_YEAR) {
         throw new Error(`Date out of range. Please provide an AD year between ${START_AD_YEAR} and ${END_AD_YEAR-1}.`);
     }
 
     const epochAdDate = new Date(START_AD_YEAR, START_AD_MONTH - 1, START_AD_DAY);
     const todayAdDate = new Date(year, month - 1, day);
     
-    // Calculate difference in days
     const diffDays = Math.floor((todayAdDate.getTime() - epochAdDate.getTime()) / (1000 * 60 * 60 * 24));
     
     let bsYear = START_BS_YEAR;
-    let bsMonth = 1;
-    let bsDay = 1;
-
     let totalDays = 0;
     
-    // Find the BS year and month
     for (let i = 0; i < nepaliMonthDays.length; i++) {
         let daysInCurrentBsYear = 0;
         for (let j = 0; j < 12; j++) {
@@ -138,8 +132,8 @@ export function adToBs(year: number, month: number, day: number) {
             let daysInMonthCounter = 0;
             for (let j = 0; j < 12; j++) {
                 if (totalDays + daysInMonthCounter + nepaliMonthDays[i][j] > diffDays) {
-                    bsMonth = j + 1;
-                    bsDay = diffDays - (totalDays + daysInMonthCounter) + 1;
+                    const bsMonth = j + 1;
+                    const bsDay = diffDays - (totalDays + daysInMonthCounter) + 1;
                     return { year: bsYear, month: bsMonth, day: bsDay };
                 }
                 daysInMonthCounter += nepaliMonthDays[i][j];
@@ -164,13 +158,13 @@ export function bsToAd(year: number, month: number, day: number) {
     
     let totalDays = 0;
     
-    for(let i = START_BS_YEAR; i < year; i++) {
+    for(let i = 0; i < bsYearIndex; i++) {
         for(let j=0; j<12; j++) {
-            totalDays += nepaliMonthDays[i-START_BS_YEAR][j];
+            totalDays += nepaliMonthDays[i][j];
         }
     }
     for(let j=0; j<month-1; j++) {
-        totalDays += nepaliMonthDays[year-START_BS_YEAR][j];
+        totalDays += nepaliMonthDays[bsYearIndex][j];
     }
     totalDays += day - 1;
 
