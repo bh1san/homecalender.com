@@ -7,7 +7,7 @@
 
 const nepaliMonthDays = [
   // 2000-2010
-  [30, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
+  [30, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 31],
   [31, 31, 32, 31, 31, 31, 30, 29, 30, 29, 30, 30],
   [31, 31, 32, 32, 31, 30, 30, 29, 30, 29, 30, 30],
   [31, 32, 31, 32, 31, 30, 30, 29, 30, 29, 30, 30],
@@ -122,8 +122,8 @@ const englishMonthDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 
 export function adToBs(adYear: number, adMonth: number, adDay: number) {
-    if (adYear < START_AD_YEAR || adYear > END_BS_YEAR + 57) {
-        throw new Error(`Date out of range. Please provide an AD year between ${START_AD_YEAR} and ${END_BS_YEAR + 57}.`);
+    if (adYear < START_AD_YEAR || (adYear === START_AD_YEAR && adMonth < START_AD_MONTH) || (adYear === START_AD_YEAR && adMonth === START_AD_MONTH && adDay < START_AD_DAY)) {
+        throw new Error(`Date out of range. Please provide an AD year after ${START_AD_YEAR}-04-14.`);
     }
 
     const epochAdDate = new Date(START_AD_YEAR, START_AD_MONTH - 1, START_AD_DAY);
@@ -139,10 +139,11 @@ export function adToBs(adYear: number, adMonth: number, adDay: number) {
     let yearIndex = 0;
 
     while (true) {
-        if (yearIndex >= nepaliMonthDays.length) {
-            throw new Error("Date out of range of Nepali calendar data.");
+        const yearData = nepaliMonthDays[yearIndex];
+        if (!yearData) {
+             throw new Error(`Date out of range. BS year data not available for ${START_BS_YEAR + yearIndex}.`);
         }
-        const daysInYear = nepaliMonthDays[yearIndex].reduce((sum, days) => sum + days, 0);
+        const daysInYear = yearData.reduce((sum, days) => sum + days, 0);
         if (daysRemaining < daysInYear) {
             bsYear = START_BS_YEAR + yearIndex;
             break;
@@ -198,9 +199,13 @@ export function bsToAd(bsYear: number, bsMonth: number, bsDay: number) {
 
 
 export function getMonthDays(year: number, month: number) {
-    if (year < START_BS_YEAR || year > END_BS_YEAR) return 30; // Return a default
+    if (year < START_BS_YEAR || year > END_BS_YEAR) {
+        throw new Error(`Date out of range. BS year data not available for ${year}.`);
+    }
     const bsYearIndex = year - START_BS_YEAR;
-    if (month < 1 || month > 12) return 30;
+    if (month < 1 || month > 12) {
+        throw new Error(`Invalid month: ${month}. Month must be between 1 and 12.`);
+    }
     return nepaliMonthDays[bsYearIndex][month - 1];
 }
 
