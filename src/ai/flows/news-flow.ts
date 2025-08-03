@@ -71,7 +71,7 @@ const newsFlow = ai.defineFlow(
             }));
         
         const apiResponse: NewsResponse = { headlines: headlinesWithImages };
-        setInCache(cacheKey, apiResponse, 60 * 60 * 1000); // Cache for 1 hour
+        setInCache(cacheKey, apiResponse, 24 * 60 * 60 * 1000); // Cache for 24 hours
 
         return apiResponse;
 
