@@ -5,6 +5,7 @@ import NepaliDate from 'nepali-date-converter';
 import { UpcomingEvent } from "@/ai/schemas";
 import { Badge } from "./ui/badge";
 import { useIsMounted } from '@/hooks/use-is-mounted';
+import { ScrollArea } from './ui/scroll-area';
 
 interface UpcomingEventsWidgetProps {
     loading: boolean;
@@ -35,7 +36,7 @@ export default function UpcomingEventsWidget({ loading: initialLoading, events }
   }
 
   return (
-    <div className="p-0">
+    <ScrollArea className="h-96 p-1">
         <ul className="space-y-1">
             {events.map((event, index) => {
                 const nepaliDate = new NepaliDate(new Date(event.startDate));
@@ -54,6 +55,6 @@ export default function UpcomingEventsWidget({ loading: initialLoading, events }
                 );
             })}
         </ul>
-    </div>
+    </ScrollArea>
   );
 }
