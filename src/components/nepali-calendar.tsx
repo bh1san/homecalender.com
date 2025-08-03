@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import NepaliDate from 'nepali-date-converter';
+import { dateConfigMap } from 'nepali-date-converter';
 import { CalendarEvent } from '@/ai/schemas';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight, Loader, Info } from 'lucide-react';
@@ -20,10 +21,12 @@ interface CalendarDate {
 }
 
 const WEEK_DAYS_NP = ["आइत", "सोम", "मंगल", "बुध", "बिहि", "शुक्र", "शनि"];
+const NEPALI_MONTHS = ["Baisakh", "Jestha", "Ashadh", "Shrawan", "Bhadra", "Ashwin", "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra"];
+
 
 export default function NepaliCalendarComponent({ isLoading: initialIsLoading }: { isLoading: boolean }) {
     const isMounted = useIsMounted();
-    const [viewDate, setViewDate] = useState(new NepaliDate(2081, 0, 1));
+    const [viewDate, setViewDate] = useState(new NepaliDate());
     const [calendarData, setCalendarData] = useState<(CalendarDate | null)[]>([]);
     const [today, setToday] = useState<NepaliDate | null>(null);
 
@@ -39,12 +42,22 @@ export default function NepaliCalendarComponent({ isLoading: initialIsLoading }:
     }, [isMounted]);
     
     useEffect(() => {
+        if (!isMounted) return;
+        
         const year = viewDate.getYear();
         const month = viewDate.getMonth();
         
         const firstDayOfMonth = new NepaliDate(year, month, 1);
         const firstDayOfWeek = firstDayOfMonth.getDay();
-        const daysInMonth = firstDayOfMonth.getMonthDays();
+        
+        const yearData = dateConfigMap[year];
+        if (!yearData) {
+            console.error(`Calendar data for year ${year} not found.`);
+            setCalendarData([]);
+            return;
+        }
+        const monthName = NEPALI_MONTHS[month];
+        const daysInMonth = yearData[monthName as keyof typeof yearData];
 
         const cells: (CalendarDate | null)[] = Array(firstDayOfWeek).fill(null);
 
@@ -62,11 +75,11 @@ export default function NepaliCalendarComponent({ isLoading: initialIsLoading }:
         }
         setCalendarData(cells);
 
-    }, [viewDate]);
+    }, [viewDate, isMounted]);
 
     const handlePrevMonth = () => {
         setViewDate(prev => {
-            const newDate = new NepaliDate(prev.getYear(), prev.getMonth(), 1);
+            const newDate = new NepaliDate(prev.toJsDate());
             newDate.setMonth(newDate.getMonth() - 1);
             return newDate;
         });
@@ -74,7 +87,7 @@ export default function NepaliCalendarComponent({ isLoading: initialIsLoading }:
 
     const handleNextMonth = () => {
         setViewDate(prev => {
-            const newDate = new NepaliDate(prev.getYear(), prev.getMonth(), 1);
+            const newDate = new NepaliDate(prev.toJsDate());
             newDate.setMonth(newDate.getMonth() + 1);
             return newDate;
         });
