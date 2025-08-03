@@ -2,90 +2,61 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { getNepaliMonthName, getNepaliDayOfWeek, getEnglishMonthName, getNepaliNumber } from '@/lib/nepali-date-converter';
+import NepaliDate from 'nepali-date-converter';
 import { useIsMounted } from '@/hooks/use-is-mounted';
-import { adToBs } from '@/lib/ad-bs-converter';
-import { useToast } from '@/hooks/use-toast';
-
-interface ClientToday {
-    bsYear: number;
-    bsMonth: number;
-    bsDate: number;
-    weekDay: number;
-    adYear: number;
-    adMonth: number;
-    adDate: number;
-    tithi?: string;
-    panchanga?: string;
-}
-
 
 export default function CurrentDateTime() {
   const [timeString, setTimeString] = useState("");
-  const [clientToday, setClientToday] = useState<ClientToday | null>(null);
+  const [nepaliDate, setNepaliDate] = useState<NepaliDate | null>(null);
   const isMounted = useIsMounted();
-  const { toast } = useToast();
-  
-  useEffect(() => {
-    // This entire block only runs on the client, after mounting.
-    const initializeDateAndTime = () => {
-      const timezone = "Asia/Kathmandu";
-      const now = new Date();
-      
-      const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true, timeZone: timezone });
-      setTimeString(timeStr);
 
-      try {
-          const bsDate = adToBs(now.getFullYear(), now.getMonth() + 1, now.getDate());
-          setClientToday({
-              bsYear: bsDate.year,
-              bsMonth: bsDate.month, 
-              bsDate: bsDate.day,
-              weekDay: now.getDay(),
-              adYear: now.getFullYear(),
-              adMonth: now.getMonth(), 
-              adDate: now.getDate()
-          });
-      } catch(e) {
-          const errorMessage = e instanceof Error ? e.message : "An unknown error occurred";
-          toast({ variant: "destructive", title: "Date Error", description: errorMessage });
-          console.error("Failed to convert date", e);
-      }
-    };
-    
-    // Run once on mount
+  useEffect(() => {
     if (isMounted) {
-      initializeDateAndTime();
-      const intervalId = setInterval(initializeDateAndTime, 1000);
+      const updateDateAndTime = () => {
+        const now = new Date();
+        const nd = new NepaliDate(now);
+        setNepaliDate(nd);
+        
+        const timezone = "Asia/Kathmandu";
+        const timeStr = now.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: 'numeric', 
+            second: 'numeric', 
+            hour12: true, 
+            timeZone: timezone 
+        });
+        setTimeString(timeStr);
+      };
+
+      updateDateAndTime();
+      const intervalId = setInterval(updateDateAndTime, 1000);
       return () => clearInterval(intervalId);
     }
-  }, [isMounted, toast]);
+  }, [isMounted]);
 
-  if (!isMounted || !clientToday) {
-      return (
-         <div className="space-y-2 text-primary-foreground">
-            <div className="h-9 w-64 bg-white/20 animate-pulse rounded-md" />
-            <div className="h-5 w-48 bg-white/20 animate-pulse rounded-md" />
-            <div className="h-5 w-32 bg-white/20 animate-pulse rounded-md" />
-        </div>
-      );
+  if (!isMounted || !nepaliDate) {
+    return (
+      <div className="space-y-2 text-primary-foreground">
+        <div className="h-9 w-64 bg-white/20 animate-pulse rounded-md" />
+        <div className="h-5 w-48 bg-white/20 animate-pulse rounded-md" />
+        <div className="h-5 w-32 bg-white/20 animate-pulse rounded-md" />
+      </div>
+    );
   }
-    
-  const nepaliDateStr = `${getNepaliNumber(clientToday.bsDate)} ${getNepaliMonthName(clientToday.bsMonth)} ${getNepaliNumber(clientToday.bsYear)}, ${getNepaliDayOfWeek(clientToday.weekDay)}`;
-  const gregorianDateStr = `${getEnglishMonthName(clientToday.adMonth)} ${clientToday.adDate}, ${clientToday.adYear}`;
+
+  const nepaliDateStr = nepaliDate.format('DD MMMM YYYY, ddd', 'np');
+  const gregorianDateStr = nepaliDate.format('MMMM DD, YYYY', 'en');
 
   const nepaliTimeParts = timeString.split(/:| /);
-  const nepaliTimeString = timeString ? getNepaliNumber(`${nepaliTimeParts[0]}:${nepaliTimeParts[1]}`) : "";
+  const nepaliTimeString = timeString ? new NepaliDate().format('K:mm', 'np') : "";
   const timeSuffix = timeString.slice(-2);
   const localizedTimePrefix = timeSuffix === 'AM' ? 'बिहानको' : 'बेलुकीको';
 
   return (
     <div className="space-y-1 text-primary-foreground">
-        <h1 className="text-3xl font-bold">{nepaliDateStr}</h1>
-        {clientToday?.tithi && clientToday.tithi !== 'N/A' && <p className="text-lg">तिथि: {clientToday.tithi}</p>}
-        {clientToday?.panchanga && <p className="text-lg">पञ्चाङ्ग: {clientToday.panchanga}</p>}
-        {timeString && <p className="text-lg">{`${localizedTimePrefix} ${nepaliTimeString}`}</p>}
-        <p className="text-base">{gregorianDateStr}</p>
+      <h1 className="text-3xl font-bold">{nepaliDateStr}</h1>
+      <p className="text-lg">{`${localizedTimePrefix} ${nepaliTimeString}`}</p>
+      <p className="text-base">{gregorianDateStr}</p>
     </div>
   );
 }

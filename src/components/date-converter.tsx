@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import NepaliDate from "nepali-date-converter";
 import { ArrowRightLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,12 +26,12 @@ import {
 import FlagLoader from "./flag-loader";
 import { useIsMounted } from "@/hooks/use-is-mounted";
 import { useToast } from "@/hooks/use-toast";
-import { getNepaliMonthName, getEnglishMonthName } from "@/lib/nepali-date-converter";
-import { adToBs, bsToAd } from "@/lib/ad-bs-converter";
 
 const nepaliMonths = [
-  "Baisakh", "Jestha", "Ashadh", "Shrawan", "Bhadra",
-  "Ashwin", "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra"
+  { value: 0, name: "Baisakh" }, { value: 1, name: "Jestha" }, { value: 2, name: "Ashadh" },
+  { value: 3, name: "Shrawan" }, { value: 4, name: "Bhadra" }, { value: 5, name: "Ashwin" },
+  { value: 6, name: "Kartik" }, { value: 7, name: "Mangsir" }, { value: 8, name: "Poush" },
+  { value: 9, name: "Magh" }, { value: 10, name: "Falgun" }, { value: 11, name: "Chaitra" }
 ];
 
 const gregorianMonths = [
@@ -51,29 +52,22 @@ export default function DateConverter() {
   const [isConvertingBS, setIsConvertingBS] = useState(false);
 
   useEffect(() => {
-    // Only set default dates after component has mounted on the client
     if (isMounted) {
       const todayAD = new Date();
       setGregorianDate({
         year: String(todayAD.getFullYear()),
-        month: String(todayAD.getMonth()), // 0-indexed for select
+        month: String(todayAD.getMonth()),
         day: String(todayAD.getDate())
       });
 
-      try {
-        const todayBS = adToBs(todayAD.getFullYear(), todayAD.getMonth() + 1, todayAD.getDate());
-        setNepaliDate({
-            year: String(todayBS.year),
-            month: String(todayBS.month), // 1-indexed for select
-            day: String(todayBS.day)
-        });
-      } catch (e) {
-         const errorMessage = e instanceof Error ? e.message : "An unknown error occurred";
-         toast({ variant: "destructive", title: "Date Error", description: errorMessage });
-         console.error("Failed to get BS date", e);
-      }
+      const todayBS = new NepaliDate(todayAD);
+      setNepaliDate({
+          year: String(todayBS.getYear()),
+          month: String(todayBS.getMonth()),
+          day: String(todayBS.getDate())
+      });
     }
-  }, [isMounted, toast]);
+  }, [isMounted]);
 
   const handleADToBS = () => {
     const { year, month, day } = gregorianDate;
@@ -83,8 +77,9 @@ export default function DateConverter() {
     }
     setIsConvertingAD(true);
     try {
-        const bsDate = adToBs(parseInt(year), parseInt(month) + 1, parseInt(day));
-        setNepaliResult(`${bsDate.day} ${getNepaliMonthName(bsDate.month)}, ${bsDate.year}`);
+        const adDate = new Date(parseInt(year), parseInt(month), parseInt(day));
+        const bsDate = new NepaliDate(adDate);
+        setNepaliResult(bsDate.format('DD MMMM YYYY', 'en'));
     } catch (e) {
         const errorMessage = e instanceof Error ? e.message : "Invalid date provided.";
         toast({ variant: "destructive", title: "Conversion Error", description: errorMessage });
@@ -102,8 +97,12 @@ export default function DateConverter() {
     }
     setIsConvertingBS(true);
     try {
-        const adDate = bsToAd(parseInt(year), parseInt(month), parseInt(day));
-        setGregorianResult(`${getEnglishMonthName(adDate.month - 1)} ${adDate.day}, ${adDate.year}`);
+        const bsDate = new NepaliDate(parseInt(year), parseInt(month), parseInt(day));
+        setGregorianResult(bsDate.toJsDate().toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        }));
     } catch (e) {
         const errorMessage = e instanceof Error ? e.message : "Invalid date provided.";
         toast({ variant: "destructive", title: "Conversion Error", description: errorMessage });
@@ -189,8 +188,8 @@ export default function DateConverter() {
              <Select value={nepaliDate.month} onValueChange={(value) => setNepaliDate({...nepaliDate, month: value})}>
                 <SelectTrigger id="nepali-month"><SelectValue placeholder="Select month..." /></SelectTrigger>
                 <SelectContent>
-                  {nepaliMonths.map((month, index) => (
-                    <SelectItem key={month} value={String(index + 1)}>{month}</SelectItem>
+                  {nepaliMonths.map((month) => (
+                    <SelectItem key={month.value} value={String(month.value)}>{month.name}</SelectItem>
                   ))}
                 </SelectContent>
             </Select>

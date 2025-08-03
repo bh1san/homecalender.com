@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { getNepaliMonthName, getNepaliNumber } from "@/lib/nepali-date-converter";
+import NepaliDate from 'nepali-date-converter';
 import { UpcomingEvent } from "@/ai/schemas";
 import { Badge } from "./ui/badge";
 import { useIsMounted } from '@/hooks/use-is-mounted';
@@ -11,37 +11,23 @@ interface UpcomingEventsWidgetProps {
     loading: boolean;
 }
 
-// Mock function to generate upcoming events.
-// In a real app, this might come from a more sophisticated source or an API.
 const getClientSideUpcomingEvents = (): UpcomingEvent[] => {
-    // This function will only run on the client
     const today = new Date();
     const events: UpcomingEvent[] = [];
 
     for (let i = 0; i < 8; i++) {
         const futureDate = new Date(today);
-        futureDate.setDate(today.getDate() + (i * 4) + 5); // Spread events out a bit
+        futureDate.setDate(today.getDate() + (i * 4) + 5); 
         
         const event: UpcomingEvent = {
             summary: `Sample Event ${i + 1}`,
-            startDate: futureDate.toISOString().split('T')[0], // YYYY-MM-DD
-            isHoliday: Math.random() > 0.8 // Randomly make some holidays
+            startDate: futureDate.toISOString().split('T')[0],
+            isHoliday: Math.random() > 0.8 
         };
         events.push(event);
     }
     return events;
 }
-
-
-function getADDateParts(dateStr: string): { month: number, day: number, year: number } {
-    try {
-        const parts = dateStr.split('-').map(Number);
-        return { year: parts[0], month: parts[1], day: parts[2] };
-    } catch {
-        return { month: 0, day: 0, year: 0 };
-    }
-}
-
 
 export default function UpcomingEventsWidget({ loading: initialLoading }: UpcomingEventsWidgetProps) {
   const isMounted = useIsMounted();
@@ -77,13 +63,13 @@ export default function UpcomingEventsWidget({ loading: initialLoading }: Upcomi
     <div className="p-0">
         <ul className="space-y-1">
             {events.map((event, index) => {
-                const { day, month } = getADDateParts(event.startDate);
+                const nepaliDate = new NepaliDate(new Date(event.startDate));
                 
                 return (
                     <li key={index} className="flex items-center gap-4 p-3 hover:bg-muted/50 rounded-md transition-colors">
                         <div className="flex-shrink-0 flex flex-col items-center justify-center w-16 h-16 rounded-lg bg-primary/10 text-primary">
-                           <span className="text-sm font-medium">{getNepaliMonthName(month) || '...'}</span>
-                           <span className="text-2xl font-bold">{getNepaliNumber(day) || '...'}</span>
+                           <span className="text-sm font-medium">{nepaliDate.format('MMM', 'np')}</span>
+                           <span className="text-2xl font-bold">{nepaliDate.format('D', 'np')}</span>
                         </div>
                         <div className="flex-grow">
                             <p className="font-semibold text-card-foreground">{event.summary}</p>

@@ -2,107 +2,81 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import NepaliDate from 'nepali-date-converter';
 import { CalendarEvent } from '@/ai/schemas';
-import { getNepaliMonthName, getNepaliNumber } from '@/lib/nepali-date-converter';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight, Loader, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { useIsMounted } from '@/hooks/use-is-mounted';
-import { adToBs, bsToAd, getMonthDays } from '@/lib/ad-bs-converter';
-import { useToast } from '@/hooks/use-toast';
-
-interface NepaliCalendarProps {
-    isLoading: boolean;
-}
 
 interface CalendarDate {
     bsYear: number;
-    bsMonth: number;
+    bsMonth: number; // 0-11
     bsDay: number;
     adYear: number;
-    adMonth: number;
+    adMonth: number; // 0-11
     adDay: number;
 }
 
 const WEEK_DAYS_NP = ["आइत", "सोम", "मंगल", "बुध", "बिहि", "शुक्र", "शनि"];
 
-export default function NepaliCalendarComponent({ isLoading: initialIsLoading }: NepaliCalendarProps) {
+export default function NepaliCalendarComponent({ isLoading: initialIsLoading }: { isLoading: boolean }) {
     const isMounted = useIsMounted();
-    const { toast } = useToast();
-    // Start with a fixed default date on the server to prevent hydration errors.
-    const [currentBS, setCurrentBS] = useState({ year: 2081, month: 12 });
+    const [viewDate, setViewDate] = useState(new NepaliDate(2081, 0, 1));
     const [calendarData, setCalendarData] = useState<(CalendarDate | null)[]>([]);
-    const [clientToday, setClientToday] = useState<{ year: number, month: number, day: number} | null>(null);
+    const [today, setToday] = useState<NepaliDate | null>(null);
 
-    // Mock month events for now. In a real app, this would be fetched.
-    const [monthEvents, setMonthEvents] = useState<CalendarEvent[]>([]);
+    // Mock month events for now.
+    const [monthEvents] = useState<CalendarEvent[]>([]);
 
     useEffect(() => {
-        // This effect runs only once on the client after mounting to set the correct current date.
         if (isMounted) {
-            try {
-                const today = new Date();
-                const todayBS = adToBs(today.getFullYear(), today.getMonth() + 1, today.getDate());
-                
-                // Set the current view to today's month and store today's date
-                setCurrentBS({ year: todayBS.year, month: todayBS.month });
-                setClientToday({ year: todayBS.year, month: todayBS.month, day: todayBS.day });
-            } catch (e) {
-                const errorMessage = e instanceof Error ? e.message : "An unknown error occurred";
-                toast({ variant: "destructive", title: "Date Error", description: errorMessage });
-                console.error("Failed to initialize calendar to today's date", e);
-            }
+            const now = new NepaliDate();
+            setToday(now);
+            setViewDate(now);
         }
-        // The dependency array is empty to ensure this runs only once on mount.
-    }, [isMounted, toast]);
-
+    }, [isMounted]);
+    
     useEffect(() => {
-        // This effect regenerates the calendar grid whenever currentBS changes.
-        // It's safe to run on both server and client, as it depends on state.
-        try {
-            const { year, month } = currentBS;
-            
-            const firstDayAd = bsToAd(year, month, 1);
-            const firstDayOfWeek = new Date(firstDayAd.year, firstDayAd.month - 1, firstDayAd.day).getDay();
-            const daysInMonth = getMonthDays(year, month);
+        const year = viewDate.getYear();
+        const month = viewDate.getMonth();
+        
+        const firstDayOfMonth = new NepaliDate(year, month, 1);
+        const firstDayOfWeek = firstDayOfMonth.getDay();
+        const daysInMonth = firstDayOfMonth.getMonthDays();
 
-            const cells: (CalendarDate | null)[] = Array(firstDayOfWeek).fill(null);
+        const cells: (CalendarDate | null)[] = Array(firstDayOfWeek).fill(null);
 
-            for (let day = 1; day <= daysInMonth; day++) {
-                const adDate = bsToAd(year, month, day);
-                cells.push({
-                    bsYear: year,
-                    bsMonth: month,
-                    bsDay: day,
-                    adYear: adDate.year,
-                    adMonth: adDate.month,
-                    adDay: adDate.day,
-                });
-            }
-            setCalendarData(cells);
-
-        } catch(e) {
-            const errorMessage = e instanceof Error ? e.message : "An unknown error occurred";
-            toast({ variant: "destructive", title: "Calendar Error", description: errorMessage });
-            console.error("Error generating calendar data", e);
+        for (let day = 1; day <= daysInMonth; day++) {
+            const d = new NepaliDate(year, month, day);
+            const ad = d.toJsDate();
+            cells.push({
+                bsYear: year,
+                bsMonth: month,
+                bsDay: day,
+                adYear: ad.getFullYear(),
+                adMonth: ad.getMonth(),
+                adDay: ad.getDate(),
+            });
         }
+        setCalendarData(cells);
 
-    }, [currentBS, toast]);
+    }, [viewDate]);
 
     const handlePrevMonth = () => {
-        setCurrentBS(prev => {
-            const newMonth = prev.month === 1 ? 12 : prev.month - 1;
-            const newYear = prev.month === 1 ? prev.year - 1 : prev.year;
-            return { year: newYear, month: newMonth };
+        setViewDate(prev => {
+            const newDate = new NepaliDate(prev.getYear(), prev.getMonth(), 1);
+            newDate.setMonth(newDate.getMonth() - 1);
+            return newDate;
         });
     };
 
     const handleNextMonth = () => {
-        setCurrentBS(prev => {
-            const newMonth = prev.month === 12 ? 1 : prev.month + 1;
-            const newYear = prev.month === 12 ? prev.year + 1 : prev.year;
-            return { year: newYear, month: newMonth };
+        setViewDate(prev => {
+            const newDate = new NepaliDate(prev.getYear(), prev.getMonth(), 1);
+            newDate.setMonth(newDate.getMonth() + 1);
+            return newDate;
         });
     };
     
@@ -133,8 +107,7 @@ export default function NepaliCalendarComponent({ isLoading: initialIsLoading }:
         
         const { bsYear, bsMonth, bsDay, adDay } = dayData;
         
-        // clientToday is only set on the client, so this is safe.
-        const isToday = clientToday && clientToday.year === bsYear && clientToday.month === bsMonth && clientToday.day === bsDay;
+        const isToday = today && today.getYear() === bsYear && today.getMonth() === bsMonth && today.getDate() === bsDay;
         
         const serverEvent = monthEvents?.find(e => e.day === bsDay);
 
@@ -160,7 +133,7 @@ export default function NepaliCalendarComponent({ isLoading: initialIsLoading }:
                         "text-lg sm:text-xl font-bold text-foreground",
                          serverEvent?.is_holiday ? "text-destructive" : ""
                     )}>
-                        {getNepaliNumber(bsDay)}
+                        {new NepaliDate(bsYear, bsMonth, bsDay).format('D', 'np')}
                     </span>
                 </div>
                 <div className="flex-grow flex flex-col justify-end text-center items-center">
@@ -181,7 +154,7 @@ export default function NepaliCalendarComponent({ isLoading: initialIsLoading }:
                         <PopoverTrigger asChild>{cellContent}</PopoverTrigger>
                         <PopoverContent className="w-60 p-4" align="start">
                             <div className="space-y-2">
-                                <h4 className="font-bold text-lg text-primary">{getNepaliNumber(bsDay)} {getNepaliMonthName(bsMonth)}</h4>
+                                <h4 className="font-bold text-lg text-primary">{new NepaliDate(bsYear, bsMonth, bsDay).format('DD MMMM', 'np')}</h4>
                                 {serverEvent.tithi && <p className="text-sm text-muted-foreground font-semibold">{serverEvent.tithi}</p>}
                                 <hr />
                                 {serverEvent.events.length > 0 ? (
@@ -209,7 +182,7 @@ export default function NepaliCalendarComponent({ isLoading: initialIsLoading }:
                     <ChevronLeft className="h-5 w-5" />
                 </Button>
                 <h2 className="text-xl sm:text-2xl font-bold text-center text-primary">
-                    {getNepaliMonthName(currentBS.month)} {getNepaliNumber(currentBS.year)}
+                    {viewDate.format('MMMM YYYY', 'np')}
                 </h2>
                 <Button variant="outline" size="icon" onClick={handleNextMonth}>
                     <ChevronRight className="h-5 w-5" />
