@@ -31,7 +31,7 @@ const newsFlow = ai.defineFlow(
   },
   async ({ country }) => {
     const cacheKey = `news_v2_${country}`;
-    const cachedNews = getFromCache<NewsResponse>(cacheKey);
+    const cachedNews = getFromCache<NewsResponse>(cacheKey, 24 * 60 * 60 * 1000); // Cache for 24 hours
     if (cachedNews) {
       console.log(`Returning cached news for ${country}.`);
       return cachedNews;
@@ -71,7 +71,7 @@ const newsFlow = ai.defineFlow(
             }));
         
         const apiResponse: NewsResponse = { headlines: headlinesWithImages };
-        setInCache(cacheKey, apiResponse, 24 * 60 * 60 * 1000); // Cache for 24 hours
+        setInCache(cacheKey, apiResponse); // Cache indefinitely until stale check invalidates
 
         return apiResponse;
 

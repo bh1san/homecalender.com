@@ -88,7 +88,7 @@ const monthEventsFlow = ai.defineFlow(
   },
   async ({ year, month }) => {
     const cacheKey = `sajjan_monthEvents_v2_${year}_${month}`;
-    const cachedData = getFromCache<CalendarEvent[]>(cacheKey);
+    const cachedData = getFromCache<CalendarEvent[]>(cacheKey, 24 * 60 * 60 * 1000); // Cache for 24 hours
     if (cachedData) {
         console.log(`Returning cached month events for ${year}-${month} from Sajjan API + Custom.`);
         return cachedData;
