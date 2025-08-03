@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -8,34 +7,51 @@ import { CurrentDateInfoResponse } from '@/ai/schemas';
 
 interface CurrentDateTimeProps {
   today?: CurrentDateInfoResponse | null;
+  todaysEvent?: string;
 }
 
-export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
+export default function CurrentDateTime({ today, todaysEvent }: CurrentDateTimeProps) {
   const [timeString, setTimeString] = useState("");
   const [nepaliTimeString, setNepaliTimeString] = useState("");
   const isMounted = useIsMounted();
 
   useEffect(() => {
-    if (isMounted) {
-      const updateTime = () => {
-        const now = new Date();
-        const timezone = "Asia/Kathmandu";
-        const timeStr = now.toLocaleTimeString('en-US', { 
-            hour: 'numeric', 
-            minute: 'numeric', 
-            second: 'numeric', 
-            hour12: true, 
-            timeZone: timezone 
-        });
-        setTimeString(timeStr);
-        setNepaliTimeString(new NepaliDate(now).format('K:mm:ss', 'np'));
-      };
+    // This effect should only run on the client side
+    const intervalId = setInterval(() => {
+      const now = new Date();
+      const timezone = "Asia/Kathmandu";
+      const timeStr = now.toLocaleTimeString('en-US', { 
+          hour: 'numeric', 
+          minute: 'numeric', 
+          second: 'numeric', 
+          hour12: true, 
+          timeZone: timezone 
+      });
+      setTimeString(timeStr);
 
-      updateTime();
-      const intervalId = setInterval(updateTime, 1000);
-      return () => clearInterval(intervalId);
+      try {
+        const nepaliTime = new NepaliDate(now).format('K:mm:ss', 'np');
+        setNepaliTimeString(nepaliTime);
+      } catch (e) {
+        // Handle potential errors from NepaliDate if any
+        setNepaliTimeString("");
+      }
+    }, 1000);
+    
+    // Set initial time immediately
+    const now = new Date();
+    const timezone = "Asia/Kathmandu";
+    const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true, timeZone: timezone });
+    setTimeString(timeStr);
+    try {
+        const nepaliTime = new NepaliDate(now).format('K:mm:ss', 'np');
+        setNepaliTimeString(nepaliTime);
+    } catch (e) {
+        setNepaliTimeString("");
     }
-  }, [isMounted]);
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   if (!isMounted || !today) {
     return (
@@ -64,7 +80,7 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
   return (
     <div className="space-y-1 text-primary-foreground">
       <h1 className="text-3xl font-bold">{nepaliDateStr}</h1>
-      <p className="text-lg">{today.tithi}</p>
+      <p className="text-lg">{todaysEvent || today.tithi}</p>
       <p className="text-lg">{nepaliTimeString ? `${localizedTimePrefix} ${nepaliTimeString}` : ""}</p>
       <p className="text-base">{gregorianDateStr}</p>
     </div>

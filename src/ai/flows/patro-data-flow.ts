@@ -46,7 +46,7 @@ const scraperPrompt = ai.definePrompt({
     `
 });
 
-const generateAIFallbackData = async (): Promise<Omit<PatroDataResponse, 'today' | 'upcomingEvents'>> => {
+const generateAIFallbackData = async (): Promise<Omit<PatroDataResponse, 'today' | 'upcomingEvents' | 'todaysEvent'>> => {
     console.log("Generating patro data using AI fallback...");
     const aiResponse = await scraperPrompt().then(r => r.output).catch(e => {
         console.error("AI call to scraperPrompt failed:", e);
@@ -113,14 +113,6 @@ const processTodayData = (bsDate: NepaliDate, monthData: z.infer<typeof SajjanAp
     
     const todayData = monthData.days.find(d => d.n === bsDayString);
     let todayTithi = todayData?.t || '';
-
-    // Check for a custom event for today and use its summary as the Tithi if available
-    const todayADString = bsDate.toJsDate().toISOString().split('T')[0];
-    const todaysCustomEvent = customEventsData.find(event => event.startDate === todayADString);
-
-    if (todaysCustomEvent) {
-        todayTithi = todaysCustomEvent.summary;
-    }
 
     if (!todayData) return null;
 
@@ -215,7 +207,7 @@ const patroDataFlow = ai.defineFlow(
     outputSchema: PatroDataResponseSchema,
   },
   async () => {
-    const cacheKey = `patro_data_v22_sajjan_custom_fix`;
+    const cacheKey = `patro_data_v23_event_fix`;
     const cachedData = getFromCache<PatroDataResponse>(cacheKey, CACHE_DURATION_MS);
     if (cachedData) {
         console.log("Returning cached patro data (Sajjan API + Custom).");
@@ -226,13 +218,14 @@ const patroDataFlow = ai.defineFlow(
 
     let todayInfo: CurrentDateInfoResponse | null = null;
     let upcomingEvents: UpcomingEvent[] = [];
-    let aiData: Omit<PatroDataResponse, 'today' | 'upcomingEvents'> = { horoscope: [], goldSilver: null, forex: [] };
+    let aiData: Omit<PatroDataResponse, 'today' | 'upcomingEvents' | 'todaysEvent'> = { horoscope: [], goldSilver: null, forex: [] };
+    let todaysEventSummary: string | undefined = undefined;
 
     const todayBS = new NepaliDate();
     const bsYear = todayBS.getYear();
     const bsMonth = todayBS.getMonth() + 1; // 1-indexed
     
-    // Fetch and process API data
+    // Fetch and process API data for today and upcoming events
     const monthData = await fetchFromSajjanAPI(`${bsYear}/${bsMonth}.json`, SajjanApiMonthSchema);
     if (monthData) {
         todayInfo = processTodayData(todayBS, monthData);
@@ -245,6 +238,14 @@ const patroDataFlow = ai.defineFlow(
     // Process local custom events
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
+    // Find custom event for today specifically
+    const todayADString = today.toISOString().split('T')[0];
+    const todaysCustomEvent = customEventsData.find(event => event.startDate === todayADString);
+    if (todaysCustomEvent) {
+      todaysEventSummary = todaysCustomEvent.summary;
+    }
+
 
     const localEvents: UpcomingEvent[] = customEventsData
         .map(event => ({
@@ -273,6 +274,7 @@ const patroDataFlow = ai.defineFlow(
     const response: PatroDataResponse = {
         ...aiData,
         today: todayInfo,
+        todaysEvent: todaysEventSummary,
         upcomingEvents: finalEvents,
     };
     
