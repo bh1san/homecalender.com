@@ -30,22 +30,25 @@ const WEEK_DAYS_NP = ["आइत", "सोम", "मंगल", "बुध", "�
 
 export default function NepaliCalendarComponent({ monthEvents, isLoading: initialIsLoading }: NepaliCalendarProps) {
     const isMounted = useIsMounted();
+    // Start with a fixed default date on the server
     const [currentBS, setCurrentBS] = useState({ year: 2081, month: 4 });
     const [calendarData, setCalendarData] = useState<(CalendarDate | null)[]>([]);
     const [clientToday, setClientToday] = useState<{ year: number, month: number, day: number} | null>(null);
 
     useEffect(() => {
-        if (!isMounted) return;
-
-        const today = new Date();
-        const todayBS = adToBs(today.getFullYear(), today.getMonth() + 1, today.getDate());
-        setCurrentBS({ year: todayBS.year, month: todayBS.month });
-        setClientToday({ year: todayBS.year, month: todayBS.month, day: todayBS.day });
+        // Only run this effect on the client after mounting
+        if (isMounted) {
+            const today = new Date();
+            const todayBS = adToBs(today.getFullYear(), today.getMonth() + 1, today.getDate());
+            // Set the current view to today's month and store today's date
+            setCurrentBS({ year: todayBS.year, month: todayBS.month });
+            setClientToday({ year: todayBS.year, month: todayBS.month, day: todayBS.day });
+        }
     }, [isMounted]);
 
     useEffect(() => {
-        if (!isMounted) return;
-        
+        // This effect regenerates the calendar grid whenever currentBS changes.
+        // It's safe to run on both server and client, as it depends on state.
         try {
             const { year, month } = currentBS;
             
@@ -72,7 +75,7 @@ export default function NepaliCalendarComponent({ monthEvents, isLoading: initia
             console.error("Error generating calendar data", e);
         }
 
-    }, [currentBS, isMounted]);
+    }, [currentBS]);
 
     const handlePrevMonth = () => {
         setCurrentBS(prev => {
@@ -117,6 +120,7 @@ export default function NepaliCalendarComponent({ monthEvents, isLoading: initia
         
         const { bsYear, bsMonth, bsDay, adDay } = dayData;
         
+        // clientToday is only set on the client, so this is safe.
         const isToday = clientToday && clientToday.year === bsYear && clientToday.month === bsMonth && clientToday.day === bsDay;
         
         const serverEvent = monthEvents?.find(e => e.day === bsDay);

@@ -51,6 +51,7 @@ export default function DateConverter() {
   const [isConvertingBS, setIsConvertingBS] = useState(false);
 
   useEffect(() => {
+    // Only set default dates after component has mounted on the client
     if (isMounted) {
       const todayAD = new Date();
       setGregorianDate({
@@ -213,3 +214,4 @@ export default function DateConverter() {
     </div>
   );
 }
+

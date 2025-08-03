@@ -28,33 +28,35 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
   const isMounted = useIsMounted();
   
   useEffect(() => {
-    if (!isMounted) return;
-
-    const intervalId = setInterval(() => {
+    // This entire block only runs on the client, after mounting.
+    const initializeDateAndTime = () => {
       const timezone = "Asia/Kathmandu";
       const now = new Date();
+      
       const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true, timeZone: timezone });
       setTimeString(timeStr);
-    }, 1000);
 
-    try {
-        const now = new Date();
-        const bsDate = adToBs(now.getFullYear(), now.getMonth() + 1, now.getDate());
-        setClientToday({
-            bsYear: bsDate.year,
-            bsMonth: bsDate.month, 
-            bsDate: bsDate.day,
-            weekDay: now.getDay(),
-            adYear: now.getFullYear(),
-            adMonth: now.getMonth(), 
-            adDate: now.getDate()
-        });
-    } catch(e) {
-        console.error("Failed to convert date", e);
-    }
+      try {
+          const bsDate = adToBs(now.getFullYear(), now.getMonth() + 1, now.getDate());
+          setClientToday({
+              bsYear: bsDate.year,
+              bsMonth: bsDate.month, 
+              bsDate: bsDate.day,
+              weekDay: now.getDay(),
+              adYear: now.getFullYear(),
+              adMonth: now.getMonth(), 
+              adDate: now.getDate()
+          });
+      } catch(e) {
+          console.error("Failed to convert date", e);
+      }
+    };
+    
+    initializeDateAndTime();
+    const intervalId = setInterval(initializeDateAndTime, 1000);
 
     return () => clearInterval(intervalId);
-  }, [isMounted]);
+  }, []); // Empty dependency array ensures this runs once on mount
 
   if (!isMounted || !clientToday) {
       return (
@@ -84,3 +86,4 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
     </div>
   );
 }
+
