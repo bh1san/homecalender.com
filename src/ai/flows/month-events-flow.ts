@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview A flow for fetching calendar events for a specific Nepali month.
+ * @fileOverview A flow for fetching calendar events for a specific Nepali month using the Sajjan.com.np API.
  *
  * - getMonthEvents - A function that fetches all calendar data for a given BS year and month.
  */
@@ -13,39 +13,31 @@ import {
   CalendarEventsRequestSchema
 } from '@/ai/schemas';
 import { getFromCache, setInCache } from '@/ai/cache';
+import NepaliDate from 'nepali-date-converter';
 
-const NpCalendarApiResponseSchema = z.array(z.object({
-    day: z.number(),
-    day_np: z.string(),
-    day_en: z.string(),
-    month_np: z.string(),
-    month_en: z.string(),
-    year_np: z.number(),
-    year_en: z.number(),
-    ad_month_en: z.string(),
-    ad_date_en: z.string(),
-    ad_year_en: z.string(),
-    events: z.array(z.string()),
-    tithi: z.string(),
-    is_holiday: z.boolean(),
-}));
 
-const fetchFromRapidAPI = async (endpoint: string, schema: z.ZodType) => {
-    const baseUrl = 'https://nepali-calendar-api.p.rapidapi.com/api/v1';
-    const apiKey = process.env.RAPIDAPI_KEY;
+const NpCalendarSajjanApiResponseSchema = z.object({
+    metadata: z.object({
+        en: z.string(),
+        np: z.string(),
+    }),
+    days: z.array(z.object({
+        n: z.string(), // nepali date
+        e: z.string(), // english date
+        t: z.string(), // tithi
+        f: z.string(), // festival
+        h: z.boolean(), // holiday
+        d: z.number(), // day of week
+    })),
+    holiFest: z.array(z.string()),
+    marriage: z.array(z.string()),
+    bratabandha: z.array(z.string()),
+});
 
-    if (!apiKey) {
-        console.error("RapidAPI key is not configured. Please add RAPIDAPI_KEY to your .env file.");
-        return null;
-    }
-
+const fetchFromSajjanAPI = async (endpoint: string, schema: z.ZodType) => {
+    const baseUrl = 'https://nepalicalendar.sajjan.com.np/data';
     try {
-        const response = await fetch(`${baseUrl}/${endpoint}`, {
-            headers: {
-                'X-RapidAPI-Key': apiKey,
-                'X-RapidAPI-Host': 'nepali-calendar-api.p.rapidapi.com'
-            }
-        });
+        const response = await fetch(`${baseUrl}/${endpoint}`);
 
         if (!response.ok) {
             console.error(`API request to ${endpoint} failed with status ${response.status}: ${await response.text()}`);
@@ -66,15 +58,25 @@ const fetchFromRapidAPI = async (endpoint: string, schema: z.ZodType) => {
     }
 };
 
-const processMonthData = (data: z.infer<typeof NpCalendarApiResponseSchema>): CalendarEvent[] => {
+const processMonthData = (data: z.infer<typeof NpCalendarSajjanApiResponseSchema>, year: number, month: number): CalendarEvent[] => {
     if (!data) return [];
-    return data.map(dayData => ({
-        day: dayData.day,
-        tithi: dayData.tithi,
-        gregorian_date: `${dayData.ad_year_en}-${dayData.ad_month_en.padStart(2, '0')}-${dayData.ad_date_en.padStart(2, '0')}`,
-        events: dayData.events,
-        is_holiday: dayData.is_holiday,
-    }));
+    
+    return data.days.map(dayData => {
+        const bsDay = parseInt(new NepaliDate(0,0,0).convert(dayData.n, 'np', 'en'));
+        const adDate = new NepaliDate(year, month - 1, bsDay).toJsDate();
+        const events = [];
+        if (dayData.f) {
+            events.push(dayData.f);
+        }
+
+        return {
+            day: bsDay,
+            tithi: dayData.t,
+            gregorian_date: adDate.toISOString().split('T')[0],
+            events: events,
+            is_holiday: dayData.h,
+        };
+    });
 };
 
 const monthEventsFlow = ai.defineFlow(
@@ -84,18 +86,18 @@ const monthEventsFlow = ai.defineFlow(
     outputSchema: z.array(CalendarEventSchema),
   },
   async ({ year, month }) => {
-    const cacheKey = `monthEvents_${year}_${month}`;
+    const cacheKey = `sajjan_monthEvents_${year}_${month}`;
     const cachedData = getFromCache<CalendarEvent[]>(cacheKey);
     if (cachedData) {
-        console.log(`Returning cached month events for ${year}-${month}.`);
+        console.log(`Returning cached month events for ${year}-${month} from Sajjan API.`);
         return cachedData;
     }
 
-    console.log(`Fetching new month events for ${year}-${month}.`);
+    console.log(`Fetching new month events for ${year}-${month} from Sajjan API.`);
 
-    const monthData = await fetchFromRapidAPI(`month?year=${year}&month=${month}`, NpCalendarApiResponseSchema);
+    const monthData = await fetchFromSajjanAPI(`${year}/${month}.json`, NpCalendarSajjanApiResponseSchema);
     
-    const events = monthData ? processMonthData(monthData) : [];
+    const events = monthData ? processMonthData(monthData, year, month) : [];
     
     setInCache(cacheKey, events);
     return events;

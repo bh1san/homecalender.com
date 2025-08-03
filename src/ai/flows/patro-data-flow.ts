@@ -2,12 +2,13 @@
 'use server';
 /**
  * @fileOverview A flow for fetching data like horoscopes, gold/silver prices, and forex rates using Genkit AI.
- * It intelligently falls back to AI generation if the Nepali Calendar API is unavailable.
+ * It now uses the nepalicalendar.sajjan.com.np public API for calendar data.
  *
  * - getPatroData - A function that fetches all daily data for the app.
  */
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import NepaliDate from 'nepali-date-converter';
 import { 
   PatroDataResponse, 
   PatroDataResponseSchema, 
@@ -15,9 +16,7 @@ import {
   GoldSilverSchema,
   ForexSchema,
   UpcomingEvent,
-  UpcomingEventSchema,
   CurrentDateInfoResponse,
-  CurrentDateInfoResponseSchema,
 } from '@/ai/schemas';
 import { getFromCache, setInCache } from '@/ai/cache';
 
@@ -43,8 +42,6 @@ const scraperPrompt = ai.definePrompt({
     `
 });
 
-const rashiNames = ["Mesh", "Brish", "Mithun", "Karkat", "Simha", "Kanya", "Tula", "Brishchik", "Dhanu", "Makar", "Kumbha", "Meen"];
-
 const generateAIFallbackData = async (): Promise<Omit<PatroDataResponse, 'today' | 'upcomingEvents'>> => {
     console.log("Generating patro data using AI fallback...");
     const aiResponse = await scraperPrompt().then(r => r.output).catch(e => {
@@ -55,7 +52,7 @@ const generateAIFallbackData = async (): Promise<Omit<PatroDataResponse, 'today'
     if (aiResponse) {
         const fullHoroscope: Horoscope[] = aiResponse.horoscope.map((h, index) => ({
             name: h.rashi,
-            rashi: h.rashi, // Ensure this matches schema, name is more descriptive
+            rashi: h.rashi,
             text: h.text,
         }));
          return {
@@ -70,89 +67,109 @@ const generateAIFallbackData = async (): Promise<Omit<PatroDataResponse, 'today'
     };
 };
 
-const TodayApiResponseSchema = z.object({
-    year: z.number(),
-    month: z.number(),
-    day: z.number(),
-    ad_year: z.number(),
-    ad_month: z.number(),
-    ad_day: z.number(),
-    tithi: z.string(),
+const SajjanApiMonthSchema = z.object({
+    days: z.array(z.object({
+        n: z.string(),
+        e: z.string(),
+        t: z.string(),
+        f: z.string(),
+        h: z.boolean(),
+        d: z.number(),
+    })),
+    holiFest: z.array(z.string()),
 });
 
-const HolidaysApiResponseSchema = z.array(z.object({
-    event_title: z.string(),
-    event_date: z.string(),
-}));
-
-
-const fetchFromRapidAPI = async (endpoint: string, schema: z.ZodType) => {
-    const baseUrl = 'https://nepali-calendar-api.p.rapidapi.com/api/v1';
-    const apiKey = process.env.RAPIDAPI_KEY;
-
-    if (!apiKey) {
-        console.error("RapidAPI key is not configured. Please add RAPIDAPI_KEY to your .env file.");
-        return null;
-    }
-
+const fetchFromSajjanAPI = async (endpoint: string, schema: z.ZodType) => {
+    const baseUrl = 'https://nepalicalendar.sajjan.com.np/data';
     try {
-        const response = await fetch(`${baseUrl}/${endpoint}`, {
-            headers: {
-                'X-RapidAPI-Key': apiKey,
-                'X-RapidAPI-Host': 'nepali-calendar-api.p.rapidapi.com'
-            }
-        });
-
+        const response = await fetch(`${baseUrl}/${endpoint}`);
         if (!response.ok) {
-            console.error(`API request to ${endpoint} failed with status ${response.status}: ${await response.text()}`);
+            console.error(`Sajjan API request to ${endpoint} failed with status ${response.status}: ${await response.text()}`);
             return null;
         }
-
         const data = await response.json();
         const parsed = schema.safeParse(data);
-
         if (!parsed.success) {
-            console.error(`Failed to parse API response from ${endpoint}:`, parsed.error);
+            console.error(`Failed to parse Sajjan API response from ${endpoint}:`, parsed.error);
             return null;
         }
         return parsed.data;
     } catch (error) {
-        console.error(`Error fetching from API endpoint ${endpoint}:`, error);
+        console.error(`Error fetching from Sajjan API endpoint ${endpoint}:`, error);
         return null;
     }
 };
 
-const processTodayData = (data: z.infer<typeof TodayApiResponseSchema>): CurrentDateInfoResponse | null => {
-    if (!data) return null;
+const processTodayData = (bsDate: NepaliDate, monthData: z.infer<typeof SajjanApiMonthSchema>): CurrentDateInfoResponse | null => {
+    if (!monthData) return null;
+    
+    const bsDay = bsDate.getDate();
+    const bsDayString = new NepaliDate(0,0,0).convert(String(bsDay), 'en', 'np');
+    
+    const todayData = monthData.days.find(d => d.n === bsDayString);
+    if (!todayData) return null;
+
+    const adDate = bsDate.toJsDate();
+
     return {
-        bsYear: data.year,
-        bsMonth: data.month,
-        bsDay: data.day,
-        adYear: data.ad_year,
-        adMonth: data.ad_month,
-        adDay: data.ad_day,
-        tithi: data.tithi,
+        bsYear: bsDate.getYear(),
+        bsMonth: bsDate.getMonth() + 1,
+        bsDay: bsDay,
+        adYear: adDate.getFullYear(),
+        adMonth: adDate.getMonth() + 1,
+        adDay: adDate.getDate(),
+        tithi: todayData.t,
     };
 };
 
-const processHolidays = (data: z.infer<typeof HolidaysApiResponseSchema>): UpcomingEvent[] => {
-    if (!data) return [];
+const processHolidays = (monthData: z.infer<typeof SajjanApiMonthSchema>, bsYear: number, bsMonth: number): UpcomingEvent[] => {
+    if (!monthData || !monthData.holiFest) return [];
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    return data
-        .map(event => {
-            const eventDate = new Date(event.event_date);
-            return {
-                summary: event.event_title,
-                startDate: event.event_date,
-                isHoliday: true,
-                eventDate: eventDate
-            };
-        })
-        .filter(event => event.eventDate >= today)
-        .sort((a, b) => a.eventDate.getTime() - b.eventDate.getTime())
-        .map(({ eventDate, ...rest }) => rest);
+    const events: UpcomingEvent[] = [];
+    
+    // Process holiFest
+    monthData.holiFest.forEach(eventStr => {
+        const match = eventStr.match(/^(\d+)\s*गते\s*(.*)/);
+        if (match) {
+            const day = parseInt(match[1]);
+            const summary = match[2];
+            try {
+                const eventDate = new NepaliDate(bsYear, bsMonth, day).toJsDate();
+                if (eventDate >= today) {
+                    events.push({
+                        summary: summary,
+                        startDate: eventDate.toISOString().split('T')[0],
+                        isHoliday: true
+                    });
+                }
+            } catch (e) {
+                // Ignore invalid dates that might be in the data
+            }
+        }
+    });
+
+    // Add day-specific festivals
+     monthData.days.forEach(day => {
+        if (day.f) {
+             try {
+                const dayNum = parseInt(new NepaliDate(0,0,0).convert(day.n, 'np', 'en'));
+                const eventDate = new NepaliDate(bsYear, bsMonth, dayNum).toJsDate();
+
+                if (eventDate >= today && !events.some(e => e.summary === day.f)) {
+                     events.push({
+                        summary: day.f,
+                        startDate: eventDate.toISOString().split('T')[0],
+                        isHoliday: day.h
+                    });
+                }
+             } catch (e) {}
+        }
+    });
+    
+    return events.sort((a,b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
 };
 
 
@@ -163,30 +180,28 @@ const patroDataFlow = ai.defineFlow(
     outputSchema: PatroDataResponseSchema,
   },
   async () => {
-    const cacheKey = `patro_data_v15_rapidapi`;
+    const cacheKey = `patro_data_v16_sajjan`;
     const cachedData = getFromCache<PatroDataResponse>(cacheKey, CACHE_DURATION_MS);
     if (cachedData) {
-        console.log("Returning cached patro data.");
+        console.log("Returning cached patro data (Sajjan API).");
         return cachedData;
     }
 
-    console.log("Fetching new Patro data from sources...");
-
-    const apiKey = process.env.RAPIDAPI_KEY;
+    console.log("Fetching new Patro data from sources (Sajjan API)...");
 
     let todayInfo: CurrentDateInfoResponse | null = null;
     let upcomingEvents: UpcomingEvent[] = [];
     let aiData: Omit<PatroDataResponse, 'today' | 'upcomingEvents'> = { horoscope: [], goldSilver: null, forex: [] };
 
+    const todayBS = new NepaliDate();
+    const bsYear = todayBS.getYear();
+    const bsMonth = todayBS.getMonth(); // 0-indexed
+    
+    const monthData = await fetchFromSajjanAPI(`${bsYear}/${bsMonth + 1}.json`, SajjanApiMonthSchema);
 
-    if (apiKey) {
-      const [todayRawData, holidaysRawData] = await Promise.all([
-          fetchFromRapidAPI(`date`, TodayApiResponseSchema),
-          fetchFromRapidAPI(`holidays`, HolidaysApiResponseSchema)
-      ]);
-      
-      todayInfo = todayRawData ? processTodayData(todayRawData) : null;
-      upcomingEvents = holidaysRawData ? processHolidays(holidaysRawData) : [];
+    if (monthData) {
+        todayInfo = processTodayData(todayBS, monthData);
+        upcomingEvents = processHolidays(monthData, bsYear, bsMonth);
     }
     
     // Always fetch AI data for horoscope, gold/silver, forex
