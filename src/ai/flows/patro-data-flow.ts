@@ -21,12 +21,8 @@ import {
   CurrentDateInfoResponse,
   CurrentDateInfoResponseSchema
 } from '@/ai/schemas';
-import { getFromCache, setInCache } from '@/ai/cache';
-import customEventsData from '@/data/custom-events.json';
 import { getMonthEvents } from './month-events-flow';
 import { liveRate } from '@sapkotamadan/nrb-forex';
-
-const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
 
 const AIGeneratedDataSchema = z.object({
     horoscope: z.array(z.object({
@@ -47,27 +43,33 @@ const scraperPrompt = ai.definePrompt({
 });
 
 const generateAIFallbackData = async (): Promise<Omit<PatroDataResponse, 'today' | 'upcomingEvents' | 'todaysEvent' | 'forex'>> => {
-    console.log("Generating horoscope and gold/silver data using AI...");
-    const aiResponse = await scraperPrompt().then(r => r.output).catch(e => {
-        console.error("AI call to scraperPrompt failed:", e);
-        return null;
-    });
-
-    if (aiResponse) {
-        const fullHoroscope: Horoscope[] = aiResponse.horoscope.map((h) => ({
-            rashi: h.rashi,
-            name: h.rashi,
-            text: h.text,
-        }));
-         return {
-            horoscope: fullHoroscope,
-            goldSilver: aiResponse.goldSilver,
-        };
+    // This function will only be called if GEMINI_API_KEY is available
+    if (!process.env.GEMINI_API_KEY) {
+        console.log("GEMINI_API_KEY not found. Skipping AI data generation.");
+        return { horoscope: [], goldSilver: null };
     }
-    // If AI also fails, return an empty but valid response shape to prevent crashes
-    return {
-        horoscope: [], goldSilver: null
-    };
+
+    try {
+        console.log("Generating horoscope and gold/silver data using AI...");
+        const aiResponse = await scraperPrompt().then(r => r.output);
+        
+        if (aiResponse) {
+            const fullHoroscope: Horoscope[] = aiResponse.horoscope.map((h) => ({
+                rashi: h.rashi,
+                name: h.rashi,
+                text: h.text,
+            }));
+             return {
+                horoscope: fullHoroscope,
+                goldSilver: aiResponse.goldSilver,
+            };
+        }
+    } catch (e) {
+        console.error("AI call to scraperPrompt failed:", e);
+    }
+    
+    // If AI fails for any reason, return an empty but valid response shape to prevent crashes
+    return { horoscope: [], goldSilver: null };
 };
 
 const getForexData = async (): Promise<Forex[]> => {
@@ -90,6 +92,8 @@ const getForexData = async (): Promise<Forex[]> => {
 
 const getLocalTodayData = async (): Promise<{ todayInfo: CurrentDateInfoResponse, todaysEvent?: string }> => {
     const NepaliDate = (await import('nepali-date-converter')).default;
+    const customEventsData = (await import('@/data/custom-events.json')).default;
+
     const todayAD = new Date();
     todayAD.setHours(0, 0, 0, 0);
 
@@ -122,18 +126,10 @@ const patroDataFlow = ai.defineFlow(
     outputSchema: PatroDataResponseSchema,
   },
   async () => {
-    const cacheKey = `patro_data_v27_nrb_forex`;
-    const cachedData = getFromCache<PatroDataResponse>(cacheKey, CACHE_DURATION_MS);
-    if (cachedData) {
-        console.log("Returning cached patro data.");
-        return cachedData;
-    }
-
     console.log("Fetching new Patro data from sources...");
-    const NepaliDate = (await import('nepali-date-converter')).default;
     const { todayInfo, todaysEvent } = await getLocalTodayData();
     
-    // Fetch AI data (horoscope, gold/silver) and real forex data in parallel
+    // Fetch AI data, real forex data, and month events in parallel for efficiency
     const [aiData, forexData, monthEvents] = await Promise.all([
         generateAIFallbackData(),
         getForexData(),
@@ -143,11 +139,13 @@ const patroDataFlow = ai.defineFlow(
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const upcomingEvents: UpcomingEvent[] = (monthEvents || []) // Ensure monthEvents is not null
+    // Process upcoming events
+    const upcomingEvents: UpcomingEvent[] = (monthEvents || [])
       .map(event => {
         try {
-          if (!event?.gregorian_date) return null; // Guard against missing date
+          if (!event?.gregorian_date) return null;
           const eventDate = new Date(event.gregorian_date);
+          eventDate.setHours(0,0,0,0); // Normalize time
           if (eventDate >= today) {
             return {
               summary: event.events[0] || 'Event',
@@ -163,8 +161,8 @@ const patroDataFlow = ai.defineFlow(
       })
       .filter((e): e is UpcomingEvent => e !== null);
 
+    // Make events unique and sort them
     const uniqueEventsMap = new Map<string, UpcomingEvent>();
-
     upcomingEvents.forEach(event => {
         const key = `${event.startDate}-${event.summary}`;
         if (!uniqueEventsMap.has(key)) {
@@ -175,6 +173,7 @@ const patroDataFlow = ai.defineFlow(
     const finalEvents = Array.from(uniqueEventsMap.values());
     finalEvents.sort((a,b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
     
+    // Assemble the final response object
     const response: PatroDataResponse = {
         ...aiData,
         forex: forexData,
@@ -183,7 +182,6 @@ const patroDataFlow = ai.defineFlow(
         upcomingEvents: finalEvents,
     };
     
-    setInCache(cacheKey, response);
     return response;
   }
 );

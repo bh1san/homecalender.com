@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A flow for fetching recent news headlines with images based on location.
@@ -6,9 +7,8 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {NewsResponse, NewsResponseSchema, NewsItemSchema} from '@/ai/schemas';
+import {NewsResponse, NewsResponseSchema} from '@/ai/schemas';
 import {z} from 'genkit';
-import { getFromCache, setInCache } from '@/ai/cache';
 
 const NewsApiRequestSchema = z.object({
   country: z.string().describe('The country for which to fetch news headlines (e.g., "Nepal").'),
@@ -20,7 +20,6 @@ const countryCodeMapping: { [key: string]: string } = {
     "India": "in",
     "United States": "us",
     "United Kingdom": "gb",
-    // Add other relevant mappings here
 };
 
 const newsFlow = ai.defineFlow(
@@ -30,26 +29,20 @@ const newsFlow = ai.defineFlow(
     outputSchema: NewsResponseSchema,
   },
   async ({ country }) => {
-    const cacheKey = `news_v2_${country}`;
-    const cachedNews = getFromCache<NewsResponse>(cacheKey, 24 * 60 * 60 * 1000); // Cache for 24 hours
-    if (cachedNews) {
-      console.log(`Returning cached news for ${country}.`);
-      return cachedNews;
-    }
-
     console.log(`Fetching new news response for ${country}.`);
     
     const apiKey = process.env.NEWSDATA_API_KEY;
     if (!apiKey) {
-        console.error("NewsData.io API key is not configured.");
-        throw new Error("News API key is not configured.");
+        console.error("NewsData.io API key is not configured in .env file (NEWSDATA_API_KEY).");
+        // Return an empty response instead of throwing to prevent page crashes.
+        return { headlines: [] };
     }
     
     const countryCode = countryCodeMapping[country] || 'us'; // Default to US if not found
     const apiUrl = `https://newsdata.io/api/1/news?apikey=${apiKey}&country=${countryCode}&size=10`;
 
     try {
-        const response = await fetch(apiUrl);
+        const response = await fetch(apiUrl, { next: { revalidate: 3600 } }); // Use Next.js built-in caching (1 hour)
         if (!response.ok) {
             const errorBody = await response.text();
             console.error(`News API request failed with status ${response.status}: ${errorBody}`);
@@ -59,7 +52,8 @@ const newsFlow = ai.defineFlow(
         const data = await response.json();
 
         if (data.status !== 'success' || !data.results) {
-             throw new Error('News API did not return a successful response.');
+             console.error('News API did not return a successful response.', data);
+             return { headlines: [] };
         }
 
         const headlinesWithImages = data.results
@@ -71,8 +65,6 @@ const newsFlow = ai.defineFlow(
             }));
         
         const apiResponse: NewsResponse = { headlines: headlinesWithImages };
-        setInCache(cacheKey, apiResponse); // Cache indefinitely until stale check invalidates
-
         return apiResponse;
 
     } catch (error) {

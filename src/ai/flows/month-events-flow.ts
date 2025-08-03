@@ -12,8 +12,6 @@ import {
   CalendarEventSchema,
   CalendarEventsRequestSchema
 } from '@/ai/schemas';
-import { getFromCache, setInCache } from '@/ai/cache';
-import customEventsData from '@/data/custom-events.json';
 
 const NpCalendarSajjanApiResponseSchema = z.object({
     metadata: z.object({
@@ -36,7 +34,8 @@ const NpCalendarSajjanApiResponseSchema = z.object({
 const fetchFromSajjanAPI = async (endpoint: string, schema: z.ZodType) => {
     const baseUrl = 'https://nepalicalendar.sajjan.com.np/data';
     try {
-        const response = await fetch(`${baseUrl}/${endpoint}`);
+        // Use Next.js built-in fetch caching, revalidate data every 24 hours.
+        const response = await fetch(`${baseUrl}/${endpoint}`, { next: { revalidate: 86400 } });
 
         if (!response.ok) {
             console.error(`API request to ${endpoint} failed with status ${response.status}: ${await response.text()}`);
@@ -88,15 +87,9 @@ const monthEventsFlow = ai.defineFlow(
     outputSchema: z.array(CalendarEventSchema),
   },
   async ({ year, month }) => {
-    const cacheKey = `sajjan_monthEvents_v4_${year}_${month}`;
-    const cachedData = getFromCache<CalendarEvent[]>(cacheKey, 24 * 60 * 60 * 1000); // Cache for 24 hours
-    if (cachedData) {
-        console.log(`Returning cached month events for ${year}-${month} from Sajjan API + Custom.`);
-        return cachedData;
-    }
-
     console.log(`Fetching new month events for ${year}-${month} from Sajjan API + Custom.`);
     const NepaliDate = (await import('nepali-date-converter')).default;
+    const customEventsData = (await import('@/data/custom-events.json')).default;
 
     // 1. Fetch events from Sajjan API
     const monthData = await fetchFromSajjanAPI(`${year}/${month}.json`, NpCalendarSajjanApiResponseSchema);
@@ -155,7 +148,6 @@ const monthEventsFlow = ai.defineFlow(
 
     const mergedEvents = Array.from(eventsMap.values()).sort((a, b) => a.day - b.day);
     
-    setInCache(cacheKey, mergedEvents);
     return mergedEvents;
   }
 );
