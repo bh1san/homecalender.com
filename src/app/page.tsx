@@ -142,6 +142,7 @@ export default function Home() {
                                     width={192} 
                                     height={128} 
                                     className="w-full h-32 object-cover" 
+                                    unoptimized
                                 />
                                 <div className="p-3">
                                     <p className="text-sm font-medium text-card-foreground leading-tight">{item.title}</p>
