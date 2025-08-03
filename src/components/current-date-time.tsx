@@ -12,6 +12,7 @@ interface CurrentDateTimeProps {
 
 export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
   const [timeString, setTimeString] = useState("");
+  const [nepaliTimeString, setNepaliTimeString] = useState("");
   const isMounted = useIsMounted();
 
   useEffect(() => {
@@ -27,6 +28,7 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
             timeZone: timezone 
         });
         setTimeString(timeStr);
+        setNepaliTimeString(new NepaliDate(now).format('K:mm:ss', 'np'));
       };
 
       updateTime();
@@ -56,15 +58,14 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
       year: 'numeric'
   });
   
-  const nepaliTimeString = timeString ? new NepaliDate(new Date()).format('K:mm:ss', 'np') : "";
   const timeSuffix = timeString.slice(-2);
-  const localizedTimePrefix = timeSuffix === 'AM' ? 'बिहानको' : 'बेलुकीको';
+  const localizedTimePrefix = timeSuffix === 'AM' ? 'बिहानको' : (timeSuffix === 'PM' ? 'बेलुकीको' : '');
 
   return (
     <div className="space-y-1 text-primary-foreground">
       <h1 className="text-3xl font-bold">{nepaliDateStr}</h1>
       <p className="text-lg">{today.tithi}</p>
-      <p className="text-lg">{`${localizedTimePrefix} ${nepaliTimeString}`}</p>
+      <p className="text-lg">{nepaliTimeString ? `${localizedTimePrefix} ${nepaliTimeString}` : ""}</p>
       <p className="text-base">{gregorianDateStr}</p>
     </div>
   );
