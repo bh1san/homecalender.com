@@ -4,6 +4,7 @@
 import NepaliDate from 'nepali-date-converter';
 import { useIsMounted } from '@/hooks/use-is-mounted';
 import { CurrentDateInfoResponse } from '@/ai/schemas';
+import { useEffect } from 'react';
 
 interface CurrentDateTimeProps {
   today?: CurrentDateInfoResponse | null;
@@ -12,6 +13,15 @@ interface CurrentDateTimeProps {
 
 export default function CurrentDateTime({ today, todaysEvent }: CurrentDateTimeProps) {
   const isMounted = useIsMounted();
+
+  useEffect(() => {
+    if (isMounted) {
+      // Check if the widget object is available and initialize it
+      if ((window as any).time_is_widget) {
+        (window as any).time_is_widget.init({Kathmandu_z423:{}});
+      }
+    }
+  }, [isMounted]);
 
   if (!isMounted || !today) {
     return (

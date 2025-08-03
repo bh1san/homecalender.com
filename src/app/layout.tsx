@@ -26,11 +26,6 @@ export default function RootLayout({
         {children}
         <Toaster />
         <Script src="//widget.time.is/t.js" strategy="lazyOnload" />
-        <Script id="time-is-widget-init" strategy="lazyOnload">
-          {`
-            time_is_widget.init({Kathmandu_z423:{}});
-          `}
-        </Script>
       </body>
     </html>
   );
