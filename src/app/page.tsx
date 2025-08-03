@@ -100,7 +100,7 @@ export default function Home() {
       <Header navLinks={settings.navLinks} logoUrl={settings.logoUrl} isLoading={loadingSettings} />
       <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 bg-primary text-primary-foreground p-4 rounded-lg shadow-md items-center">
-            <CurrentDateTime />
+            <CurrentDateTime today={patroData?.today} />
             <div className="hidden sm:flex justify-end">
                 <MotivationalQuote />
             </div>
@@ -166,7 +166,7 @@ export default function Home() {
                     <CardTitle className="text-lg font-semibold text-card-foreground">आउँदा दिनहरु</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <UpcomingEventsWidget loading={loading} />
+                    <UpcomingEventsWidget loading={loading} events={patroData?.upcomingEvents} />
                 </CardContent>
             </Card>
 
@@ -233,7 +233,8 @@ export default function Home() {
             <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
                 <CardContent className="p-2 sm:p-4">
                      <NepaliCalendarComponent
-                        isLoading={loading} 
+                        isLoading={loading}
+                        monthEvents={patroData?.monthEvents}
                     />
                 </CardContent>
               </Card>

@@ -2,8 +2,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import NepaliDate from 'nepali-date-converter';
-import { dateConfigMap } from 'nepali-date-converter';
+import NepaliDate, { dateConfigMap } from 'nepali-date-converter';
 import { CalendarEvent } from '@/ai/schemas';
 import { Button } from './ui/button';
 import { ChevronLeft, ChevronRight, Loader, Info } from 'lucide-react';
@@ -23,15 +22,16 @@ interface CalendarDate {
 const WEEK_DAYS_NP = ["आइत", "सोम", "मंगल", "बुध", "बिहि", "शुक्र", "शनि"];
 const NEPALI_MONTHS = ["Baisakh", "Jestha", "Ashadh", "Shrawan", "Bhadra", "Ashwin", "Kartik", "Mangsir", "Poush", "Magh", "Falgun", "Chaitra"];
 
+interface NepaliCalendarComponentProps {
+    isLoading: boolean;
+    monthEvents?: CalendarEvent[];
+}
 
-export default function NepaliCalendarComponent({ isLoading: initialIsLoading }: { isLoading: boolean }) {
+export default function NepaliCalendarComponent({ isLoading: initialIsLoading, monthEvents }: NepaliCalendarComponentProps) {
     const isMounted = useIsMounted();
-    const [viewDate, setViewDate] = useState(new NepaliDate());
+    const [viewDate, setViewDate] = useState<NepaliDate>(new NepaliDate());
     const [calendarData, setCalendarData] = useState<(CalendarDate | null)[]>([]);
     const [today, setToday] = useState<NepaliDate | null>(null);
-
-    // Mock month events for now.
-    const [monthEvents] = useState<CalendarEvent[]>([]);
 
     useEffect(() => {
         if (isMounted) {

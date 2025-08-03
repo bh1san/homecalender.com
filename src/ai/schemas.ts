@@ -43,6 +43,7 @@ export type FestivalResponse = z.infer<typeof FestivalResponseSchema>;
 export const CalendarEventSchema = z.object({
   day: z.number().describe('The day of the month.'),
   tithi: z.string().describe('The lunar phase (Tithi) of the day, in Nepali script.'),
+  gregorian_date: z.string().optional(),
   gregorian_day: z.number().optional().describe('The corresponding Gregorian day of the month.'),
   events: z
     .array(z.string())
@@ -72,7 +73,7 @@ export const CurrentDateInfoResponseSchema = CalendarEventSchema.extend({
   bsDay: z.number(),
   bsWeekDay: z.number(),
   adYear: z.number(),
-  adMonth: z.number(), // 0-indexed
+  adMonth: z.number(), // 0-indexed in JS, but API might be 1-indexed
   adDay: z.number(),
 });
 export type CurrentDateInfoResponse = z.infer<typeof CurrentDateInfoResponseSchema>;

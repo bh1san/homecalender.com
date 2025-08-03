@@ -1,7 +1,6 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
 import NepaliDate from 'nepali-date-converter';
 import { UpcomingEvent } from "@/ai/schemas";
 import { Badge } from "./ui/badge";
@@ -9,35 +8,11 @@ import { useIsMounted } from '@/hooks/use-is-mounted';
 
 interface UpcomingEventsWidgetProps {
     loading: boolean;
+    events?: UpcomingEvent[];
 }
 
-const getClientSideUpcomingEvents = (): UpcomingEvent[] => {
-    const today = new Date();
-    const events: UpcomingEvent[] = [];
-
-    for (let i = 0; i < 8; i++) {
-        const futureDate = new Date(today);
-        futureDate.setDate(today.getDate() + (i * 4) + 5); 
-        
-        const event: UpcomingEvent = {
-            summary: `Sample Event ${i + 1}`,
-            startDate: futureDate.toISOString().split('T')[0],
-            isHoliday: Math.random() > 0.8 
-        };
-        events.push(event);
-    }
-    return events;
-}
-
-export default function UpcomingEventsWidget({ loading: initialLoading }: UpcomingEventsWidgetProps) {
+export default function UpcomingEventsWidget({ loading: initialLoading, events }: UpcomingEventsWidgetProps) {
   const isMounted = useIsMounted();
-  const [events, setEvents] = useState<UpcomingEvent[]>([]);
-
-  useEffect(() => {
-    if (isMounted) {
-      setEvents(getClientSideUpcomingEvents());
-    }
-  }, [isMounted]);
 
   if (!isMounted || initialLoading) {
     return (

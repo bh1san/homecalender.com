@@ -14,8 +14,15 @@ import {
   HoroscopeSchema,
   GoldSilverSchema,
   ForexSchema,
+  CurrentDateInfoResponse,
+  CalendarEvent,
+  UpcomingEvent,
+  UpcomingEventsResponseSchema,
+  CalendarEventsResponseSchema,
+  CurrentDateInfoResponseSchema
 } from '@/ai/schemas';
 import { getFromCache, setInCache } from '@/ai/cache';
+import NepaliDate from 'nepali-date-converter';
 
 const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -56,6 +63,41 @@ const generateDataFromAI = async (): Promise<Omit<PatroDataResponse, 'today' | '
     };
 };
 
+const fetchFromAPI = async (endpoint: string, schema: z.ZodType, options: RequestInit = {}) => {
+    const apiKey = process.env.RAPIDAPI_KEY;
+    if (!apiKey) {
+        console.warn(`RapidAPI key not found. Cannot fetch from ${endpoint}.`);
+        return null;
+    }
+
+    try {
+        const response = await fetch(`https://nepali-calendar-api.p.rapidapi.com/${endpoint}`, {
+            ...options,
+            headers: {
+                ...options.headers,
+                'x-rapidapi-host': 'nepali-calendar-api.p.rapidapi.com',
+                'x-rapidapi-key': apiKey,
+            },
+        });
+
+        if (!response.ok) {
+            console.error(`API request to ${endpoint} failed with status ${response.status}: ${await response.text()}`);
+            return null;
+        }
+
+        const data = await response.json();
+        const parsed = schema.safeParse(data);
+        if (!parsed.success) {
+            console.error(`Failed to parse API response from ${endpoint}:`, parsed.error);
+            return null;
+        }
+        return parsed.data;
+    } catch (error) {
+        console.error(`Error fetching from API endpoint ${endpoint}:`, error);
+        return null;
+    }
+}
+
 
 const patroDataFlow = ai.defineFlow(
   {
@@ -64,23 +106,47 @@ const patroDataFlow = ai.defineFlow(
     outputSchema: PatroDataResponseSchema,
   },
   async () => {
-    const cacheKey = "patro_data_nepal_static";
+    const cacheKey = `patro_data_v2_${process.env.RAPIDAPI_KEY ? 'api' : 'ai'}`;
     const cachedData = getFromCache<PatroDataResponse>(cacheKey, CACHE_DURATION_MS);
     if (cachedData) {
         console.log("Returning cached patro data.");
         return cachedData;
     }
 
-    console.log("Generating data using AI...");
-    
+    const today = new NepaliDate();
+    const year = today.getYear();
+    const month = today.getMonth() + 1;
+
+    console.log("Fetching Patro data from sources...");
+
+    const apiAvailable = !!process.env.RAPIDAPI_KEY;
+
+    let apiData: {
+        today: CurrentDateInfoResponse | null,
+        monthEvents: CalendarEvent[],
+        upcomingEvents: UpcomingEvent[]
+    } = { today: null, monthEvents: [], upcomingEvents: [] };
+
+    if (apiAvailable) {
+        const [todayData, monthData, upcomingData] = await Promise.all([
+            fetchFromAPI('api/v1/today', CurrentDateInfoResponseSchema),
+            fetchFromAPI(`api/v1/month?year=${year}&month=${month}`, CalendarEventsResponseSchema),
+            fetchFromAPI('api/v1/holidays', UpcomingEventsResponseSchema)
+        ]);
+        
+        if (todayData) apiData.today = todayData;
+        if (monthData) apiData.monthEvents = monthData.month_events;
+        if (upcomingData) apiData.upcomingEvents = upcomingData.events;
+    }
+
     const aiData = await generateDataFromAI();
     
     const response: PatroDataResponse = {
         ...aiData,
-        today: null,
-        monthEvents: [],
-        upcomingEvents: []
-    }
+        today: apiData.today,
+        monthEvents: apiData.monthEvents,
+        upcomingEvents: apiData.upcomingEvents,
+    };
     
     setInCache(cacheKey, response);
     return response;
