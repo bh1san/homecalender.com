@@ -25,7 +25,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-muted/40 font-body">
         {children}
         <Toaster />
-        <Script src="//widget.time.is/t.js" strategy="lazyOnload" />
+        <Script src="//widget.time.is/en.js" strategy="lazyOnload" />
       </body>
     </html>
   );

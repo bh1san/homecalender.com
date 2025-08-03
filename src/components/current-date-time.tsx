@@ -16,9 +16,8 @@ export default function CurrentDateTime({ today, todaysEvent }: CurrentDateTimeP
 
   useEffect(() => {
     if (isMounted) {
-      // Check if the widget object is available and initialize it
       if ((window as any).time_is_widget) {
-        (window as any).time_is_widget.init({Kathmandu_z423:{}});
+        (window as any).time_is_widget.init({Kathmandu_z423:{template:"TIME<br>SUN", sun_format:"Sunrise: srhour:srminute Sunset: sshour:ssminute<br>Day length: dlhoursh dlminutesm", coords:"27.7016900,85.3206000"}});
       }
     }
   }, [isMounted]);
@@ -50,12 +49,12 @@ export default function CurrentDateTime({ today, todaysEvent }: CurrentDateTimeP
       <h1 className="text-3xl font-bold">{nepaliDateStr}</h1>
       {todaysEvent && <p className="text-lg">{todaysEvent}</p>}
       <div className="flex items-baseline gap-2">
-         <span id="Kathmandu_z423" className="text-lg"></span>
-         <a href="https://time.is/Kathmandu" id="time_is_link" rel="nofollow" className="text-xs opacity-80 hover:opacity-100">
-           (time.is)
-         </a>
+         <span id="Kathmandu_z423" className="text-lg leading-tight"></span>
       </div>
       <p className="text-base">{gregorianDateStr}</p>
+       <a href="https://time.is/Kathmandu" id="time_is_link" rel="nofollow" className="text-xs opacity-80 hover:opacity-100 hidden">
+           Time in Kathmandu
+        </a>
     </div>
   );
 }
