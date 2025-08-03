@@ -4,7 +4,6 @@
 import NepaliDate from 'nepali-date-converter';
 import { useIsMounted } from '@/hooks/use-is-mounted';
 import { CurrentDateInfoResponse } from '@/ai/schemas';
-import { useEffect } from 'react';
 
 interface CurrentDateTimeProps {
   today?: CurrentDateInfoResponse | null;
@@ -13,14 +12,6 @@ interface CurrentDateTimeProps {
 
 export default function CurrentDateTime({ today, todaysEvent }: CurrentDateTimeProps) {
   const isMounted = useIsMounted();
-
-  useEffect(() => {
-    if (isMounted) {
-      if ((window as any).time_is_widget) {
-        (window as any).time_is_widget.init({Kathmandu_z423:{template:"TIME<br>SUN", sun_format:"Sunrise: srhour:srminute Sunset: sshour:ssminute<br>Day length: dlhoursh dlminutesm", coords:"27.7016900,85.3206000"}});
-      }
-    }
-  }, [isMounted]);
 
   if (!isMounted || !today) {
     return (
@@ -48,13 +39,18 @@ export default function CurrentDateTime({ today, todaysEvent }: CurrentDateTimeP
     <div className="space-y-1 text-primary-foreground">
       <h1 className="text-3xl font-bold">{nepaliDateStr}</h1>
       {todaysEvent && <p className="text-lg">{todaysEvent}</p>}
-      <div className="flex items-baseline gap-2">
-         <span id="Kathmandu_z423" className="text-lg leading-tight"></span>
-      </div>
+      <iframe
+        scrolling="no"
+        frameBorder="0"
+        marginWidth={0}
+        marginHeight={0}
+        allowTransparency={true}
+        src="https://www.ashesh.com.np/linknepali-time.php?time_only=no&font_color=FFFFFF&aj_time=yes&font_size=14&line_brake=1&sec_time=no&nst=yes&api=430081p485"
+        width="195"
+        height="45"
+        className="bg-transparent"
+      ></iframe>
       <p className="text-base">{gregorianDateStr}</p>
-       <a href="https://time.is/Kathmandu" id="time_is_link" rel="nofollow" className="text-xs opacity-80 hover:opacity-100 hidden">
-           Time in Kathmandu
-        </a>
     </div>
   );
 }

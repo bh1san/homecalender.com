@@ -2,7 +2,6 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
-import Script from 'next/script';
 
 export const metadata: Metadata = {
   title: 'HomeCalender.com - Your Global Calendar and Date Converter',
@@ -25,7 +24,6 @@ export default function RootLayout({
       <body className="min-h-screen bg-muted/40 font-body">
         {children}
         <Toaster />
-        <Script src="//widget.time.is/en.js" strategy="lazyOnload" />
       </body>
     </html>
   );
