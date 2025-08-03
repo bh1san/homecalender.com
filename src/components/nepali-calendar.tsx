@@ -149,30 +149,30 @@ export default function NepaliCalendarComponent() {
                                     आज
                                 </div>
                             )}
-                            <div className="flex justify-between items-start">
+                            <div className="flex-grow">
                                 <span className={cn(
                                     "text-xs sm:text-sm font-semibold text-muted-foreground",
                                      isHoliday ? "text-destructive" : ""
                                 )}>
                                     {adDay}
                                 </span>
-                                <span className={cn(
-                                    "text-lg sm:text-xl font-bold text-foreground",
-                                     isHoliday ? "text-destructive" : ""
-                                )}>
-                                    {new NepaliDate(bsYear, bsMonth, bsDay).format('D', 'np')}
-                                </span>
+                                 <div className="text-center mt-1">
+                                     {dayEvent?.tithi && (
+                                         <p className="text-[10px] sm:text-xs text-foreground/80 truncate font-medium">{dayEvent.tithi}</p>
+                                    )}
+                                     {dayEvent && dayEvent.events.length > 0 && (
+                                        <p className="text-[10px] sm:text-xs text-accent/90 font-semibold text-center truncate px-1">
+                                            {dayEvent.events[0]}
+                                        </p>
+                                     )}
+                                </div>
                             </div>
-                            <div className="flex-grow flex flex-col justify-end text-center items-center mt-1">
-                                 {dayEvent?.tithi && (
-                                     <p className="text-[10px] sm:text-xs text-foreground/80 truncate font-medium">{dayEvent.tithi}</p>
-                                )}
-                                 {dayEvent && dayEvent.events.length > 0 && (
-                                    <p className="text-[10px] sm:text-xs text-accent/90 font-semibold text-center truncate px-1">
-                                        {dayEvent.events[0]}
-                                    </p>
-                                 )}
-                            </div>
+                             <span className={cn(
+                                "text-lg sm:text-xl font-bold text-foreground text-center",
+                                 isHoliday ? "text-destructive" : ""
+                            )}>
+                                {new NepaliDate(bsYear, bsMonth, bsDay).format('D', 'np')}
+                            </span>
                         </div>
                     );
                     
