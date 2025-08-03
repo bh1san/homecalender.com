@@ -45,20 +45,26 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
     );
   }
 
-  const nepaliDate = new NepaliDate(today.bsYear, today.bsMonth - 1, today.bsDay);
-  const nepaliDateStr = nepaliDate.format('DD MMMM YYYY, ddd', 'np');
-  
-  const gregorianDate = new NepaliDate(new Date(today.adYear, today.adMonth-1, today.adDay));
-  const gregorianDateStr = gregorianDate.format('MMMM DD, YYYY', 'en');
+  const nepaliDay = new NepaliDate(0,0,0).convert(String(today.bsDay), 'en', 'np');
+  const nepaliYear = new NepaliDate(0,0,0).convert(String(today.bsYear), 'en', 'np');
+  const nepaliDateStr = `${nepaliDay} ${today.bsMonthName} ${nepaliYear}, ${today.dayOfWeek}`;
 
-  const nepaliTimeString = timeString ? new NepaliDate().format('K:mm', 'np') : "";
+  const gregorianDate = new Date(today.adYear, today.adMonth - 1, today.adDay);
+  const gregorianDateStr = gregorianDate.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+  });
+  
+  const nepaliTimeString = timeString ? new NepaliDate(new Date()).format('K:mm:ss', 'np') : "";
   const timeSuffix = timeString.slice(-2);
   const localizedTimePrefix = timeSuffix === 'AM' ? 'बिहानको' : 'बेलुकीको';
 
   return (
     <div className="space-y-1 text-primary-foreground">
       <h1 className="text-3xl font-bold">{nepaliDateStr}</h1>
-      <p className="text-lg">{`${localizedTimePrefix} ${nepaliTimeString} | ${today.tithi}`}</p>
+      <p className="text-lg">{today.tithi}</p>
+      <p className="text-lg">{`${localizedTimePrefix} ${nepaliTimeString}`}</p>
       <p className="text-base">{gregorianDateStr}</p>
     </div>
   );

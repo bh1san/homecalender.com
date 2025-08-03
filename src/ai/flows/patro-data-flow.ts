@@ -17,7 +17,9 @@ import {
   GoldSilverSchema,
   ForexSchema,
   UpcomingEvent,
+  UpcomingEventSchema,
   CurrentDateInfoResponse,
+  CurrentDateInfoResponseSchema
 } from '@/ai/schemas';
 import { getFromCache, setInCache } from '@/ai/cache';
 
@@ -52,8 +54,8 @@ const generateAIFallbackData = async (): Promise<Omit<PatroDataResponse, 'today'
 
     if (aiResponse) {
         const fullHoroscope: Horoscope[] = aiResponse.horoscope.map((h, index) => ({
-            name: h.rashi,
             rashi: h.rashi,
+            name: h.rashi,
             text: h.text,
         }));
          return {
@@ -111,11 +113,15 @@ const processTodayData = (bsDate: NepaliDate, monthData: z.infer<typeof SajjanAp
     if (!todayData) return null;
 
     const adDate = bsDate.toJsDate();
+    const npMonths = ['बैशाख', 'जेठ', 'असार', 'श्रावण', 'भदौ', 'असोज', 'कार्तिक', 'मंसिर', 'पुष', 'माघ', 'फागुन', 'चैत'];
+    const npDays = ['आइतबार', 'सोमबार', 'मङ्गलबार', 'बुधबार', 'बिहिबार', 'शुक्रबार', 'शनिबार'];
 
     return {
         bsYear: bsDate.getYear(),
         bsMonth: bsDate.getMonth() + 1,
         bsDay: bsDay,
+        bsMonthName: npMonths[bsDate.getMonth()],
+        dayOfWeek: npDays[bsDate.getDay()],
         adYear: adDate.getFullYear(),
         adMonth: adDate.getMonth() + 1,
         adDay: adDate.getDate(),
@@ -197,7 +203,7 @@ const patroDataFlow = ai.defineFlow(
     outputSchema: PatroDataResponseSchema,
   },
   async () => {
-    const cacheKey = `patro_data_v17_sajjan`;
+    const cacheKey = `patro_data_v18_sajjan`;
     const cachedData = getFromCache<PatroDataResponse>(cacheKey, CACHE_DURATION_MS);
     if (cachedData) {
         console.log("Returning cached patro data (Sajjan API).");

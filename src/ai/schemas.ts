@@ -104,6 +104,8 @@ export const CurrentDateInfoResponseSchema = z.object({
     bsYear: z.number(),
     bsMonth: z.number(),
     bsDay: z.number(),
+    bsMonthName: z.string(),
+    dayOfWeek: z.string(),
     adYear: z.number(),
     adMonth: z.number(),
     adDay: z.number(),
