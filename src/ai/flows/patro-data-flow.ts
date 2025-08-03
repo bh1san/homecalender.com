@@ -2,7 +2,7 @@
 'use server';
 /**
  * @fileOverview A flow for fetching data like horoscopes, gold/silver prices, and forex rates using Genkit AI.
- * It now uses the nepalicalendar.sajjan.com.np public API for calendar data.
+ * It now uses the nepalicalendar.sajjan.com.np public API for calendar data and a local file for custom events.
  *
  * - getPatroData - A function that fetches all daily data for the app.
  */
@@ -22,6 +22,7 @@ import {
   CurrentDateInfoResponseSchema
 } from '@/ai/schemas';
 import { getFromCache, setInCache } from '@/ai/cache';
+import customEventsData from '@/data/custom-events.json';
 
 const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -55,7 +56,7 @@ const generateAIFallbackData = async (): Promise<Omit<PatroDataResponse, 'today'
     if (aiResponse) {
         const fullHoroscope: Horoscope[] = aiResponse.horoscope.map((h, index) => ({
             rashi: h.rashi,
-            name: h.rashi,
+            name: h.rashi, // Ensure name is populated
             text: h.text,
         }));
          return {
@@ -107,7 +108,8 @@ const processTodayData = (bsDate: NepaliDate, monthData: z.infer<typeof SajjanAp
     if (!monthData) return null;
     
     const bsDay = bsDate.getDate();
-    const bsDayString = new NepaliDate(0,0,0).convert(String(bsDay), 'en', 'np');
+    const tempDateConverter = new NepaliDate(0,0,0);
+    const bsDayString = tempDateConverter.convert(String(bsDay), 'en', 'np');
     
     const todayData = monthData.days.find(d => d.n === bsDayString);
     if (!todayData) return null;
@@ -129,7 +131,7 @@ const processTodayData = (bsDate: NepaliDate, monthData: z.infer<typeof SajjanAp
     };
 };
 
-const processHolidays = (monthData: z.infer<typeof SajjanApiMonthSchema>, bsYear: number, bsMonth: number): UpcomingEvent[] => {
+const processEvents = (monthData: z.infer<typeof SajjanApiMonthSchema>, bsYear: number, bsMonth: number): UpcomingEvent[] => {
     if (!monthData) return [];
     
     const today = new Date();
@@ -192,7 +194,7 @@ const processHolidays = (monthData: z.infer<typeof SajjanApiMonthSchema>, bsYear
         }
     });
     
-    return events.sort((a,b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
+    return events;
 };
 
 
@@ -203,14 +205,14 @@ const patroDataFlow = ai.defineFlow(
     outputSchema: PatroDataResponseSchema,
   },
   async () => {
-    const cacheKey = `patro_data_v18_sajjan`;
+    const cacheKey = `patro_data_v20_sajjan_custom`;
     const cachedData = getFromCache<PatroDataResponse>(cacheKey, CACHE_DURATION_MS);
     if (cachedData) {
-        console.log("Returning cached patro data (Sajjan API).");
+        console.log("Returning cached patro data (Sajjan API + Custom).");
         return cachedData;
     }
 
-    console.log("Fetching new Patro data from sources (Sajjan API)...");
+    console.log("Fetching new Patro data from sources (Sajjan API + Custom)...");
 
     let todayInfo: CurrentDateInfoResponse | null = null;
     let upcomingEvents: UpcomingEvent[] = [];
@@ -220,20 +222,48 @@ const patroDataFlow = ai.defineFlow(
     const bsYear = todayBS.getYear();
     const bsMonth = todayBS.getMonth() + 1; // 1-indexed
     
+    // Fetch and process API data
     const monthData = await fetchFromSajjanAPI(`${bsYear}/${bsMonth}.json`, SajjanApiMonthSchema);
-
     if (monthData) {
         todayInfo = processTodayData(todayBS, monthData);
-        upcomingEvents = processHolidays(monthData, bsYear, bsMonth);
+        upcomingEvents = processEvents(monthData, bsYear, bsMonth);
     }
     
     // Always fetch AI data for horoscope, gold/silver, forex
     aiData = await generateAIFallbackData();
+
+    // Process local custom events
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const localEvents: UpcomingEvent[] = customEventsData
+        .map(event => ({
+            ...event,
+            isHoliday: false, // Assuming custom events are not holidays unless specified
+        }))
+        .filter(event => new Date(event.startDate) >= today);
+    
+    // Merge and de-duplicate events
+    const allEvents = [...upcomingEvents, ...localEvents];
+    const uniqueEventsMap = new Map<string, UpcomingEvent>();
+
+    allEvents.forEach(event => {
+        // Use a key of date + summary to identify unique events
+        const key = `${event.startDate}-${event.summary}`;
+        if (!uniqueEventsMap.has(key)) {
+            uniqueEventsMap.set(key, event);
+        }
+    });
+
+    const finalEvents = Array.from(uniqueEventsMap.values());
+
+    // Sort all events by date
+    finalEvents.sort((a,b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
     
     const response: PatroDataResponse = {
         ...aiData,
         today: todayInfo,
-        upcomingEvents: upcomingEvents,
+        upcomingEvents: finalEvents,
     };
     
     setInCache(cacheKey, response);
@@ -244,3 +274,4 @@ const patroDataFlow = ai.defineFlow(
 export async function getPatroData(): Promise<PatroDataResponse> {
   return patroDataFlow();
 }
+
