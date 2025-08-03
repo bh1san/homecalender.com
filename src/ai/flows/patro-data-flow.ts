@@ -14,12 +14,10 @@ import {
   HoroscopeSchema,
   GoldSilverSchema,
   ForexSchema,
-  CalendarEvent,
   UpcomingEvent,
   NpEventsApiResponseSchema,
 } from '@/ai/schemas';
 import { getFromCache, setInCache } from '@/ai/cache';
-import NepaliDate from 'nepali-date-converter';
 
 const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -89,14 +87,15 @@ const processRangeData = (data: z.infer<typeof NpEventsApiResponseSchema>): Upco
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Normalize today's date
 
-    for (const year in data) {
-        for (const month in data[year]) {
-            for (const day in data[year][month]) {
-                const dayData = data[year][month][day];
+    if (!data) return events;
+
+    Object.values(data).forEach(yearData => {
+        Object.values(yearData).forEach(monthData => {
+            Object.values(monthData).forEach(dayData => {
                 const eventDate = new Date(dayData.date.ad.year, dayData.date.ad.month - 1, dayData.date.ad.day);
 
                 // Only include events that are today or in the future
-                if (eventDate >= today && (dayData.event.length > 0 || dayData.public_holiday)) {
+                if (eventDate >= today && dayData.public_holiday) {
                     const allEvents = dayData.event.join(', ');
                     events.push({
                         summary: allEvents || "Public Holiday",
@@ -104,9 +103,10 @@ const processRangeData = (data: z.infer<typeof NpEventsApiResponseSchema>): Upco
                         isHoliday: dayData.public_holiday
                     });
                 }
-            }
-        }
-    }
+            });
+        });
+    });
+
     // Sort events by date
     events.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
     return events;
@@ -120,7 +120,7 @@ const patroDataFlow = ai.defineFlow(
     outputSchema: PatroDataResponseSchema,
   },
   async () => {
-    const cacheKey = `patro_data_v4_npclapi_holidays`;
+    const cacheKey = `patro_data_v5_npclapi_holidays`;
     const cachedData = getFromCache<PatroDataResponse>(cacheKey, CACHE_DURATION_MS);
     if (cachedData) {
         console.log("Returning cached patro data.");

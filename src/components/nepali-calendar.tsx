@@ -132,13 +132,16 @@ export default function NepaliCalendarComponent() {
                     }
                     
                     const { bsYear, bsMonth, bsDay, adDay } = dayData;
+                    const date = new NepaliDate(bsYear, bsMonth, bsDay);
                     const isToday = today && today.getYear() === bsYear && today.getMonth() === bsMonth && today.getDate() === bsDay;
                     const dayEvent = monthEvents?.find(e => e.day === bsDay);
+                    const isSaturday = date.getDay() === 6;
+                    const isHoliday = dayEvent?.is_holiday || isSaturday;
 
                     const cellContent = (
                          <div className={cn(
                             "relative flex flex-col p-1.5 border rounded-md min-h-[100px] transition-colors duration-200 group cursor-pointer",
-                            dayEvent?.is_holiday && !isToday ? "bg-red-50 dark:bg-red-950/20" : "bg-card hover:bg-muted/50",
+                            isHoliday && !isToday ? "bg-red-50 dark:bg-red-950/20" : "bg-card hover:bg-muted/50",
                             isToday && "ring-2 ring-offset-background ring-primary bg-primary/10"
                         )}>
                              {isToday && (
@@ -149,13 +152,13 @@ export default function NepaliCalendarComponent() {
                             <div className="flex justify-between items-start">
                                 <span className={cn(
                                     "text-xs sm:text-sm font-semibold text-muted-foreground",
-                                     dayEvent?.is_holiday ? "text-destructive" : ""
+                                     isHoliday ? "text-destructive" : ""
                                 )}>
                                     {adDay}
                                 </span>
                                 <span className={cn(
                                     "text-lg sm:text-xl font-bold text-foreground",
-                                     dayEvent?.is_holiday ? "text-destructive" : ""
+                                     isHoliday ? "text-destructive" : ""
                                 )}>
                                     {new NepaliDate(bsYear, bsMonth, bsDay).format('D', 'np')}
                                 </span>
@@ -179,12 +182,13 @@ export default function NepaliCalendarComponent() {
                                     <h4 className="font-bold text-lg text-primary">{new NepaliDate(bsYear, bsMonth, bsDay).format('DD MMMM', 'np')}</h4>
                                     {dayEvent?.tithi && <p className="text-sm text-muted-foreground font-semibold">{dayEvent.tithi}</p>}
                                     <hr />
+                                    {isSaturday && !dayEvent?.events.length && <li className="text-sm font-medium flex items-center gap-2"><Info className="w-4 h-4 text-accent" />शनिबार (सार्वजनिक बिदा)</li>}
                                     {dayEvent && dayEvent.events.length > 0 ? (
                                         <ul className="space-y-1.5">
                                             {dayEvent.events.map((e, i) => <li key={i} className="text-sm font-medium flex items-center gap-2"><Info className="w-4 h-4 text-accent" />{e}</li>)}
                                         </ul>
                                     ): (
-                                         <p className="text-sm text-muted-foreground">कुनै कार्यक्रम छैन।</p>
+                                         !isSaturday && <p className="text-sm text-muted-foreground">कुनै कार्यक्रम छैन।</p>
                                     )}
                                 </div>
                             </PopoverContent>
