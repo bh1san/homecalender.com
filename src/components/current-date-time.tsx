@@ -12,49 +12,40 @@ interface CurrentDateTimeProps {
 }
 
 export default function CurrentDateTime({ today, todaysEvent }: CurrentDateTimeProps) {
-  const [timeString, setTimeString] = useState("");
-  const [nepaliTimeString, setNepaliTimeString] = useState("");
+  const [time, setTime] = useState<Date | null>(null);
   const isMounted = useIsMounted();
 
   useEffect(() => {
-    // This effect should only run on the client side
-    const intervalId = setInterval(() => {
-      const now = new Date();
-      const timezone = "Asia/Kathmandu";
-      const timeStr = now.toLocaleTimeString('en-US', { 
-          hour: 'numeric', 
-          minute: 'numeric', 
-          second: 'numeric', 
-          hour12: true, 
-          timeZone: timezone 
-      });
-      setTimeString(timeStr);
-
+    const fetchTime = async () => {
       try {
-        const nepaliTime = new NepaliDate(now).format('K:mm:ss', 'np');
-        setNepaliTimeString(nepaliTime);
-      } catch (e) {
-        // Handle potential errors from NepaliDate if any
-        setNepaliTimeString("");
+        const response = await fetch('https://worldtimeapi.org/api/timezone/Asia/Kathmandu');
+        if (!response.ok) {
+            throw new Error('Failed to fetch time');
+        }
+        const data = await response.json();
+        const initialTime = new Date(data.datetime);
+        setTime(initialTime);
+      } catch (error) {
+        console.error("Error fetching time from API, falling back to client time:", error);
+        // Fallback to client time if API fails
+        setTime(new Date());
       }
-    }, 1000);
-    
-    // Set initial time immediately
-    const now = new Date();
-    const timezone = "Asia/Kathmandu";
-    const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true, timeZone: timezone });
-    setTimeString(timeStr);
-    try {
-        const nepaliTime = new NepaliDate(now).format('K:mm:ss', 'np');
-        setNepaliTimeString(nepaliTime);
-    } catch (e) {
-        setNepaliTimeString("");
-    }
+    };
 
-    return () => clearInterval(intervalId);
+    fetchTime();
   }, []);
 
-  if (!isMounted || !today) {
+  useEffect(() => {
+    if (!time) return;
+
+    const intervalId = setInterval(() => {
+      setTime(prevTime => prevTime ? new Date(prevTime.getTime() + 1000) : null);
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [time]);
+
+  if (!isMounted || !today || !time) {
     return (
       <div className="space-y-2 text-primary-foreground">
         <div className="h-9 w-64 bg-white/20 animate-pulse rounded-md" />
@@ -76,8 +67,10 @@ export default function CurrentDateTime({ today, todaysEvent }: CurrentDateTimeP
       year: 'numeric'
   });
   
+  const timeString = time.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true });
   const timeSuffix = timeString.slice(-2);
   const localizedTimePrefix = timeSuffix === 'AM' ? 'बिहानको' : (timeSuffix === 'PM' ? 'बेलुकीको' : '');
+  const nepaliTimeString = new NepaliDate(time).format('K:mm:ss', 'np');
 
   return (
     <div className="space-y-1 text-primary-foreground">
@@ -88,5 +81,3 @@ export default function CurrentDateTime({ today, todaysEvent }: CurrentDateTimeP
     </div>
   );
 }
-
-    
