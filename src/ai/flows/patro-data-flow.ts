@@ -163,7 +163,6 @@ const patroDataFlow = ai.defineFlow(
     ]);
     
     const todayInfo = todayRawData ? processTodayData(todayRawData) : null;
-    console.log("Fetched Today's Info:", todayInfo);
     
     const upcomingEvents = upcomingData ? processRangeData(upcomingData) : [];
     
