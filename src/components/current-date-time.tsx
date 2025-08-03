@@ -52,11 +52,13 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
       }
     };
     
-    initializeDateAndTime();
-    const intervalId = setInterval(initializeDateAndTime, 1000);
-
-    return () => clearInterval(intervalId);
-  }, []); // Empty dependency array ensures this runs once on mount
+    // Run once on mount
+    if (isMounted) {
+      initializeDateAndTime();
+      const intervalId = setInterval(initializeDateAndTime, 1000);
+      return () => clearInterval(intervalId);
+    }
+  }, [isMounted]);
 
   if (!isMounted || !clientToday) {
       return (
@@ -86,4 +88,3 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
     </div>
   );
 }
-

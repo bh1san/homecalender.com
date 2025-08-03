@@ -51,6 +51,7 @@ export default function Home() {
   
   useEffect(() => {
     const fetchSettings = async () => {
+        setLoadingSettings(true);
         try {
             const response = await fetch('/api/settings');
             if (response.ok) {
@@ -270,6 +271,7 @@ function Header({ navLinks, logoUrl, isLoading }: { navLinks: string[], logoUrl:
                            <div className="h-8 w-10 bg-gray-300/20 animate-pulse rounded-md" />
                            <div className="h-8 w-8 bg-gray-300/20 animate-pulse rounded-full" />
                         </div>
+                         <div className="md:hidden h-8 w-8 bg-gray-300/20 animate-pulse rounded-md" />
                     </div>
                 </div>
             </header>
@@ -290,7 +292,7 @@ function Header({ navLinks, logoUrl, isLoading }: { navLinks: string[], logoUrl:
                             </Link>
                         ))}
                     </nav>
-                    <div className="flex items-center space-x-4">
+                    <div className="hidden md:flex items-center space-x-4">
                         <Button variant="outline" size="sm">EN</Button>
                         <User className="h-6 w-6 cursor-pointer hover:text-primary"/>
                     </div>
