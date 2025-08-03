@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A flow for fetching data like horoscopes, gold/silver prices, and forex rates using Genkit AI.
@@ -15,6 +14,7 @@ import {
   GoldSilverSchema,
   ForexSchema,
   UpcomingEvent,
+  UpcomingEventSchema,
   NpEventsApiResponseSchema,
   CurrentDateInfoResponse,
   CurrentDateInfoResponseSchema,
@@ -120,10 +120,10 @@ const processTodayData = (data: z.infer<typeof NpEventsApiResponseSchema>): Curr
     if (!data) return null;
     try {
         // Since we query for @today, we expect a very specific structure
-        const year = Object.keys(data)[0];
-        const month = Object.keys(data[year])[0];
-        const day = Object.keys(data[year][month])[0];
-        const todayData = data[year][month][day];
+        const yearKey = Object.keys(data)[0];
+        const monthKey = Object.keys(data[yearKey])[0];
+        const dayKey = Object.keys(data[yearKey][monthKey])[0];
+        const todayData = data[yearKey][monthKey][dayKey];
 
         return {
             adYear: todayData.date.ad.year,
@@ -148,14 +148,14 @@ const patroDataFlow = ai.defineFlow(
     outputSchema: PatroDataResponseSchema,
   },
   async () => {
-    const cacheKey = `patro_data_v8_today_holidays`;
+    const cacheKey = `patro_data_v11_today_holidays`;
     const cachedData = getFromCache<PatroDataResponse>(cacheKey, CACHE_DURATION_MS);
     if (cachedData) {
         console.log("Returning cached patro data.");
         return cachedData;
     }
 
-    console.log("Fetching Patro data from sources...");
+    console.log("Fetching new Patro data from sources...");
 
     const [todayRawData, upcomingData] = await Promise.all([
         fetchFromNpEventsAPI(`v2/date/bs/@today`, NpEventsApiResponseSchema),
@@ -163,6 +163,8 @@ const patroDataFlow = ai.defineFlow(
     ]);
     
     const todayInfo = todayRawData ? processTodayData(todayRawData) : null;
+    console.log("Fetched Today's Info:", todayInfo);
+    
     const upcomingEvents = upcomingData ? processRangeData(upcomingData) : [];
     
     const aiData = await generateAIFallbackData();
