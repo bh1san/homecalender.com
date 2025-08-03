@@ -112,6 +112,16 @@ const processTodayData = (bsDate: NepaliDate, monthData: z.infer<typeof SajjanAp
     const bsDayString = tempDateConverter.convert(String(bsDay), 'en', 'np');
     
     const todayData = monthData.days.find(d => d.n === bsDayString);
+    let todayTithi = todayData?.t || '';
+
+    // Check for a custom event for today and use its summary as the Tithi if available
+    const todayADString = bsDate.toJsDate().toISOString().split('T')[0];
+    const todaysCustomEvent = customEventsData.find(event => event.startDate === todayADString);
+
+    if (todaysCustomEvent) {
+        todayTithi = todaysCustomEvent.summary;
+    }
+
     if (!todayData) return null;
 
     const adDate = bsDate.toJsDate();
@@ -127,7 +137,7 @@ const processTodayData = (bsDate: NepaliDate, monthData: z.infer<typeof SajjanAp
         adYear: adDate.getFullYear(),
         adMonth: adDate.getMonth() + 1,
         adDay: adDate.getDate(),
-        tithi: todayData.t,
+        tithi: todayTithi,
     };
 };
 
@@ -205,7 +215,7 @@ const patroDataFlow = ai.defineFlow(
     outputSchema: PatroDataResponseSchema,
   },
   async () => {
-    const cacheKey = `patro_data_v20_sajjan_custom`;
+    const cacheKey = `patro_data_v21_sajjan_custom`;
     const cachedData = getFromCache<PatroDataResponse>(cacheKey, CACHE_DURATION_MS);
     if (cachedData) {
         console.log("Returning cached patro data (Sajjan API + Custom).");
