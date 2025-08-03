@@ -48,7 +48,6 @@ export const CalendarEventSchema = z.object({
     .array(z.string())
     .describe('A list of events or festivals on this day, in Nepali script.'),
   is_holiday: z.boolean().describe('Whether the day is a public holiday.'),
-  panchanga: z.string().optional().describe("Astrological details for the day, if available."),
 });
 export type CalendarEvent = z.infer<typeof CalendarEventSchema>;
 
