@@ -12,7 +12,7 @@ export const NewsItemSchema = z.object({
   imageDataUri: z
     .string()
     .describe(
-      "A generated image for the news article, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+      "A generated image for the news article, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'"
     ),
   imageHint: z.string().optional().describe('A hint for image generation.'),
 });
@@ -39,12 +39,32 @@ export const FestivalResponseSchema = z.object({
 });
 export type FestivalResponse = z.infer<typeof FestivalResponseSchema>;
 
-// Calendar Events Schemas
+// Calendar Events Schemas from npEventsAPI
+const NpApiDateSchema = z.object({
+    ad: z.object({ day: z.number(), month: z.number(), year: z.number() }),
+    bs: z.object({ day: z.number(), month: z.number(), year: z.number() }),
+});
+
+const NpApiDayEventSchema = z.object({
+    date: NpApiDateSchema,
+    event: z.array(z.string()),
+    panchangam: z.array(z.string()),
+    public_holiday: z.boolean(),
+    tithi: z.string(),
+});
+
+export const NpEventsApiResponseSchema = z.record( // year
+    z.record( // month
+        z.record( // day
+            NpApiDayEventSchema
+        )
+    )
+);
+
 export const CalendarEventSchema = z.object({
   day: z.number().describe('The day of the month.'),
   tithi: z.string().describe('The lunar phase (Tithi) of the day, in Nepali script.'),
   gregorian_date: z.string().optional(),
-  gregorian_day: z.number().optional().describe('The corresponding Gregorian day of the month.'),
   events: z
     .array(z.string())
     .describe('A list of events or festivals on this day, in Nepali script.'),
@@ -59,24 +79,6 @@ export const CalendarEventsRequestSchema = z.object({
 });
 export type CalendarEventsRequest = z.infer<typeof CalendarEventsRequestSchema>;
 
-export const CalendarEventsResponseSchema = z.object({
-  month_events: z
-    .array(CalendarEventSchema)
-    .describe('A list of all events for the given month.'),
-});
-export type CalendarEventsResponse = z.infer<typeof CalendarEventsResponseSchema>;
-
-// Current Date Info Schema
-export const CurrentDateInfoResponseSchema = CalendarEventSchema.extend({
-  bsYear: z.number(),
-  bsMonth: z.number(),
-  bsDay: z.number(),
-  bsWeekDay: z.number(),
-  adYear: z.number(),
-  adMonth: z.number(), // 0-indexed in JS, but API might be 1-indexed
-  adDay: z.number(),
-});
-export type CurrentDateInfoResponse = z.infer<typeof CurrentDateInfoResponseSchema>;
 
 // Upcoming Events Schemas
 export const UpcomingEventSchema = z.object({
@@ -86,13 +88,8 @@ export const UpcomingEventSchema = z.object({
 });
 export type UpcomingEvent = z.infer<typeof UpcomingEventSchema>;
 
-export const UpcomingEventsResponseSchema = z.object({
-  events: z.array(UpcomingEventSchema).describe('A list of upcoming events.'),
-});
-export type UpcomingEventsResponse = z.infer<typeof UpcomingEventsResponseSchema>;
 
 // Hamro Patro Scraper Schemas
-
 export const HoroscopeSchema = z.object({
     rashi: z.number(),
     name: z.string(),
@@ -130,7 +127,6 @@ export const PatroDataResponseSchema = z.object({
     horoscope: z.array(HoroscopeSchema),
     goldSilver: GoldSilverSchema.nullable(),
     forex: z.array(ForexSchema),
-    today: CurrentDateInfoResponseSchema.nullable().optional(),
     monthEvents: z.array(CalendarEventSchema).optional(),
     upcomingEvents: z.array(UpcomingEventSchema).optional(),
 });

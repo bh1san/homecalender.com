@@ -14,12 +14,9 @@ import {
   HoroscopeSchema,
   GoldSilverSchema,
   ForexSchema,
-  CurrentDateInfoResponse,
   CalendarEvent,
   UpcomingEvent,
-  UpcomingEventsResponseSchema,
-  CalendarEventsResponseSchema,
-  CurrentDateInfoResponseSchema
+  NpEventsApiResponseSchema,
 } from '@/ai/schemas';
 import { getFromCache, setInCache } from '@/ai/cache';
 import NepaliDate from 'nepali-date-converter';
@@ -43,7 +40,7 @@ const scraperPrompt = ai.definePrompt({
     `
 });
 
-const generateDataFromAI = async (): Promise<Omit<PatroDataResponse, 'today' | 'monthEvents' | 'upcomingEvents'>> => {
+const generateAIFallbackData = async (): Promise<Omit<PatroDataResponse, 'monthEvents' | 'upcomingEvents'>> => {
     console.log("Generating patro data using AI fallback...");
     const aiResponse = await scraperPrompt().then(r => r.output).catch(e => {
         console.error("AI call to scraperPrompt failed:", e);
@@ -63,22 +60,10 @@ const generateDataFromAI = async (): Promise<Omit<PatroDataResponse, 'today' | '
     };
 };
 
-const fetchFromAPI = async (endpoint: string, schema: z.ZodType, options: RequestInit = {}) => {
-    const apiKey = process.env.RAPIDAPI_KEY;
-    if (!apiKey) {
-        console.warn(`RapidAPI key not found. Cannot fetch from ${endpoint}.`);
-        return null;
-    }
-
+const fetchFromNpEventsAPI = async (endpoint: string, schema: z.ZodType) => {
+    const baseUrl = 'https://npclapi.casualsnek.eu.org';
     try {
-        const response = await fetch(`https://nepali-calendar-api.p.rapidapi.com/${endpoint}`, {
-            ...options,
-            headers: {
-                ...options.headers,
-                'x-rapidapi-host': 'nepali-calendar-api.p.rapidapi.com',
-                'x-rapidapi-key': apiKey,
-            },
-        });
+        const response = await fetch(`${baseUrl}/${endpoint}`);
 
         if (!response.ok) {
             console.error(`API request to ${endpoint} failed with status ${response.status}: ${await response.text()}`);
@@ -87,6 +72,7 @@ const fetchFromAPI = async (endpoint: string, schema: z.ZodType, options: Reques
 
         const data = await response.json();
         const parsed = schema.safeParse(data);
+
         if (!parsed.success) {
             console.error(`Failed to parse API response from ${endpoint}:`, parsed.error);
             return null;
@@ -96,7 +82,46 @@ const fetchFromAPI = async (endpoint: string, schema: z.ZodType, options: Reques
         console.error(`Error fetching from API endpoint ${endpoint}:`, error);
         return null;
     }
-}
+};
+
+const processMonthData = (data: z.infer<typeof NpEventsApiResponseSchema>): CalendarEvent[] => {
+    const events: CalendarEvent[] = [];
+    for (const year in data) {
+        for (const month in data[year]) {
+            for (const day in data[year][month]) {
+                const dayData = data[year][month][day];
+                events.push({
+                    day: dayData.date.bs.day,
+                    tithi: dayData.tithi,
+                    gregorian_date: `${dayData.date.ad.year}-${String(dayData.date.ad.month).padStart(2, '0')}-${String(dayData.date.ad.day).padStart(2, '0')}`,
+                    events: [...dayData.event, ...dayData.panchangam],
+                    is_holiday: dayData.public_holiday,
+                });
+            }
+        }
+    }
+    return events;
+};
+
+const processRangeData = (data: z.infer<typeof NpEventsApiResponseSchema>): UpcomingEvent[] => {
+    const events: UpcomingEvent[] = [];
+    for (const year in data) {
+        for (const month in data[year]) {
+            for (const day in data[year][month]) {
+                const dayData = data[year][month][day];
+                 if (dayData.event.length > 0 || dayData.public_holiday) {
+                    const allEvents = dayData.event.join(', ');
+                    events.push({
+                        summary: allEvents || "Public Holiday",
+                        startDate: `${dayData.date.ad.year}-${String(dayData.date.ad.month).padStart(2, '0')}-${String(dayData.date.ad.day).padStart(2, '0')}`,
+                        isHoliday: dayData.public_holiday
+                    });
+                }
+            }
+        }
+    }
+    return events;
+};
 
 
 const patroDataFlow = ai.defineFlow(
@@ -106,7 +131,7 @@ const patroDataFlow = ai.defineFlow(
     outputSchema: PatroDataResponseSchema,
   },
   async () => {
-    const cacheKey = `patro_data_v2_${process.env.RAPIDAPI_KEY ? 'api' : 'ai'}`;
+    const cacheKey = `patro_data_v3_npclapi`;
     const cachedData = getFromCache<PatroDataResponse>(cacheKey, CACHE_DURATION_MS);
     if (cachedData) {
         console.log("Returning cached patro data.");
@@ -114,38 +139,24 @@ const patroDataFlow = ai.defineFlow(
     }
 
     const today = new NepaliDate();
-    const year = today.getYear();
-    const month = today.getMonth() + 1;
+    const nextMonth = new NepaliDate(new Date(today.toJsDate().setDate(today.toJsDate().getDate() + 30)));
 
     console.log("Fetching Patro data from sources...");
 
-    const apiAvailable = !!process.env.RAPIDAPI_KEY;
-
-    let apiData: {
-        today: CurrentDateInfoResponse | null,
-        monthEvents: CalendarEvent[],
-        upcomingEvents: UpcomingEvent[]
-    } = { today: null, monthEvents: [], upcomingEvents: [] };
-
-    if (apiAvailable) {
-        const [todayData, monthData, upcomingData] = await Promise.all([
-            fetchFromAPI('api/v1/today', CurrentDateInfoResponseSchema),
-            fetchFromAPI(`api/v1/month?year=${year}&month=${month}`, CalendarEventsResponseSchema),
-            fetchFromAPI('api/v1/holidays', UpcomingEventsResponseSchema)
-        ]);
-        
-        if (todayData) apiData.today = todayData;
-        if (monthData) apiData.monthEvents = monthData.month_events;
-        if (upcomingData) apiData.upcomingEvents = upcomingData.events;
-    }
-
-    const aiData = await generateDataFromAI();
+    const [monthData, upcomingData] = await Promise.all([
+        fetchFromNpEventsAPI(`v2/date/bs/@cur_year-@cur_month-0?bs_as_key=1`, NpEventsApiResponseSchema),
+        fetchFromNpEventsAPI(`v2/range/bs/from/@today/to/${nextMonth.getYear()}-${nextMonth.getMonth()+1}-${nextMonth.getDate()}`, NpEventsApiResponseSchema),
+    ]);
+    
+    const monthEvents = monthData ? processMonthData(monthData) : [];
+    const upcomingEvents = upcomingData ? processRangeData(upcomingData) : [];
+    
+    const aiData = await generateAIFallbackData();
     
     const response: PatroDataResponse = {
         ...aiData,
-        today: apiData.today,
-        monthEvents: apiData.monthEvents,
-        upcomingEvents: apiData.upcomingEvents,
+        monthEvents: monthEvents,
+        upcomingEvents: upcomingEvents,
     };
     
     setInCache(cacheKey, response);
