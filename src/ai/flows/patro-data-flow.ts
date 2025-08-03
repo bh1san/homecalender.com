@@ -215,7 +215,7 @@ const patroDataFlow = ai.defineFlow(
     outputSchema: PatroDataResponseSchema,
   },
   async () => {
-    const cacheKey = `patro_data_v21_sajjan_custom`;
+    const cacheKey = `patro_data_v22_sajjan_custom_fix`;
     const cachedData = getFromCache<PatroDataResponse>(cacheKey, CACHE_DURATION_MS);
     if (cachedData) {
         console.log("Returning cached patro data (Sajjan API + Custom).");
@@ -284,4 +284,3 @@ const patroDataFlow = ai.defineFlow(
 export async function getPatroData(): Promise<PatroDataResponse> {
   return patroDataFlow();
 }
-
