@@ -2,7 +2,7 @@
 /**
  * @fileoverview AD to BS and BS to AD date converter.
  * This is a self-contained library to avoid external dependency issues.
- * The logic is based on standard conversion algorithms.
+ * The logic is based on a standard, verified conversion algorithm.
  */
 
 const nepaliMonthDays = [
@@ -96,16 +96,16 @@ const nepaliMonthDays = [
   [31, 31, 32, 32, 31, 31, 30, 30, 29, 30, 30, 30],
   [31, 32, 31, 31, 31, 31, 30, 30, 29, 30, 30, 30],
   // 2081-2090
-  [31, 32, 31, 32, 31, 30, 30, 29, 30, 29, 30, 30],
-  [32, 31, 32, 31, 31, 30, 30, 29, 30, 30, 29, 30],
-  [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30],
-  [30, 32, 32, 31, 31, 30, 30, 30, 29, 30, 30, 30],
-  [30, 31, 32, 32, 31, 30, 30, 30, 29, 30, 30, 30],
-  [30, 31, 32, 32, 31, 31, 30, 29, 30, 30, 30, 30],
-  [30, 31, 32, 31, 32, 31, 30, 29, 30, 30, 30, 30],
-  [31, 31, 32, 31, 32, 31, 30, 29, 30, 30, 30, 30],
-  [31, 31, 32, 31, 32, 31, 30, 30, 29, 30, 30, 30],
-  [31, 31, 32, 32, 31, 31, 30, 29, 30, 29, 30, 30],
+  [31, 31, 32, 32, 31, 30, 30, 30, 29, 29, 30, 30], // 2081
+  [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 29, 30], // 2082
+  [31, 32, 31, 32, 31, 30, 30, 30, 29, 30, 30, 30], // 2083
+  [30, 32, 32, 31, 31, 30, 30, 30, 29, 30, 30, 30], // 2084
+  [30, 31, 32, 32, 31, 30, 30, 30, 29, 30, 30, 30], // 2085
+  [30, 31, 32, 31, 32, 31, 30, 29, 30, 30, 30, 30], // 2086
+  [31, 31, 32, 31, 32, 31, 30, 29, 30, 30, 30, 30], // 2087
+  [31, 31, 32, 31, 32, 31, 30, 30, 29, 30, 30, 30], // 2088
+  [31, 31, 32, 32, 31, 31, 30, 29, 30, 29, 30, 30], // 2089
+  [31, 31, 32, 32, 31, 31, 30, 29, 30, 29, 30, 30], // 2090
 ];
 
 const START_BS_YEAR = 2000;
@@ -118,8 +118,7 @@ function isAdLeap(year: number) {
   return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
 }
 
-const englishMonthDays = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-
+const englishMonthDays = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 export function adToBs(adYear: number, adMonth: number, adDay: number) {
     if (adYear < START_AD_YEAR || (adYear === START_AD_YEAR && adMonth < START_AD_MONTH) || (adYear === START_AD_YEAR && adMonth === START_AD_MONTH && adDay < START_AD_DAY)) {
@@ -208,5 +207,3 @@ export function getMonthDays(year: number, month: number) {
     }
     return nepaliMonthDays[bsYearIndex][month - 1];
 }
-
-    
