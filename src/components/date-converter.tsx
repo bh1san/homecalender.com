@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import NepaliDate from "nepali-date-converter";
+import type NepaliDate from "nepali-date-converter";
 import { ArrowRightLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,17 +42,22 @@ const gregorianMonths = [
 export default function DateConverter() {
   const { toast } = useToast();
   const isMounted = useIsMounted();
+  const [NepaliDateConverter, setNepaliDateConverter] = useState<typeof import('nepali-date-converter').default | null>(null);
 
   const [gregorianDate, setGregorianDate] = useState({ year: "", month: "", day: "" });
   const [nepaliResult, setNepaliResult] = useState<string | null>(null);
   const [isConvertingAD, setIsConvertingAD] = useState(false);
 
-  const [nepaliDate, setNepaliDate] = useState({ year: "", month: "", day: "" });
+  const [nepaliDateInput, setNepaliDateInput] = useState({ year: "", month: "", day: "" });
   const [gregorianResult, setGregorianResult] = useState<string | null>(null);
   const [isConvertingBS, setIsConvertingBS] = useState(false);
+  
+  useEffect(() => {
+    import('nepali-date-converter').then(mod => setNepaliDateConverter(() => mod.default));
+  }, []);
 
   useEffect(() => {
-    if (isMounted) {
+    if (isMounted && NepaliDateConverter) {
       const todayAD = new Date();
       setGregorianDate({
         year: String(todayAD.getFullYear()),
@@ -60,16 +65,17 @@ export default function DateConverter() {
         day: String(todayAD.getDate())
       });
 
-      const todayBS = new NepaliDate(todayAD);
-      setNepaliDate({
+      const todayBS = new NepaliDateConverter(todayAD);
+      setNepaliDateInput({
           year: String(todayBS.getYear()),
           month: String(todayBS.getMonth()),
           day: String(todayBS.getDate())
       });
     }
-  }, [isMounted]);
+  }, [isMounted, NepaliDateConverter]);
 
   const handleADToBS = () => {
+    if (!NepaliDateConverter) return;
     const { year, month, day } = gregorianDate;
     if (!year || month === "" || !day) {
         toast({ variant: "destructive", title: "Missing Fields", description: "Please fill all Gregorian date fields." });
@@ -78,7 +84,7 @@ export default function DateConverter() {
     setIsConvertingAD(true);
     try {
         const adDate = new Date(parseInt(year), parseInt(month), parseInt(day));
-        const bsDate = new NepaliDate(adDate);
+        const bsDate = new NepaliDateConverter(adDate);
         setNepaliResult(bsDate.format('DD MMMM YYYY', 'en'));
     } catch (e) {
         const errorMessage = e instanceof Error ? e.message : "Invalid date provided.";
@@ -90,14 +96,15 @@ export default function DateConverter() {
   }
 
   const handleBSToAD = () => {
-    const { year, month, day } = nepaliDate;
+    if (!NepaliDateConverter) return;
+    const { year, month, day } = nepaliDateInput;
     if (!year || month === "" || !day) {
         toast({ variant: "destructive", title: "Missing Fields", description: "Please fill all Nepali date fields." });
         return;
     }
     setIsConvertingBS(true);
     try {
-        const bsDate = new NepaliDate(parseInt(year), parseInt(month), parseInt(day));
+        const bsDate = new NepaliDateConverter(parseInt(year), parseInt(month), parseInt(day));
         setGregorianResult(bsDate.toJsDate().toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
@@ -112,7 +119,7 @@ export default function DateConverter() {
     }
   }
 
-  if (!isMounted) {
+  if (!isMounted || !NepaliDateConverter) {
     return (
         <div className="space-y-8">
             <div className="h-52 w-full animate-pulse bg-muted/50 rounded-lg" />
@@ -181,11 +188,11 @@ export default function DateConverter() {
         <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="space-y-2">
             <Label htmlFor="nepali-year">Year (BS)</Label>
-            <Input id="nepali-year" type="number" placeholder="e.g., 2081" value={nepaliDate.year} onChange={(e) => setNepaliDate({...nepaliDate, year: e.target.value})} />
+            <Input id="nepali-year" type="number" placeholder="e.g., 2081" value={nepaliDateInput.year} onChange={(e) => setNepaliDateInput({...nepaliDateInput, year: e.target.value})} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="nepali-month">Month</Label>
-             <Select value={nepaliDate.month} onValueChange={(value) => setNepaliDate({...nepaliDate, month: value})}>
+             <Select value={nepaliDateInput.month} onValueChange={(value) => setNepaliDateInput({...nepaliDateInput, month: value})}>
                 <SelectTrigger id="nepali-month"><SelectValue placeholder="Select month..." /></SelectTrigger>
                 <SelectContent>
                   {nepaliMonths.map((month) => (
@@ -196,7 +203,7 @@ export default function DateConverter() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="nepali-day">Day</Label>
-            <Input id="nepali-day" type="number" placeholder="e.g., 15" value={nepaliDate.day} onChange={(e) => setNepaliDate({...nepaliDate, day: e.target.value})} />
+            <Input id="nepali-day" type="number" placeholder="e.g., 15" value={nepaliDateInput.day} onChange={(e) => setNepaliDateInput({...nepaliDateInput, day: e.target.value})} />
           </div>
         </CardContent>
         <CardFooter className="flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">

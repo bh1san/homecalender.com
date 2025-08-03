@@ -13,7 +13,6 @@ import {
   CalendarEventsRequestSchema
 } from '@/ai/schemas';
 import { getFromCache, setInCache } from '@/ai/cache';
-import NepaliDate from 'nepali-date-converter';
 import customEventsData from '@/data/custom-events.json';
 
 const NpCalendarSajjanApiResponseSchema = z.object({
@@ -58,8 +57,9 @@ const fetchFromSajjanAPI = async (endpoint: string, schema: z.ZodType) => {
     }
 };
 
-const processMonthData = (data: z.infer<typeof NpCalendarSajjanApiResponseSchema>, year: number, month: number): CalendarEvent[] => {
+const processMonthData = async (data: z.infer<typeof NpCalendarSajjanApiResponseSchema>, year: number, month: number): Promise<CalendarEvent[]> => {
     if (!data) return [];
+    const NepaliDate = (await import('nepali-date-converter')).default;
     
     return data.days.map(dayData => {
         const nepaliDateConverter = new NepaliDate(0,0,0);
@@ -95,10 +95,11 @@ const monthEventsFlow = ai.defineFlow(
     }
 
     console.log(`Fetching new month events for ${year}-${month} from Sajjan API + Custom.`);
+    const NepaliDate = (await import('nepali-date-converter')).default;
 
     // 1. Fetch events from Sajjan API
     const monthData = await fetchFromSajjanAPI(`${year}/${month}.json`, NpCalendarSajjanApiResponseSchema);
-    const apiEvents = monthData ? processMonthData(monthData, year, month) : [];
+    const apiEvents = monthData ? await processMonthData(monthData, year, month) : [];
 
     // 2. Filter custom events for the given year and month
     const customEventsForMonth = customEventsData

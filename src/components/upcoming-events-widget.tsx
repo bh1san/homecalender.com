@@ -1,11 +1,12 @@
 
 "use client";
 
-import NepaliDate from 'nepali-date-converter';
+import type NepaliDateType from 'nepali-date-converter';
 import { UpcomingEvent } from "@/ai/schemas";
 import { Badge } from "./ui/badge";
 import { useIsMounted } from '@/hooks/use-is-mounted';
 import { ScrollArea } from './ui/scroll-area';
+import { useState, useEffect } from 'react';
 
 interface UpcomingEventsWidgetProps {
     loading: boolean;
@@ -14,8 +15,13 @@ interface UpcomingEventsWidgetProps {
 
 export default function UpcomingEventsWidget({ loading: initialLoading, events }: UpcomingEventsWidgetProps) {
   const isMounted = useIsMounted();
+  const [NepaliDate, setNepaliDate] = useState<typeof import('nepali-date-converter').default | null>(null);
 
-  if (!isMounted || initialLoading) {
+  useEffect(() => {
+    import('nepali-date-converter').then(mod => setNepaliDate(() => mod.default));
+  }, []);
+
+  if (!isMounted || initialLoading || !NepaliDate) {
     return (
       <div className="space-y-4 p-4">
         {[...Array(5)].map((_, i) => (

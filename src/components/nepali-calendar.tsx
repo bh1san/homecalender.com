@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import NepaliDate from 'nepali-date-converter';
+import type NepaliDateType from 'nepali-date-converter';
 import { dateConfigMap } from 'nepali-date-converter';
 import { CalendarEvent } from '@/ai/schemas';
 import { Button } from './ui/button';
@@ -25,13 +25,20 @@ const WEEK_DAYS_NP = ["आइत", "सोम", "मंगल", "बुध", "�
 
 export default function NepaliCalendarComponent() {
     const isMounted = useIsMounted();
-    const [viewDate, setViewDate] = useState<NepaliDate>(new NepaliDate());
+    const [NepaliDate, setNepaliDate] = useState<typeof import('nepali-date-converter').default | null>(null);
+    const [viewDate, setViewDate] = useState<NepaliDateType | null>(null);
     const [calendarData, setCalendarData] = useState<(CalendarDate | null)[]>([]);
-    const [today, setToday] = useState<NepaliDate | null>(null);
+    const [today, setToday] = useState<NepaliDateType | null>(null);
     const [monthEvents, setMonthEvents] = useState<CalendarEvent[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    
+    useEffect(() => {
+        import('nepali-date-converter').then(mod => {
+            setNepaliDate(() => mod.default);
+        });
+    }, []);
 
-    const fetchEventsForMonth = useCallback(async (date: NepaliDate) => {
+    const fetchEventsForMonth = useCallback(async (date: NepaliDateType) => {
         setIsLoading(true);
         try {
             const events = await getMonthEvents({ year: date.getYear(), month: date.getMonth() + 1 });
@@ -45,16 +52,16 @@ export default function NepaliCalendarComponent() {
     }, []);
 
     useEffect(() => {
-        if (isMounted) {
+        if (isMounted && NepaliDate) {
             const now = new NepaliDate();
             setToday(now);
             setViewDate(now);
             fetchEventsForMonth(now);
         }
-    }, [isMounted, fetchEventsForMonth]);
+    }, [isMounted, fetchEventsForMonth, NepaliDate]);
     
     useEffect(() => {
-        if (!isMounted) return;
+        if (!isMounted || !viewDate || !NepaliDate) return;
         
         const year = viewDate.getYear();
         const month = viewDate.getMonth();
@@ -89,26 +96,29 @@ export default function NepaliCalendarComponent() {
         }
         setCalendarData(cells);
 
-    }, [viewDate, isMounted]);
+    }, [viewDate, isMounted, NepaliDate]);
 
-    const handleMonthChange = (newDate: NepaliDate) => {
+    const handleMonthChange = (newDate: NepaliDateType) => {
         setViewDate(newDate);
         fetchEventsForMonth(newDate);
     };
 
     const handlePrevMonth = () => {
+        if (!viewDate || !NepaliDate) return;
         const newDate = new NepaliDate(viewDate.toJsDate());
         newDate.setMonth(newDate.getMonth() - 1);
         handleMonthChange(newDate);
     };
 
     const handleNextMonth = () => {
+        if (!viewDate || !NepaliDate) return;
         const newDate = new NepaliDate(viewDate.toJsDate());
         newDate.setMonth(newDate.getMonth() + 1);
         handleMonthChange(newDate);
     };
     
     const renderCalendar = () => {
+        if (!NepaliDate) return null;
         if (isLoading && !monthEvents.length) {
             return (
                  <div className="relative p-0 sm:p-2 bg-card rounded-lg w-full">
@@ -201,7 +211,7 @@ export default function NepaliCalendarComponent() {
         )
     }
 
-    if (!isMounted) {
+    if (!isMounted || !viewDate || !NepaliDate) {
          return (
              <div className="relative p-0 sm:p-2 bg-card rounded-lg w-full">
                 <div className="flex items-center justify-between mb-4">

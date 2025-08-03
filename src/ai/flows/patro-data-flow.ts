@@ -8,7 +8,6 @@
  */
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import NepaliDate from 'nepali-date-converter';
 import { 
   PatroDataResponse, 
   PatroDataResponseSchema, 
@@ -89,7 +88,8 @@ const getForexData = async (): Promise<Forex[]> => {
     }
 };
 
-const getLocalTodayData = (): { todayInfo: CurrentDateInfoResponse, todaysEvent?: string } => {
+const getLocalTodayData = async (): Promise<{ todayInfo: CurrentDateInfoResponse, todaysEvent?: string }> => {
+    const NepaliDate = (await import('nepali-date-converter')).default;
     const todayAD = new Date();
     todayAD.setHours(0, 0, 0, 0);
 
@@ -130,8 +130,8 @@ const patroDataFlow = ai.defineFlow(
     }
 
     console.log("Fetching new Patro data from sources...");
-
-    const { todayInfo, todaysEvent } = getLocalTodayData();
+    const NepaliDate = (await import('nepali-date-converter')).default;
+    const { todayInfo, todaysEvent } = await getLocalTodayData();
     
     // Fetch AI data (horoscope, gold/silver) and real forex data in parallel
     const [aiData, forexData, monthEvents] = await Promise.all([

@@ -1,4 +1,6 @@
 
+"use client";
+
 import {
   Accordion,
   AccordionContent,
@@ -7,13 +9,31 @@ import {
 } from "@/components/ui/accordion";
 import { PartyPopper } from "lucide-react";
 import { UpcomingEvent } from "@/ai/schemas";
-import NepaliDate from "nepali-date-converter";
+import { useState, useEffect } from 'react';
+import type NepaliDate from 'nepali-date-converter';
+import { useIsMounted } from '@/hooks/use-is-mounted';
+
 
 interface FestivalListProps {
   festivals: UpcomingEvent[];
 }
 
 export default function FestivalList({ festivals }: FestivalListProps) {
+  const isMounted = useIsMounted();
+  const [NepaliDate, setNepaliDate] = useState<typeof import('nepali-date-converter').default | null>(null);
+
+  useEffect(() => {
+    import('nepali-date-converter').then(mod => setNepaliDate(() => mod.default));
+  }, []);
+
+  if (!isMounted || !NepaliDate) {
+    return (
+      <div className="flex items-center justify-center p-4 text-center text-muted-foreground bg-muted/50 rounded-lg">
+        Loading festivals...
+      </div>
+    );
+  }
+
   if (!festivals || festivals.length === 0) {
     return (
       <div className="flex items-center justify-center p-4 text-center text-muted-foreground bg-muted/50 rounded-lg">

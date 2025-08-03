@@ -1,7 +1,8 @@
 
 "use client";
 
-import NepaliDate from 'nepali-date-converter';
+import { useState, useEffect } from 'react';
+import type NepaliDate from 'nepali-date-converter';
 import { useIsMounted } from '@/hooks/use-is-mounted';
 import { CurrentDateInfoResponse } from '@/ai/schemas';
 
@@ -12,8 +13,13 @@ interface CurrentDateTimeProps {
 
 export default function CurrentDateTime({ today, todaysEvent }: CurrentDateTimeProps) {
   const isMounted = useIsMounted();
+  const [NepaliDate, setNepaliDate] = useState<typeof import('nepali-date-converter').default | null>(null);
 
-  if (!isMounted || !today) {
+  useEffect(() => {
+    import('nepali-date-converter').then(mod => setNepaliDate(() => mod.default));
+  }, []);
+
+  if (!isMounted || !today || !NepaliDate) {
     return (
       <div className="space-y-2 text-primary-foreground">
         <div className="h-9 w-64 bg-white/20 animate-pulse rounded-md" />
@@ -24,10 +30,8 @@ export default function CurrentDateTime({ today, todaysEvent }: CurrentDateTimeP
   }
   
   const todayBS = new NepaliDate(new Date(today.adYear, today.adMonth -1, today.adDay));
-  const nepaliDay = todayBS.format('D', 'np');
-  const nepaliYear = todayBS.format('YYYY', 'np');
-  const nepaliDateStr = `${nepaliDay} ${today.bsMonthName} ${nepaliYear}, ${today.dayOfWeek}`;
-
+  const nepaliDateStr = todayBS.format('dddd, MMMM D, YYYY', 'np');
+  
   const gregorianDate = new Date(today.adYear, today.adMonth - 1, today.adDay);
   const gregorianDateStr = gregorianDate.toLocaleDateString('en-US', {
       month: 'long',
