@@ -30,8 +30,8 @@ const WEEK_DAYS_NP = ["आइत", "सोम", "मंगल", "बुध", "�
 export default function NepaliCalendarComponent({ isLoading: initialIsLoading }: NepaliCalendarProps) {
     const isMounted = useIsMounted();
     const { toast } = useToast();
-    // Start with a fixed default date on the server
-    const [currentBS, setCurrentBS] = useState({ year: 2081, month: 4 });
+    // Start with a fixed default date on the server to prevent hydration errors.
+    const [currentBS, setCurrentBS] = useState({ year: 2081, month: 12 });
     const [calendarData, setCalendarData] = useState<(CalendarDate | null)[]>([]);
     const [clientToday, setClientToday] = useState<{ year: number, month: number, day: number} | null>(null);
 
@@ -39,11 +39,12 @@ export default function NepaliCalendarComponent({ isLoading: initialIsLoading }:
     const [monthEvents, setMonthEvents] = useState<CalendarEvent[]>([]);
 
     useEffect(() => {
-        // Only run this effect on the client after mounting
+        // This effect runs only once on the client after mounting to set the correct current date.
         if (isMounted) {
             try {
                 const today = new Date();
                 const todayBS = adToBs(today.getFullYear(), today.getMonth() + 1, today.getDate());
+                
                 // Set the current view to today's month and store today's date
                 setCurrentBS({ year: todayBS.year, month: todayBS.month });
                 setClientToday({ year: todayBS.year, month: todayBS.month, day: todayBS.day });
@@ -53,6 +54,7 @@ export default function NepaliCalendarComponent({ isLoading: initialIsLoading }:
                 console.error("Failed to initialize calendar to today's date", e);
             }
         }
+        // The dependency array is empty to ensure this runs only once on mount.
     }, [isMounted, toast]);
 
     useEffect(() => {
