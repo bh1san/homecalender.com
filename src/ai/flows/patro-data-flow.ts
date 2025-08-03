@@ -139,7 +139,7 @@ const patroDataFlow = ai.defineFlow(
     }
 
     const today = new NepaliDate();
-    const nextMonth = new NepaliDate(new Date(today.toJsDate().setDate(today.toJsDate().getDate() + 30)));
+    const nextMonth = new NepaliDate(new Date().setDate(today.toJsDate().getDate() + 30));
 
     console.log("Fetching Patro data from sources...");
 
