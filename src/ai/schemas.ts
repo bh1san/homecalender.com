@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview Defines the Zod schemas and TypeScript types for the AI flows.
  */
@@ -9,19 +8,19 @@ import {z} from 'genkit';
 export const NewsItemSchema = z.object({
   id: z.string().describe('A unique identifier for the news article.'),
   title: z.string().describe('The headline of the news article.'),
-  imageDataUri: z
+  imageUrl: z
     .string()
+    .url()
     .describe(
-      "A generated image for the news article, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'"
+      "A URL for the news article's image."
     ),
-  imageHint: z.string().optional().describe('A hint for image generation.'),
 });
 export type NewsItem = z.infer<typeof NewsItemSchema>;
 
 export const NewsResponseSchema = z.object({
   headlines: z
     .array(NewsItemSchema)
-    .describe('A list of 8 recent news headlines from a country with generated images.'),
+    .describe('A list of recent news headlines from a country.'),
 });
 export type NewsResponse = z.infer<typeof NewsResponseSchema>;
 

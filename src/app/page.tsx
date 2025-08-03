@@ -1,4 +1,3 @@
-
 "use client";
 
 import { ArrowRightLeft, CalendarDays, PartyPopper, Search, Menu, Plus, MessageSquare } from "lucide-react";
@@ -138,12 +137,11 @@ export default function Home() {
                                 className="flex-shrink-0 w-48 bg-card/80 rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105"
                             >
                                 <Image 
-                                    src={item.imageDataUri} 
+                                    src={item.imageUrl} 
                                     alt={item.title} 
                                     width={192} 
                                     height={128} 
                                     className="w-full h-32 object-cover" 
-                                    data-ai-hint={item.imageHint}
                                 />
                                 <div className="p-3">
                                     <p className="text-sm font-medium text-card-foreground leading-tight">{item.title}</p>
