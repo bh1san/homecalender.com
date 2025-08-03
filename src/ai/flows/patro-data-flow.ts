@@ -89,23 +89,33 @@ const processRangeData = (data: z.infer<typeof NpEventsApiResponseSchema>): Upco
 
     if (!data) return events;
 
-    Object.values(data).forEach(yearData => {
-        Object.values(yearData).forEach(monthData => {
-            Object.values(monthData).forEach(dayData => {
-                const eventDate = new Date(dayData.date.ad.year, dayData.date.ad.month - 1, dayData.date.ad.day);
-
-                // Only include events that are today or in the future
-                if (eventDate >= today && dayData.public_holiday) {
-                    const allEvents = dayData.event.join(', ');
-                    events.push({
-                        summary: allEvents || "Public Holiday",
-                        startDate: `${dayData.date.ad.year}-${String(dayData.date.ad.month).padStart(2, '0')}-${String(dayData.date.ad.day).padStart(2, '0')}`,
-                        isHoliday: dayData.public_holiday
-                    });
+    // The API response is nested by year, then month, then day.
+    for (const year of Object.keys(data)) {
+        const yearData = data[year];
+        for (const month of Object.keys(yearData)) {
+            const monthData = yearData[month];
+            for (const day of Object.keys(monthData)) {
+                const dayData = monthData[day];
+                
+                // We only care about public holidays
+                if (dayData.public_holiday) {
+                    const eventDate = new Date(dayData.date.ad.year, dayData.date.ad.month - 1, dayData.date.ad.day);
+                    
+                    // Only include events that are today or in the future
+                    if (eventDate >= today) {
+                        // The main event name is usually in the 'event' array. If it's empty, we create a generic one.
+                        const summary = dayData.event.length > 0 ? dayData.event.join(', ') : "Public Holiday";
+                        
+                        events.push({
+                            summary: summary,
+                            startDate: `${dayData.date.ad.year}-${String(dayData.date.ad.month).padStart(2, '0')}-${String(dayData.date.ad.day).padStart(2, '0')}`,
+                            isHoliday: dayData.public_holiday
+                        });
+                    }
                 }
-            });
-        });
-    });
+            }
+        }
+    }
 
     // Sort events by date
     events.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
@@ -120,7 +130,7 @@ const patroDataFlow = ai.defineFlow(
     outputSchema: PatroDataResponseSchema,
   },
   async () => {
-    const cacheKey = `patro_data_v5_npclapi_holidays`;
+    const cacheKey = `patro_data_v6_npclapi_holidays`;
     const cachedData = getFromCache<PatroDataResponse>(cacheKey, CACHE_DURATION_MS);
     if (cachedData) {
         console.log("Returning cached patro data.");
