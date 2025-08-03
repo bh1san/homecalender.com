@@ -5,15 +5,26 @@ import { useState, useEffect } from 'react';
 import { getNepaliMonthName, getNepaliDayOfWeek, getEnglishMonthName, getNepaliNumber } from '@/lib/nepali-date-converter';
 import { CurrentDateInfoResponse } from '@/ai/schemas';
 import { useIsMounted } from '@/hooks/use-is-mounted';
-import NepaliCalendar from 'nepali-calendar-js';
+import ADBS from '@/lib/ad-bs-converter';
 
 interface CurrentDateTimeProps {
   today: CurrentDateInfoResponse | null | undefined;
 }
 
+interface ClientToday {
+    bsYear: number;
+    bsMonth: number;
+    bsDate: number;
+    bsDay: number;
+    adYear: number;
+    adMonth: number;
+    adDate: number;
+}
+
+
 export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
   const [timeString, setTimeString] = useState("");
-  const [clientToday, setClientToday] = useState<CurrentDateInfoResponse | null>(null);
+  const [clientToday, setClientToday] = useState<ClientToday | null>(null);
   const isMounted = useIsMounted();
   
   useEffect(() => {
@@ -28,34 +39,25 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
 
     // Use the library on the client-side to get the most accurate date
     try {
-        const bsDate = (NepaliCalendar as any).default.toBS(new Date());
-        
+        const adDate = new Date();
+        const bsDate = ADBS.ad2bs(`${adDate.getFullYear()}/${adDate.getMonth() + 1}/${adDate.getDate()}`);
         setClientToday({
-            bsYear: bsDate.bs_year,
-            bsMonth: bsDate.bs_month,
-            bsDay: bsDate.bs_date,
-            bsWeekDay: bsDate.bs_day_of_week - 1, // Theirs is 1-7 (Sun-Sat), we use 0-6
-            adYear: bsDate.ad_year,
-            adMonth: bsDate.ad_month - 1, // Theirs is 1-12, we use 0-11
-            adDay: bsDate.ad_date,
-            day: bsDate.bs_date,
-            tithi: today?.tithi ?? 'N/A', // Keep tithi from server if available
-            events: today?.events ?? [],
-            is_holiday: today?.is_holiday ?? false,
-            panchanga: today?.panchanga ?? '',
+            bsYear: parseInt(bsDate.en.year),
+            bsMonth: parseInt(bsDate.en.month) - 1, // To 0-indexed
+            bsDate: parseInt(bsDate.en.day),
+            bsDay: adDate.getDay(),
+            adYear: adDate.getFullYear(),
+            adMonth: adDate.getMonth(), // Is 0-indexed
+            adDate: adDate.getDate()
         });
     } catch(e) {
-        console.error("Failed to init nepali-calendar-js", e);
-        // Fallback to server-passed data only if library fails
-        if (today) setClientToday(today);
+        console.error("Failed to convert date", e);
     }
 
     return () => clearInterval(intervalId);
-  }, [isMounted, today]);
+  }, [isMounted]);
 
-  const displayDate = clientToday;
-
-  if (!displayDate) {
+  if (!isMounted || !clientToday) {
       return (
          <div className="space-y-2 text-white">
             <div className="h-9 w-64 bg-white/20 animate-pulse rounded-md" />
@@ -65,8 +67,8 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
       );
   }
     
-  const nepaliDateStr = `${getNepaliNumber(displayDate.bsDay)} ${getNepaliMonthName(displayDate.bsMonth)} ${getNepaliNumber(displayDate.bsYear)}, ${getNepaliDayOfWeek(displayDate.bsWeekDay)}`;
-  const gregorianDateStr = `${getEnglishMonthName(displayDate.adMonth)} ${displayDate.adDay}, ${displayDate.adYear}`;
+  const nepaliDateStr = `${getNepaliNumber(clientToday.bsDate)} ${getNepaliMonthName(clientToday.bsMonth)} ${getNepaliNumber(clientToday.bsYear)}, ${getNepaliDayOfWeek(clientToday.bsDay)}`;
+  const gregorianDateStr = `${getEnglishMonthName(clientToday.adMonth)} ${clientToday.adDate}, ${clientToday.adYear}`;
 
   const nepaliTimeParts = timeString.split(/:| /);
   const nepaliTimeString = timeString ? getNepaliNumber(`${nepaliTimeParts[0]}:${nepaliTimeParts[1]}`) : "";
@@ -76,8 +78,8 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
   return (
     <div className="space-y-1 text-primary-foreground">
         <h1 className="text-3xl font-bold">{nepaliDateStr}</h1>
-        {displayDate.tithi && displayDate.tithi !== 'N/A' && <p className="text-lg">तिथि: {displayDate.tithi}</p>}
-        {displayDate.panchanga && <p className="text-lg">पञ्चाङ्ग: {displayDate.panchanga}</p>}
+        {today?.tithi && today.tithi !== 'N/A' && <p className="text-lg">तिथि: {today.tithi}</p>}
+        {today?.panchanga && <p className="text-lg">पञ्चाङ्ग: {today.panchanga}</p>}
         {timeString && <p className="text-lg">{`${localizedTimePrefix} ${nepaliTimeString}`}</p>}
         <p className="text-base">{gregorianDateStr}</p>
     </div>

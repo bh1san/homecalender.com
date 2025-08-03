@@ -24,7 +24,7 @@ import {
 } from "./ui/select";
 import FlagLoader from "./flag-loader";
 import { useIsMounted } from "@/hooks/use-is-mounted";
-import NepaliCalendar from "nepali-calendar-js";
+import ADBS from "@/lib/ad-bs-converter";
 import { useToast } from "@/hooks/use-toast";
 
 const nepaliMonths = [
@@ -54,16 +54,16 @@ export default function DateConverter() {
       const today = new Date();
       setGregorianDate({
         year: String(today.getFullYear()),
-        month: String(today.getMonth() + 1),
+        month: String(today.getMonth()), // 0-indexed
         day: String(today.getDate())
       });
 
       try {
-        const todayBS = (NepaliCalendar as any).default.toBS(today);
+        const todayBS = ADBS.ad2bs(`${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}`);
         setNepaliDate({
-            year: String(todayBS.bs_year),
-            month: String(todayBS.bs_month),
-            day: String(todayBS.bs_date)
+            year: todayBS.en.year,
+            month: String(parseInt(todayBS.en.month) - 1), // 0-indexed
+            day: todayBS.en.day
         });
       } catch (e) {
          console.error("Failed to get BS date", e);
@@ -73,15 +73,15 @@ export default function DateConverter() {
 
   const handleADToBS = () => {
     const { year, month, day } = gregorianDate;
-    if (!year || !month || !day) {
+    if (!year || month === "" || !day) {
         toast({ variant: "destructive", title: "Missing Fields", description: "Please fill all Gregorian date fields." });
         return;
     }
     setIsConvertingAD(true);
     try {
-        const bsDate = (NepaliCalendar as any).default.adToBs(parseInt(year), parseInt(month), parseInt(day));
-        const monthName = nepaliMonths[bsDate.bs_month - 1];
-        setNepaliResult(`${bsDate.bs_date} ${monthName}, ${bsDate.bs_year}`);
+        const bsDate = ADBS.ad2bs(`${year}/${parseInt(month) + 1}/${day}`);
+        const monthName = nepaliMonths[parseInt(bsDate.en.month) - 1];
+        setNepaliResult(`${bsDate.en.day} ${monthName}, ${bsDate.en.year}`);
     } catch (e) {
         const errorMessage = e instanceof Error ? e.message : "Invalid date provided.";
         toast({ variant: "destructive", title: "Conversion Error", description: errorMessage });
@@ -93,15 +93,15 @@ export default function DateConverter() {
 
   const handleBSToAD = () => {
     const { year, month, day } = nepaliDate;
-    if (!year || !month || !day) {
+    if (!year || month === "" || !day) {
         toast({ variant: "destructive", title: "Missing Fields", description: "Please fill all Nepali date fields." });
         return;
     }
     setIsConvertingBS(true);
     try {
-        const adDate = (NepaliCalendar as any).default.bsToAd(parseInt(year), parseInt(month), parseInt(day));
-        const monthName = gregorianMonths[adDate.ad_month - 1];
-        setGregorianResult(`${adDate.ad_date} ${monthName}, ${adDate.ad_year}`);
+        const adDate = ADBS.bs2ad(`${year}/${parseInt(month) + 1}/${day}`);
+        const monthName = gregorianMonths[parseInt(adDate.en.month) - 1];
+        setGregorianResult(`${adDate.en.day} ${monthName}, ${adDate.en.year}`);
     } catch (e) {
         const errorMessage = e instanceof Error ? e.message : "Invalid date provided.";
         toast({ variant: "destructive", title: "Conversion Error", description: errorMessage });
@@ -141,7 +141,7 @@ export default function DateConverter() {
                 <SelectTrigger id="gregorian-month"><SelectValue placeholder="Select month..." /></SelectTrigger>
                 <SelectContent>
                   {gregorianMonths.map((month, index) => (
-                    <SelectItem key={month} value={String(index + 1)}>{month}</SelectItem>
+                    <SelectItem key={month} value={String(index)}>{month}</SelectItem>
                   ))}
                 </SelectContent>
             </Select>
@@ -188,7 +188,7 @@ export default function DateConverter() {
                 <SelectTrigger id="nepali-month"><SelectValue placeholder="Select month..." /></SelectTrigger>
                 <SelectContent>
                   {nepaliMonths.map((month, index) => (
-                    <SelectItem key={month} value={String(index + 1)}>{month}</SelectItem>
+                    <SelectItem key={month} value={String(index)}>{month}</SelectItem>
                   ))}
                 </SelectContent>
             </Select>

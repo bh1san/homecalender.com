@@ -1,21 +1,18 @@
 
-// This file now contains only formatting helpers, as the core conversion logic
-// is handled by the `nepali-calendar-js` library.
-
 const getNepaliMonthName = (month: number) => {
-    // Month is 1-indexed
+    // Month is 0-indexed
     const months = ["बैशाख", "जेठ", "असार", "श्रावण", "भदौ", "आश्विन", "कार्तिक", "मंसिर", "पौष", "माघ", "फाल्गुन", "चैत्र"];
-    return months[month - 1];
+    return months[month];
 }
 
 const getEnglishMonthName = (month: number) => {
     const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    // JS Date month is 0-indexed
+    // Month is 0-indexed
     return months[month];
 };
 
 const getNepaliDayOfWeek = (day: number) => {
-    // JS Date day is 0-indexed (Sun=0)
+    // Day is 0-indexed (Sun=0)
     const days = ["आइतवार", "सोमवार", "मङ्गलवार", "बुधवार", "बिहिवार", "शुक्रवार", "शनिवार"];
     return days[day];
 };
