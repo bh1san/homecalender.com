@@ -84,6 +84,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 's.france24.com',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 };
