@@ -140,7 +140,7 @@ export default function NepaliCalendarComponent() {
 
                     const cellContent = (
                          <div className={cn(
-                            "relative flex flex-col p-1.5 border rounded-md min-h-[100px] transition-colors duration-200 group cursor-pointer",
+                            "relative flex flex-col p-1.5 border rounded-md min-h-[120px] sm:min-h-[100px] transition-colors duration-200 group cursor-pointer",
                             isHoliday && !isToday ? "bg-red-50 dark:bg-red-950/20" : "bg-card hover:bg-muted/50",
                             isToday && "ring-2 ring-offset-background ring-primary bg-primary/10"
                         )}>
@@ -163,14 +163,16 @@ export default function NepaliCalendarComponent() {
                                     {new NepaliDate(bsYear, bsMonth, bsDay).format('D', 'np')}
                                 </span>
                             </div>
-                            <div className="flex-grow flex flex-col justify-end text-center items-center">
+                            <div className="flex-grow flex flex-col justify-end text-center items-center mt-1">
                                  {dayEvent?.tithi && (
-                                     <p className="text-xs text-foreground truncate">{dayEvent.tithi}</p>
+                                     <p className="text-[10px] sm:text-xs text-foreground/80 truncate font-medium">{dayEvent.tithi}</p>
                                 )}
+                                 {dayEvent && dayEvent.events.length > 0 && (
+                                    <p className="text-[10px] sm:text-xs text-accent/90 font-semibold text-center truncate px-1">
+                                        {dayEvent.events[0]}
+                                    </p>
+                                 )}
                             </div>
-                             {dayEvent && dayEvent.events.length > 0 && (
-                                 <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-accent rounded-full" />
-                             )}
                         </div>
                     );
                     
