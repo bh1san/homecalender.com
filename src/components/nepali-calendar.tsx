@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { useIsMounted } from '@/hooks/use-is-mounted';
 import { adToBs, bsToAd, getMonthDays } from '@/lib/ad-bs-converter';
+import { useToast } from '@/hooks/use-toast';
 
 interface NepaliCalendarProps {
     today: CurrentDateInfoResponse | null | undefined;
@@ -30,6 +31,7 @@ const WEEK_DAYS_NP = ["आइत", "सोम", "मंगल", "बुध", "�
 
 export default function NepaliCalendarComponent({ monthEvents, isLoading: initialIsLoading }: NepaliCalendarProps) {
     const isMounted = useIsMounted();
+    const { toast } = useToast();
     // Start with a fixed default date on the server
     const [currentBS, setCurrentBS] = useState({ year: 2081, month: 4 });
     const [calendarData, setCalendarData] = useState<(CalendarDate | null)[]>([]);
@@ -38,13 +40,19 @@ export default function NepaliCalendarComponent({ monthEvents, isLoading: initia
     useEffect(() => {
         // Only run this effect on the client after mounting
         if (isMounted) {
-            const today = new Date();
-            const todayBS = adToBs(today.getFullYear(), today.getMonth() + 1, today.getDate());
-            // Set the current view to today's month and store today's date
-            setCurrentBS({ year: todayBS.year, month: todayBS.month });
-            setClientToday({ year: todayBS.year, month: todayBS.month, day: todayBS.day });
+            try {
+                const today = new Date();
+                const todayBS = adToBs(today.getFullYear(), today.getMonth() + 1, today.getDate());
+                // Set the current view to today's month and store today's date
+                setCurrentBS({ year: todayBS.year, month: todayBS.month });
+                setClientToday({ year: todayBS.year, month: todayBS.month, day: todayBS.day });
+            } catch (e) {
+                const errorMessage = e instanceof Error ? e.message : "An unknown error occurred";
+                toast({ variant: "destructive", title: "Date Error", description: errorMessage });
+                console.error("Failed to initialize calendar to today's date", e);
+            }
         }
-    }, [isMounted]);
+    }, [isMounted, toast]);
 
     useEffect(() => {
         // This effect regenerates the calendar grid whenever currentBS changes.
@@ -72,10 +80,12 @@ export default function NepaliCalendarComponent({ monthEvents, isLoading: initia
             setCalendarData(cells);
 
         } catch(e) {
+            const errorMessage = e instanceof Error ? e.message : "An unknown error occurred";
+            toast({ variant: "destructive", title: "Calendar Error", description: errorMessage });
             console.error("Error generating calendar data", e);
         }
 
-    }, [currentBS]);
+    }, [currentBS, toast]);
 
     const handlePrevMonth = () => {
         setCurrentBS(prev => {

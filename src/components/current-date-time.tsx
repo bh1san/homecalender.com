@@ -6,6 +6,7 @@ import { getNepaliMonthName, getNepaliDayOfWeek, getEnglishMonthName, getNepaliN
 import { CurrentDateInfoResponse } from '@/ai/schemas';
 import { useIsMounted } from '@/hooks/use-is-mounted';
 import { adToBs } from '@/lib/ad-bs-converter';
+import { useToast } from '@/hooks/use-toast';
 
 interface CurrentDateTimeProps {
   today: CurrentDateInfoResponse | null | undefined;
@@ -26,6 +27,7 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
   const [timeString, setTimeString] = useState("");
   const [clientToday, setClientToday] = useState<ClientToday | null>(null);
   const isMounted = useIsMounted();
+  const { toast } = useToast();
   
   useEffect(() => {
     // This entire block only runs on the client, after mounting.
@@ -48,6 +50,8 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
               adDate: now.getDate()
           });
       } catch(e) {
+          const errorMessage = e instanceof Error ? e.message : "An unknown error occurred";
+          toast({ variant: "destructive", title: "Date Error", description: errorMessage });
           console.error("Failed to convert date", e);
       }
     };
@@ -58,7 +62,7 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
       const intervalId = setInterval(initializeDateAndTime, 1000);
       return () => clearInterval(intervalId);
     }
-  }, [isMounted]);
+  }, [isMounted, toast]);
 
   if (!isMounted || !clientToday) {
       return (

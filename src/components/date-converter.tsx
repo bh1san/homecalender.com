@@ -68,10 +68,12 @@ export default function DateConverter() {
             day: String(todayBS.day)
         });
       } catch (e) {
+         const errorMessage = e instanceof Error ? e.message : "An unknown error occurred";
+         toast({ variant: "destructive", title: "Date Error", description: errorMessage });
          console.error("Failed to get BS date", e);
       }
     }
-  }, [isMounted]);
+  }, [isMounted, toast]);
 
   const handleADToBS = () => {
     const { year, month, day } = gregorianDate;
