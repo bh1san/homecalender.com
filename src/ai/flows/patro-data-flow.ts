@@ -24,7 +24,10 @@ import { getFromCache, setInCache } from '@/ai/cache';
 const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
 
 const ScraperDataSchema = z.object({
-    horoscope: z.array(HoroscopeSchema).describe("A list of 12 horoscopes for each rashi."),
+    horoscope: z.array(z.object({
+      rashi: z.string().describe("The name of the rashi (zodiac sign) in Nepali, e.g., 'Mesh'"),
+      text: z.string().describe("The horoscope prediction text.")
+    })).describe("A list of 12 horoscopes for each rashi."),
     goldSilver: GoldSilverSchema.describe("A list of gold and silver prices."),
     forex: z.array(ForexSchema).describe("A list of foreign exchange rates against NPR."),
 });
@@ -34,13 +37,15 @@ const scraperPrompt = ai.definePrompt({
     output: { schema: ScraperDataSchema },
     prompt: `You are a data provider for a Nepali calendar application. Generate a complete and realistic set of data for today. Today's Gregorian date is ${new Date().toISOString().split('T')[0]}.
     
-    1.  **Horoscope (Rashifal):** Generate a unique, plausible-sounding horoscope for all 12 rashi (zodiac signs: Mesh, Brish, Mithun, Karkat, Simha, Kanya, Tula, Brishchik, Dhanu, Makar, Kumbha, Meen).
+    1.  **Horoscope (Rashifal):** Generate a unique, plausible-sounding horoscope for all 12 rashi (zodiac signs: Mesh, Brish, Mithun, Karkat, Simha, Kanya, Tula, Brishchik, Dhanu, Makar, Kumbha, Meen). The 'rashi' field should contain the name of the sign.
     2.  **Gold/Silver Prices:** Provide realistic prices for Fine Gold (99.9%), Tejabi Gold, and Silver in Nepalese Rupees (NPR) per Tola.
     3.  **Foreign Exchange (Forex):** Provide a list of buy and sell rates for at least 15 major currencies against NPR. Include the currency name, ISO3 code, unit, and a valid flag image URL.
     `
 });
 
-const generateAIFallbackData = async (): Promise<Omit<PatroDataResponse, 'today' | 'monthEvents' | 'upcomingEvents'>> => {
+const rashiNames = ["Mesh", "Brish", "Mithun", "Karkat", "Simha", "Kanya", "Tula", "Brishchik", "Dhanu", "Makar", "Kumbha", "Meen"];
+
+const generateAIFallbackData = async (): Promise<Omit<PatroDataResponse, 'today' | 'upcomingEvents'>> => {
     console.log("Generating patro data using AI fallback...");
     const aiResponse = await scraperPrompt().then(r => r.output).catch(e => {
         console.error("AI call to scraperPrompt failed:", e);
@@ -48,8 +53,13 @@ const generateAIFallbackData = async (): Promise<Omit<PatroDataResponse, 'today'
     });
 
     if (aiResponse) {
+        const fullHoroscope: Horoscope[] = aiResponse.horoscope.map((h, index) => ({
+            name: h.rashi,
+            rashi: h.rashi, // Ensure this matches schema, name is more descriptive
+            text: h.text,
+        }));
          return {
-            horoscope: aiResponse.horoscope,
+            horoscope: fullHoroscope,
             goldSilver: aiResponse.goldSilver,
             forex: aiResponse.forex,
         };
@@ -77,7 +87,7 @@ const HolidaysApiResponseSchema = z.array(z.object({
 
 
 const fetchFromRapidAPI = async (endpoint: string, schema: z.ZodType) => {
-    const baseUrl = 'https://nepali-calendar-api.p.rapidapi.com/api/v1/date';
+    const baseUrl = 'https://nepali-calendar-api.p.rapidapi.com/api/v1';
     const apiKey = process.env.RAPIDAPI_KEY;
 
     if (!apiKey) {
@@ -153,7 +163,7 @@ const patroDataFlow = ai.defineFlow(
     outputSchema: PatroDataResponseSchema,
   },
   async () => {
-    const cacheKey = `patro_data_v13_rapidapi`;
+    const cacheKey = `patro_data_v15_rapidapi`;
     const cachedData = getFromCache<PatroDataResponse>(cacheKey, CACHE_DURATION_MS);
     if (cachedData) {
         console.log("Returning cached patro data.");
@@ -166,10 +176,12 @@ const patroDataFlow = ai.defineFlow(
 
     let todayInfo: CurrentDateInfoResponse | null = null;
     let upcomingEvents: UpcomingEvent[] = [];
+    let aiData: Omit<PatroDataResponse, 'today' | 'upcomingEvents'> = { horoscope: [], goldSilver: null, forex: [] };
+
 
     if (apiKey) {
       const [todayRawData, holidaysRawData] = await Promise.all([
-          fetchFromRapidAPI(``, TodayApiResponseSchema),
+          fetchFromRapidAPI(`date`, TodayApiResponseSchema),
           fetchFromRapidAPI(`holidays`, HolidaysApiResponseSchema)
       ]);
       
@@ -177,12 +189,12 @@ const patroDataFlow = ai.defineFlow(
       upcomingEvents = holidaysRawData ? processHolidays(holidaysRawData) : [];
     }
     
-    const aiData = await generateAIFallbackData();
+    // Always fetch AI data for horoscope, gold/silver, forex
+    aiData = await generateAIFallbackData();
     
     const response: PatroDataResponse = {
         ...aiData,
         today: todayInfo,
-        monthEvents: [], // monthEvents are now fetched on demand in the calendar component
         upcomingEvents: upcomingEvents,
     };
     
