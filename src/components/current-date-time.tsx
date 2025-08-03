@@ -48,7 +48,7 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
   const nepaliDate = new NepaliDate(today.bsYear, today.bsMonth - 1, today.bsDay);
   const nepaliDateStr = nepaliDate.format('DD MMMM YYYY, ddd', 'np');
   
-  const gregorianDate = new NepaliDate(new Date(today.adYear, today.adMonth, today.adDay));
+  const gregorianDate = new NepaliDate(new Date(today.adYear, today.adMonth-1, today.adDay));
   const gregorianDateStr = gregorianDate.format('MMMM DD, YYYY', 'en');
 
   const nepaliTimeString = timeString ? new NepaliDate().format('K:mm', 'np') : "";

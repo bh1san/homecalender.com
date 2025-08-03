@@ -45,7 +45,7 @@ const NpApiDateSchema = z.object({
     bs: z.object({ day: z.number(), month: z.number(), year: z.number() }),
 });
 
-const NpApiDayEventSchema = z.object({
+export const NpApiDayEventSchema = z.object({
     date: NpApiDateSchema,
     event: z.array(z.string()),
     panchangam: z.array(z.string()),
@@ -122,11 +122,23 @@ export const ForexSchema = z.object({
 });
 export type Forex = z.infer<typeof ForexSchema>;
 
+export const CurrentDateInfoResponseSchema = z.object({
+    bsYear: z.number(),
+    bsMonth: z.number(),
+    bsDay: z.number(),
+    adYear: z.number(),
+    adMonth: z.number(),
+    adDay: z.number(),
+    tithi: z.string(),
+});
+export type CurrentDateInfoResponse = z.infer<typeof CurrentDateInfoResponseSchema>;
+
 
 export const PatroDataResponseSchema = z.object({
     horoscope: z.array(HoroscopeSchema),
     goldSilver: GoldSilverSchema.nullable(),
     forex: z.array(ForexSchema),
+    today: CurrentDateInfoResponseSchema.nullable(),
     monthEvents: z.array(CalendarEventSchema).optional(),
     upcomingEvents: z.array(UpcomingEventSchema).optional(),
 });

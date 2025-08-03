@@ -16,6 +16,9 @@ import {
   ForexSchema,
   UpcomingEvent,
   NpEventsApiResponseSchema,
+  CurrentDateInfoResponse,
+  CurrentDateInfoResponseSchema,
+  NpApiDayEventSchema,
 } from '@/ai/schemas';
 import { getFromCache, setInCache } from '@/ai/cache';
 
@@ -38,7 +41,7 @@ const scraperPrompt = ai.definePrompt({
     `
 });
 
-const generateAIFallbackData = async (): Promise<Omit<PatroDataResponse, 'monthEvents' | 'upcomingEvents'>> => {
+const generateAIFallbackData = async (): Promise<Omit<PatroDataResponse, 'today' | 'monthEvents' | 'upcomingEvents'>> => {
     console.log("Generating patro data using AI fallback...");
     const aiResponse = await scraperPrompt().then(r => r.output).catch(e => {
         console.error("AI call to scraperPrompt failed:", e);
@@ -89,37 +92,52 @@ const processRangeData = (data: z.infer<typeof NpEventsApiResponseSchema>): Upco
 
     if (!data) return events;
 
-    // The API response is nested by year, then month, then day.
-    for (const year of Object.keys(data)) {
-        const yearData = data[year];
-        for (const month of Object.keys(yearData)) {
-            const monthData = yearData[month];
-            for (const day of Object.keys(monthData)) {
-                const dayData = monthData[day];
+    for (const year in data) {
+        for (const month in data[year]) {
+            for (const day in data[year][month]) {
+                const dayData = data[year][month][day];
                 
-                // We only care about public holidays
-                if (dayData.public_holiday) {
-                    const eventDate = new Date(dayData.date.ad.year, dayData.date.ad.month - 1, dayData.date.ad.day);
+                const eventDate = new Date(dayData.date.ad.year, dayData.date.ad.month - 1, dayData.date.ad.day);
+                
+                if (dayData.public_holiday && eventDate >= today) {
+                    const summary = dayData.event.length > 0 ? dayData.event.join(', ') : "Public Holiday";
                     
-                    // Only include events that are today or in the future
-                    if (eventDate >= today) {
-                        // The main event name is usually in the 'event' array. If it's empty, we create a generic one.
-                        const summary = dayData.event.length > 0 ? dayData.event.join(', ') : "Public Holiday";
-                        
-                        events.push({
-                            summary: summary,
-                            startDate: `${dayData.date.ad.year}-${String(dayData.date.ad.month).padStart(2, '0')}-${String(dayData.date.ad.day).padStart(2, '0')}`,
-                            isHoliday: dayData.public_holiday
-                        });
-                    }
+                    events.push({
+                        summary: summary,
+                        startDate: `${dayData.date.ad.year}-${String(dayData.date.ad.month).padStart(2, '0')}-${String(dayData.date.ad.day).padStart(2, '0')}`,
+                        isHoliday: dayData.public_holiday
+                    });
                 }
             }
         }
     }
 
-    // Sort events by date
     events.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
     return events;
+};
+
+const processTodayData = (data: z.infer<typeof NpEventsApiResponseSchema>): CurrentDateInfoResponse | null => {
+    if (!data) return null;
+    try {
+        // Since we query for @today, we expect a very specific structure
+        const year = Object.keys(data)[0];
+        const month = Object.keys(data[year])[0];
+        const day = Object.keys(data[year][month])[0];
+        const todayData = data[year][month][day];
+
+        return {
+            adYear: todayData.date.ad.year,
+            adMonth: todayData.date.ad.month,
+            adDay: todayData.date.ad.day,
+            bsYear: todayData.date.bs.year,
+            bsMonth: todayData.date.bs.month,
+            bsDay: todayData.date.bs.day,
+            tithi: todayData.tithi,
+        };
+    } catch (e) {
+        console.error("Error processing today's data:", e);
+        return null;
+    }
 };
 
 
@@ -130,7 +148,7 @@ const patroDataFlow = ai.defineFlow(
     outputSchema: PatroDataResponseSchema,
   },
   async () => {
-    const cacheKey = `patro_data_v7_npclapi_holidays`;
+    const cacheKey = `patro_data_v8_today_holidays`;
     const cachedData = getFromCache<PatroDataResponse>(cacheKey, CACHE_DURATION_MS);
     if (cachedData) {
         console.log("Returning cached patro data.");
@@ -139,15 +157,19 @@ const patroDataFlow = ai.defineFlow(
 
     console.log("Fetching Patro data from sources...");
 
-    // Fetch all public holidays for the current Nepali year.
-    const upcomingData = await fetchFromNpEventsAPI(`v2/date/bs/@cur_year?only_holidays=1`, NpEventsApiResponseSchema);
+    const [todayRawData, upcomingData] = await Promise.all([
+        fetchFromNpEventsAPI(`v2/date/bs/@today`, NpEventsApiResponseSchema),
+        fetchFromNpEventsAPI(`v2/date/bs/@cur_year?only_holidays=1`, NpEventsApiResponseSchema)
+    ]);
     
+    const todayInfo = todayRawData ? processTodayData(todayRawData) : null;
     const upcomingEvents = upcomingData ? processRangeData(upcomingData) : [];
     
     const aiData = await generateAIFallbackData();
     
     const response: PatroDataResponse = {
         ...aiData,
+        today: todayInfo,
         monthEvents: [], // monthEvents are now fetched on demand in the calendar component
         upcomingEvents: upcomingEvents,
     };
