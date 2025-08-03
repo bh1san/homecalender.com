@@ -19,10 +19,9 @@ import FestivalList from "@/components/festival-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getNews } from "@/ai/flows/news-flow";
-import { NewsItem, Festival, PatroDataResponse } from "@/ai/schemas";
+import { NewsItem, UpcomingEvent, PatroDataResponse } from "@/ai/schemas";
 import CurrentDateTime from "@/components/current-date-time";
 import { useEffect, useState } from "react";
-import { getFestivals } from "@/ai/flows/festival-flow";
 import { Calendar } from "@/components/ui/calendar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import MotivationalQuote from "@/components/motivational-quote";
@@ -43,7 +42,6 @@ type Settings = {
 
 export default function Home() {
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
-  const [festivals, setFestivals] = useState<Festival[]>([]);
   const [patroData, setPatroData] = useState<PatroDataResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState<Settings>({ logoUrl: "https://placehold.co/200x50.png", navLinks: [] });
@@ -74,15 +72,13 @@ export default function Home() {
       try {
         const country = "Nepal";
         
-        const patroPromise = getPatroData();
-        const newsPromise = getNews(country);
-        const festivalPromise = getFestivals(country);
-
-        const [patroData, newsData, festivalData] = await Promise.all([patroPromise, newsPromise, festivalPromise]);
+        const [patroData, newsData] = await Promise.all([
+            getPatroData(),
+            getNews(country),
+        ]);
 
         setPatroData(patroData);
         setNewsItems(newsData.headlines);
-        setFestivals(festivalData.festivals);
         
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -100,7 +96,7 @@ export default function Home() {
       <Header navLinks={settings.navLinks} logoUrl={settings.logoUrl} isLoading={loadingSettings} />
       <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 bg-primary text-primary-foreground p-4 rounded-lg shadow-md items-center">
-            <CurrentDateTime today={patroData?.today} />
+            <CurrentDateTime />
             <div className="hidden sm:flex justify-end">
                 <MotivationalQuote />
             </div>
@@ -217,7 +213,11 @@ export default function Home() {
                             ))}
                          </div>
                       ) : (
-                         festivals.length > 0 ? <FestivalList festivals={festivals} /> : <p className="text-center text-muted-foreground p-4 bg-background/80 rounded">No festivals found for Nepal.</p>
+                         patroData?.upcomingEvents && patroData.upcomingEvents.length > 0 ? (
+                           <FestivalList festivals={patroData.upcomingEvents} />
+                         ) : (
+                           <p className="text-center text-muted-foreground p-4 bg-background/80 rounded">No upcoming festivals found.</p>
+                         )
                       )}
                     </TabsContent>
                      <TabsContent value="gold" className="mt-6">
