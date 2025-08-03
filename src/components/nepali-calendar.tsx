@@ -34,67 +34,78 @@ export default function NepaliCalendarComponent({ today: initialToday, monthEven
     const [calendarData, setCalendarData] = useState<(CalendarDate | null)[]>([]);
     const [bsMonth, setBsMonth] = useState(0);
     const [bsYear, setBsYear] = useState(0);
-    const [isLoading, setIsLoading] = useState(true);
-
-    useEffect(() => {
-        setIsLoading(false);
-    }, []);
+    const [clientToday, setClientToday] = useState<{bsYear: number, bsMonth: number, bsDate: number} | null>(null);
 
     useEffect(() => {
         if (!isMounted) return;
 
         const year = currentDate.getFullYear();
-        const month = currentDate.getMonth() + 1; // 1-indexed for library
+        const month = currentDate.getMonth(); // 0-indexed for calculations
         
-        const firstDayOfMonthAD = new Date(year, month - 1, 1);
-        const lastDayOfMonthAD = new Date(year, month, 0);
+        try {
+            // Determine BS month/year for the start of the currently viewed AD month
+            const firstDayOfMonthAD = new Date(year, month, 1);
+            const firstDayBS = ADBS.ad2bs(`${firstDayOfMonthAD.getFullYear()}/${firstDayOfMonthAD.getMonth() + 1}/${firstDayOfMonthAD.getDate()}`);
+            
+            const startBsYear = parseInt(firstDayBS.en.year);
+            const startBsMonth = parseInt(firstDayBS.en.month); // 1-indexed from library
+            
+            setBsYear(startBsYear);
+            setBsMonth(startBsMonth -1); // 0-indexed for display
 
-        const firstDayBS = ADBS.ad2bs(`${firstDayOfMonthAD.getFullYear()}/${firstDayOfMonthAD.getMonth() + 1}/${firstDayOfMonthAD.getDate()}`);
-        const lastDayBS = ADBS.ad2bs(`${lastDayOfMonthAD.getFullYear()}/${lastDayOfMonthAD.getMonth() + 1}/${lastDayOfMonthAD.getDate()}`);
-        
-        const startBsYear = parseInt(firstDayBS.en.year);
-        const startBsMonth = parseInt(firstDayBS.en.month);
-        setBsMonth(startBsMonth -1); // 0-indexed for display
-        setBsYear(startBsYear);
+            const daysInBsMonth = ADBS.getBsMonthDays(startBsYear, startBsMonth);
 
-        const daysInBsMonth = ADBS.getDaysInMonth(startBsYear, startBsMonth);
+            // Determine the day of the week the BS month starts on
+            const firstDayOfBsMonthAd = ADBS.bs2ad(`${startBsYear}/${startBsMonth}/1`);
+            const firstDayOfWeek = new Date(parseInt(firstDayOfBsMonthAd.en.year), parseInt(firstDayOfBsMonthAd.en.month) - 1, parseInt(firstDayOfBsMonthAd.en.day)).getDay();
 
-        const cells: (CalendarDate | null)[] = [];
-        const firstDayOfWeek = new Date(year, month - 1, 1).getDay(); // 0=Sun, 1=Mon...
-        
-        for (let i = 0; i < firstDayOfWeek; i++) {
-            cells.push(null);
-        }
-
-        for (let day = 1; day <= daysInBsMonth; day++) {
-            try {
-                const adDate = ADBS.bs2ad(`${startBsYear}/${startBsMonth}/${day}`);
-                cells.push({
-                    bsYear: startBsYear,
-                    bsMonth: startBsMonth -1,
-                    bsDate: day,
-                    adYear: parseInt(adDate.en.year),
-                    adMonth: parseInt(adDate.en.month) - 1,
-                    adDate: parseInt(adDate.en.day),
-                });
-            } catch(e) {
-                // handles cases where a day doesn't exist in BS month (can happen at month boundaries)
-                continue;
+            const cells: (CalendarDate | null)[] = [];
+            for (let i = 0; i < firstDayOfWeek; i++) {
+                cells.push(null);
             }
+
+            for (let day = 1; day <= daysInBsMonth; day++) {
+                try {
+                    const adDate = ADBS.bs2ad(`${startBsYear}/${startBsMonth}/${day}`);
+                    cells.push({
+                        bsYear: startBsYear,
+                        bsMonth: startBsMonth - 1,
+                        bsDate: day,
+                        adYear: parseInt(adDate.en.year),
+                        adMonth: parseInt(adDate.en.month) - 1,
+                        adDate: parseInt(adDate.en.day),
+                    });
+                } catch(e) {
+                    console.error(`Could not convert BS date ${startBsYear}/${startBsMonth}/${day}`);
+                    continue;
+                }
+            }
+            setCalendarData(cells);
+
+             // Set today's date for highlighting
+            const todayAD = new Date();
+            const todayBS = ADBS.ad2bs(`${todayAD.getFullYear()}/${todayAD.getMonth() + 1}/${todayAD.getDate()}`);
+            setClientToday({
+                bsYear: parseInt(todayBS.en.year),
+                bsMonth: parseInt(todayBS.en.month) - 1,
+                bsDate: parseInt(todayBS.en.day)
+            });
+
+        } catch(e) {
+            console.error("Error generating calendar data", e);
         }
-        setCalendarData(cells);
 
     }, [currentDate, isMounted]);
 
     const handlePrevMonth = () => {
-        setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+        setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 15));
     };
 
     const handleNextMonth = () => {
-        setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+        setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 15));
     };
     
-    if (!isMounted || isLoading) {
+    if (!isMounted || initialIsLoading) {
         return (
              <div className="relative p-0 sm:p-2 bg-card rounded-lg w-full">
                 <div className="flex items-center justify-between mb-4">
@@ -119,12 +130,10 @@ export default function NepaliCalendarComponent({ today: initialToday, monthEven
             return <div key={`empty-${index}`} className="border rounded-md bg-muted/40" />;
         }
         
-        const todayAD = new Date();
-        const todayBS = ADBS.ad2bs(`${todayAD.getFullYear()}/${todayAD.getMonth() + 1}/${todayAD.getDate()}`);
-
-        const isToday = dayData.bsYear === parseInt(todayBS.en.year) &&
-                        dayData.bsMonth === (parseInt(todayBS.en.month) - 1) &&
-                        dayData.bsDate === parseInt(todayBS.en.day);
+        const isToday = clientToday &&
+                        dayData.bsYear === clientToday.bsYear &&
+                        dayData.bsMonth === clientToday.bsMonth &&
+                        dayData.bsDate === clientToday.bsDate;
         
         const serverEvent = monthEvents?.find(e => e.day === dayData.bsDate);
 

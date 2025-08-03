@@ -115,8 +115,8 @@ export default function DateConverter() {
     return (
         <div className="space-y-8">
             <div className="h-52 w-full animate-pulse bg-muted/50 rounded-lg" />
-            <div className="relative flex justify-center">
-                <Separator className="absolute inset-x-0 top-1/2" />
+            <div className="relative flex justify-center my-8">
+                <Separator/>
             </div>
             <div className="h-52 w-full animate-pulse bg-muted/50 rounded-lg" />
         </div>

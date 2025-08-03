@@ -59,7 +59,7 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
 
   if (!isMounted || !clientToday) {
       return (
-         <div className="space-y-2 text-white">
+         <div className="space-y-2 text-primary-foreground">
             <div className="h-9 w-64 bg-white/20 animate-pulse rounded-md" />
             <div className="h-5 w-48 bg-white/20 animate-pulse rounded-md" />
             <div className="h-5 w-32 bg-white/20 animate-pulse rounded-md" />

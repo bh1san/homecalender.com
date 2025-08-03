@@ -24,7 +24,8 @@ export default function MotivationalQuote() {
   const isMounted = useIsMounted();
 
   useEffect(() => {
-    // This effect runs only on the client, after hydration
+    if (!isMounted) return;
+
     setCurrentQuote(quotes[Math.floor(Math.random() * quotes.length)]);
 
     const intervalId = setInterval(() => {
@@ -41,11 +42,13 @@ export default function MotivationalQuote() {
     }, 15000); 
 
     return () => clearInterval(intervalId);
-  }, [currentQuote]); // Note: dependency on currentQuote is for the interval logic, not for initial render.
+  }, [isMounted, currentQuote]);
 
   if (!isMounted) {
     return (
-        <div className="w-[400px] h-[100px] flex items-center justify-center bg-black/20 rounded-lg p-4 text-center overflow-hidden" />
+        <div className="w-[400px] h-[100px] flex items-center justify-center bg-black/20 rounded-lg p-4 text-center overflow-hidden">
+             <div className="h-6 w-3/4 bg-white/20 animate-pulse rounded-md" />
+        </div>
     );
   }
 
