@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { getNepaliMonthName, getNepaliDayOfWeek, getEnglishMonthName, getNepaliNumber } from '@/lib/nepali-date-converter';
 import { CurrentDateInfoResponse } from '@/ai/schemas';
 import { useIsMounted } from '@/hooks/use-is-mounted';
-import ADBS from '@/lib/ad-bs-converter';
+import { adToBs } from '@/lib/ad-bs-converter';
 
 interface CurrentDateTimeProps {
   today: CurrentDateInfoResponse | null | undefined;
@@ -15,7 +15,7 @@ interface ClientToday {
     bsYear: number;
     bsMonth: number;
     bsDate: number;
-    bsDay: number;
+    weekDay: number;
     adYear: number;
     adMonth: number;
     adDate: number;
@@ -37,18 +37,17 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
       setTimeString(timeStr);
     }, 1000);
 
-    // Use the library on the client-side to get the most accurate date
     try {
-        const adDate = new Date();
-        const bsDate = ADBS.ad2bs(`${adDate.getFullYear()}/${adDate.getMonth() + 1}/${adDate.getDate()}`);
+        const now = new Date();
+        const bsDate = adToBs(now.getFullYear(), now.getMonth() + 1, now.getDate());
         setClientToday({
-            bsYear: parseInt(bsDate.en.year),
-            bsMonth: parseInt(bsDate.en.month) - 1, // To 0-indexed
-            bsDate: parseInt(bsDate.en.day),
-            bsDay: adDate.getDay(),
-            adYear: adDate.getFullYear(),
-            adMonth: adDate.getMonth(), // Is 0-indexed
-            adDate: adDate.getDate()
+            bsYear: bsDate.year,
+            bsMonth: bsDate.month, 
+            bsDate: bsDate.day,
+            weekDay: now.getDay(),
+            adYear: now.getFullYear(),
+            adMonth: now.getMonth(), 
+            adDate: now.getDate()
         });
     } catch(e) {
         console.error("Failed to convert date", e);
@@ -67,7 +66,7 @@ export default function CurrentDateTime({ today }: CurrentDateTimeProps) {
       );
   }
     
-  const nepaliDateStr = `${getNepaliNumber(clientToday.bsDate)} ${getNepaliMonthName(clientToday.bsMonth)} ${getNepaliNumber(clientToday.bsYear)}, ${getNepaliDayOfWeek(clientToday.bsDay)}`;
+  const nepaliDateStr = `${getNepaliNumber(clientToday.bsDate)} ${getNepaliMonthName(clientToday.bsMonth)} ${getNepaliNumber(clientToday.bsYear)}, ${getNepaliDayOfWeek(clientToday.weekDay)}`;
   const gregorianDateStr = `${getEnglishMonthName(clientToday.adMonth)} ${clientToday.adDate}, ${clientToday.adYear}`;
 
   const nepaliTimeParts = timeString.split(/:| /);

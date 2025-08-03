@@ -9,7 +9,7 @@ import { ChevronLeft, ChevronRight, Loader, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { useIsMounted } from '@/hooks/use-is-mounted';
-import ADBS from "@/lib/ad-bs-converter";
+import { adToBs, bsToAd, getMonthDays } from '@/lib/ad-bs-converter';
 
 interface NepaliCalendarProps {
     today: CurrentDateInfoResponse | null | undefined;
@@ -20,89 +20,74 @@ interface NepaliCalendarProps {
 interface CalendarDate {
     bsYear: number;
     bsMonth: number;
-    bsDate: number;
+    bsDay: number;
     adYear: number;
     adMonth: number;
-    adDate: number;
+    adDay: number;
 }
 
 const WEEK_DAYS_NP = ["आइत", "सोम", "मंगल", "बुध", "बिहि", "शुक्र", "शनि"];
 
-export default function NepaliCalendarComponent({ today: initialToday, monthEvents, isLoading: initialIsLoading }: NepaliCalendarProps) {
+export default function NepaliCalendarComponent({ monthEvents, isLoading: initialIsLoading }: NepaliCalendarProps) {
     const isMounted = useIsMounted();
-    const [currentDate, setCurrentDate] = useState(new Date()); // Represents AD date for navigation
+    const [currentBS, setCurrentBS] = useState({ year: 2081, month: 4 });
     const [calendarData, setCalendarData] = useState<(CalendarDate | null)[]>([]);
-    const [bsMonth, setBsMonth] = useState(0);
-    const [bsYear, setBsYear] = useState(0);
-    const [clientToday, setClientToday] = useState<{bsYear: number, bsMonth: number, bsDate: number} | null>(null);
+    const [clientToday, setClientToday] = useState<{ year: number, month: number, day: number} | null>(null);
 
     useEffect(() => {
         if (!isMounted) return;
 
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth(); // 0-indexed for calculations
+        const today = new Date();
+        const todayBS = adToBs(today.getFullYear(), today.getMonth() + 1, today.getDate());
+        setCurrentBS({ year: todayBS.year, month: todayBS.month });
+        setClientToday({ year: todayBS.year, month: todayBS.month, day: todayBS.day });
+    }, [isMounted]);
+
+    useEffect(() => {
+        if (!isMounted) return;
         
         try {
-            // Determine BS month/year for the start of the currently viewed AD month
-            const firstDayOfMonthAD = new Date(year, month, 1);
-            const firstDayBS = ADBS.ad2bs(`${firstDayOfMonthAD.getFullYear()}/${firstDayOfMonthAD.getMonth() + 1}/${firstDayOfMonthAD.getDate()}`);
+            const { year, month } = currentBS;
             
-            const startBsYear = parseInt(firstDayBS.en.year);
-            const startBsMonth = parseInt(firstDayBS.en.month); // 1-indexed from library
-            
-            setBsYear(startBsYear);
-            setBsMonth(startBsMonth -1); // 0-indexed for display
+            const firstDayAd = bsToAd(year, month, 1);
+            const firstDayOfWeek = new Date(firstDayAd.year, firstDayAd.month - 1, firstDayAd.day).getDay();
+            const daysInMonth = getMonthDays(year, month);
 
-            const daysInBsMonth = ADBS.getBsMonthDays(startBsYear, startBsMonth);
+            const cells: (CalendarDate | null)[] = Array(firstDayOfWeek).fill(null);
 
-            // Determine the day of the week the BS month starts on
-            const firstDayOfBsMonthAd = ADBS.bs2ad(`${startBsYear}/${startBsMonth}/1`);
-            const firstDayOfWeek = new Date(parseInt(firstDayOfBsMonthAd.en.year), parseInt(firstDayOfBsMonthAd.en.month) - 1, parseInt(firstDayOfBsMonthAd.en.day)).getDay();
-
-            const cells: (CalendarDate | null)[] = [];
-            for (let i = 0; i < firstDayOfWeek; i++) {
-                cells.push(null);
-            }
-
-            for (let day = 1; day <= daysInBsMonth; day++) {
-                try {
-                    const adDate = ADBS.bs2ad(`${startBsYear}/${startBsMonth}/${day}`);
-                    cells.push({
-                        bsYear: startBsYear,
-                        bsMonth: startBsMonth - 1,
-                        bsDate: day,
-                        adYear: parseInt(adDate.en.year),
-                        adMonth: parseInt(adDate.en.month) - 1,
-                        adDate: parseInt(adDate.en.day),
-                    });
-                } catch(e) {
-                    console.error(`Could not convert BS date ${startBsYear}/${startBsMonth}/${day}`);
-                    continue;
-                }
+            for (let day = 1; day <= daysInMonth; day++) {
+                const adDate = bsToAd(year, month, day);
+                cells.push({
+                    bsYear: year,
+                    bsMonth: month,
+                    bsDay: day,
+                    adYear: adDate.year,
+                    adMonth: adDate.month,
+                    adDay: adDate.day,
+                });
             }
             setCalendarData(cells);
-
-             // Set today's date for highlighting
-            const todayAD = new Date();
-            const todayBS = ADBS.ad2bs(`${todayAD.getFullYear()}/${todayAD.getMonth() + 1}/${todayAD.getDate()}`);
-            setClientToday({
-                bsYear: parseInt(todayBS.en.year),
-                bsMonth: parseInt(todayBS.en.month) - 1,
-                bsDate: parseInt(todayBS.en.day)
-            });
 
         } catch(e) {
             console.error("Error generating calendar data", e);
         }
 
-    }, [currentDate, isMounted]);
+    }, [currentBS, isMounted]);
 
     const handlePrevMonth = () => {
-        setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 15));
+        setCurrentBS(prev => {
+            const newMonth = prev.month === 1 ? 12 : prev.month - 1;
+            const newYear = prev.month === 1 ? prev.year - 1 : prev.year;
+            return { year: newYear, month: newMonth };
+        });
     };
 
     const handleNextMonth = () => {
-        setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 15));
+        setCurrentBS(prev => {
+            const newMonth = prev.month === 12 ? 1 : prev.month + 1;
+            const newYear = prev.month === 12 ? prev.year + 1 : prev.year;
+            return { year: newYear, month: newMonth };
+        });
     };
     
     if (!isMounted || initialIsLoading) {
@@ -130,12 +115,11 @@ export default function NepaliCalendarComponent({ today: initialToday, monthEven
             return <div key={`empty-${index}`} className="border rounded-md bg-muted/40" />;
         }
         
-        const isToday = clientToday &&
-                        dayData.bsYear === clientToday.bsYear &&
-                        dayData.bsMonth === clientToday.bsMonth &&
-                        dayData.bsDate === clientToday.bsDate;
+        const { bsYear, bsMonth, bsDay, adDay } = dayData;
         
-        const serverEvent = monthEvents?.find(e => e.day === dayData.bsDate);
+        const isToday = clientToday && clientToday.year === bsYear && clientToday.month === bsMonth && clientToday.day === bsDay;
+        
+        const serverEvent = monthEvents?.find(e => e.day === bsDay);
 
         const cellContent = (
              <div className={cn(
@@ -153,13 +137,13 @@ export default function NepaliCalendarComponent({ today: initialToday, monthEven
                         "text-xs sm:text-sm font-semibold text-muted-foreground",
                          serverEvent?.is_holiday ? "text-destructive" : ""
                     )}>
-                        {dayData.adDate}
+                        {adDay}
                     </span>
                     <span className={cn(
                         "text-lg sm:text-xl font-bold text-foreground",
                          serverEvent?.is_holiday ? "text-destructive" : ""
                     )}>
-                        {getNepaliNumber(dayData.bsDate)}
+                        {getNepaliNumber(bsDay)}
                     </span>
                 </div>
                 <div className="flex-grow flex flex-col justify-end text-center items-center">
@@ -174,13 +158,13 @@ export default function NepaliCalendarComponent({ today: initialToday, monthEven
         );
         
         return (
-            <div key={`${dayData.bsYear}-${dayData.bsMonth}-${dayData.bsDate}`}>
+            <div key={`${bsYear}-${bsMonth}-${bsDay}`}>
                 {serverEvent ? (
                      <Popover>
                         <PopoverTrigger asChild>{cellContent}</PopoverTrigger>
                         <PopoverContent className="w-60 p-4" align="start">
                             <div className="space-y-2">
-                                <h4 className="font-bold text-lg text-primary">{getNepaliNumber(dayData.bsDate)} {getNepaliMonthName(dayData.bsMonth)}</h4>
+                                <h4 className="font-bold text-lg text-primary">{getNepaliNumber(bsDay)} {getNepaliMonthName(bsMonth)}</h4>
                                 {serverEvent.tithi && <p className="text-sm text-muted-foreground font-semibold">{serverEvent.tithi}</p>}
                                 <hr />
                                 {serverEvent.events.length > 0 ? (
@@ -208,7 +192,7 @@ export default function NepaliCalendarComponent({ today: initialToday, monthEven
                     <ChevronLeft className="h-5 w-5" />
                 </Button>
                 <h2 className="text-xl sm:text-2xl font-bold text-center text-primary">
-                    {getNepaliMonthName(bsMonth)} {getNepaliNumber(bsYear)}
+                    {getNepaliMonthName(currentBS.month)} {getNepaliNumber(currentBS.year)}
                 </h2>
                 <Button variant="outline" size="icon" onClick={handleNextMonth}>
                     <ChevronRight className="h-5 w-5" />

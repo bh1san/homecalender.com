@@ -24,8 +24,9 @@ import {
 } from "./ui/select";
 import FlagLoader from "./flag-loader";
 import { useIsMounted } from "@/hooks/use-is-mounted";
-import ADBS from "@/lib/ad-bs-converter";
 import { useToast } from "@/hooks/use-toast";
+import { getNepaliMonthName, getEnglishMonthName } from "@/lib/nepali-date-converter";
+import { adToBs, bsToAd } from "@/lib/ad-bs-converter";
 
 const nepaliMonths = [
   "Baisakh", "Jestha", "Ashadh", "Shrawan", "Bhadra",
@@ -51,19 +52,19 @@ export default function DateConverter() {
 
   useEffect(() => {
     if (isMounted) {
-      const today = new Date();
+      const todayAD = new Date();
       setGregorianDate({
-        year: String(today.getFullYear()),
-        month: String(today.getMonth()), // 0-indexed
-        day: String(today.getDate())
+        year: String(todayAD.getFullYear()),
+        month: String(todayAD.getMonth()), // 0-indexed for select
+        day: String(todayAD.getDate())
       });
 
       try {
-        const todayBS = ADBS.ad2bs(`${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}`);
+        const todayBS = adToBs(todayAD.getFullYear(), todayAD.getMonth() + 1, todayAD.getDate());
         setNepaliDate({
-            year: todayBS.en.year,
-            month: String(parseInt(todayBS.en.month) - 1), // 0-indexed
-            day: todayBS.en.day
+            year: String(todayBS.year),
+            month: String(todayBS.month), // 1-indexed for select
+            day: String(todayBS.day)
         });
       } catch (e) {
          console.error("Failed to get BS date", e);
@@ -79,9 +80,8 @@ export default function DateConverter() {
     }
     setIsConvertingAD(true);
     try {
-        const bsDate = ADBS.ad2bs(`${year}/${parseInt(month) + 1}/${day}`);
-        const monthName = nepaliMonths[parseInt(bsDate.en.month) - 1];
-        setNepaliResult(`${bsDate.en.day} ${monthName}, ${bsDate.en.year}`);
+        const bsDate = adToBs(parseInt(year), parseInt(month) + 1, parseInt(day));
+        setNepaliResult(`${bsDate.day} ${getNepaliMonthName(bsDate.month)}, ${bsDate.year}`);
     } catch (e) {
         const errorMessage = e instanceof Error ? e.message : "Invalid date provided.";
         toast({ variant: "destructive", title: "Conversion Error", description: errorMessage });
@@ -99,9 +99,8 @@ export default function DateConverter() {
     }
     setIsConvertingBS(true);
     try {
-        const adDate = ADBS.bs2ad(`${year}/${parseInt(month) + 1}/${day}`);
-        const monthName = gregorianMonths[parseInt(adDate.en.month) - 1];
-        setGregorianResult(`${adDate.en.day} ${monthName}, ${adDate.en.year}`);
+        const adDate = bsToAd(parseInt(year), parseInt(month), parseInt(day));
+        setGregorianResult(`${getEnglishMonthName(adDate.month - 1)} ${adDate.day}, ${adDate.year}`);
     } catch (e) {
         const errorMessage = e instanceof Error ? e.message : "Invalid date provided.";
         toast({ variant: "destructive", title: "Conversion Error", description: errorMessage });
@@ -188,7 +187,7 @@ export default function DateConverter() {
                 <SelectTrigger id="nepali-month"><SelectValue placeholder="Select month..." /></SelectTrigger>
                 <SelectContent>
                   {nepaliMonths.map((month, index) => (
-                    <SelectItem key={month} value={String(index)}>{month}</SelectItem>
+                    <SelectItem key={month} value={String(index + 1)}>{month}</SelectItem>
                   ))}
                 </SelectContent>
             </Select>
