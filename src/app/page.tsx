@@ -1,7 +1,7 @@
 
 "use client";
 
-import { ArrowRightLeft, CalendarDays, PartyPopper, Search, Menu, Plus, MessageSquare } from "lucide-react";
+import { ArrowRightLeft, CalendarDays, PartyPopper, Search, Menu } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -9,8 +9,7 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
-  CardFooter
+  CardDescription
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import NepaliCalendarComponent from "@/components/nepali-calendar";
@@ -19,14 +18,12 @@ import FestivalList from "@/components/festival-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getNews } from "@/ai/flows/news-flow";
-import { NewsItem, UpcomingEvent, PatroDataResponse } from "@/ai/schemas";
+import { NewsItem, PatroDataResponse } from "@/ai/schemas";
 import CurrentDateTime from "@/components/current-date-time";
 import { useEffect, useState } from "react";
-import { Calendar } from "@/components/ui/calendar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import MotivationalQuote from "@/components/motivational-quote";
 import { User } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
 import UpcomingEventsWidget from "@/components/upcoming-events-widget";
 import { getPatroData } from "@/ai/flows/patro-data-flow";
 import Rashifal from "@/components/rashifal";
@@ -166,16 +163,6 @@ export default function Home() {
                 </CardContent>
             </Card>
 
-            <Card className="bg-card/80 backdrop-blur-sm">
-                <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="text-lg font-semibold text-card-foreground">मेरो नोट</CardTitle>
-                     <Button size="sm" variant="outline"><Plus className="mr-1" /> Add Note</Button>
-                </CardHeader>
-                <CardContent>
-                    <Textarea placeholder="You can add your notes here." className="bg-background/50"/>
-                </CardContent>
-            </Card>
-
              <Card className="bg-card/80 backdrop-blur-sm">
                 <CardHeader>
                     <CardTitle className="text-lg font-semibold text-card-foreground">राशीफल</CardTitle>
@@ -184,8 +171,26 @@ export default function Home() {
                      <Rashifal loading={loading} horoscope={patroData?.horoscope} />
                 </CardContent>
             </Card>
+          </aside>
 
-             <Card className="shadow-lg bg-card/80 backdrop-blur-sm">
+          <div className="lg:col-span-3 space-y-8">
+            <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
+                <CardContent className="p-2 sm:p-4">
+                     <NepaliCalendarComponent />
+                </CardContent>
+              </Card>
+
+              <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle>Foreign Exchange Rates</CardTitle>
+                  <CardDescription>Rates are against NPR and provided by Nepal Rastra Bank.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Forex loading={loading} rates={patroData?.forex} />
+                </CardContent>
+              </Card>
+
+               <Card className="shadow-lg bg-card/80 backdrop-blur-sm">
                 <CardHeader>
                     <CardTitle>Tools</CardTitle>
                 </CardHeader>
@@ -226,27 +231,7 @@ export default function Home() {
                   </Tabs>
                 </CardContent>
               </Card>
-
-          </aside>
-
-          <div className="lg:col-span-3 space-y-8">
-            <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
-                <CardContent className="p-2 sm:p-4">
-                     <NepaliCalendarComponent />
-                </CardContent>
-              </Card>
-
-              <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle>Foreign Exchange Rates</CardTitle>
-                  <CardDescription>Rates are against NPR and provided by Nepal Rastra Bank.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Forex loading={loading} rates={patroData?.forex} />
-                </CardContent>
-              </Card>
           </div>
-
         </div>
       </main>
     </>

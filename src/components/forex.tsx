@@ -21,8 +21,8 @@ export default function Forex({ loading, rates }: ForexProps) {
     if (loading) {
         return (
             <div className="space-y-2">
-                {[...Array(5)].map((_, i) => (
-                    <div key={i} className="flex items-center justify-between h-10 bg-muted/50 animate-pulse rounded-md" />
+                {[...Array(10)].map((_, i) => (
+                    <div key={i} className="flex items-center justify-between h-12 bg-muted/50 animate-pulse rounded-md" />
                 ))}
             </div>
         )
@@ -33,10 +33,10 @@ export default function Forex({ loading, rates }: ForexProps) {
     }
 
     return (
-        <div className="overflow-auto border rounded-lg">
+        <div className="overflow-auto border rounded-lg max-h-[600px]">
             <Table>
                 <TableHeader>
-                    <TableRow>
+                    <TableRow className="sticky top-0 bg-card/95 backdrop-blur-sm">
                         <TableHead>Currency</TableHead>
                         <TableHead className="text-right">Unit</TableHead>
                         <TableHead className="text-right">Buy</TableHead>
@@ -47,7 +47,14 @@ export default function Forex({ loading, rates }: ForexProps) {
                     {rates.map((rate) => (
                         <TableRow key={rate.iso3}>
                             <TableCell className="font-medium flex items-center gap-2">
-                                <Image src={rate.flag} alt={`${rate.name} flag`} width={24} height={18} className="object-contain" />
+                                <Image 
+                                    src={rate.flag} 
+                                    alt={`${rate.name} flag`} 
+                                    width={24} 
+                                    height={18} 
+                                    className="object-contain" 
+                                    unoptimized
+                                />
                                 <div>
                                     <div>{rate.name}</div>
                                     <div className="text-xs text-muted-foreground">{rate.iso3}</div>

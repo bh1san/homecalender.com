@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview A flow for fetching data like horoscopes, gold/silver prices, and forex rates using Genkit AI.
+ * @fileOverview A flow for fetching data like horoscopes, gold/silver prices, and forex rates.
  * Today's date information for the banner is sourced locally for reliability.
  *
  * - getPatroData - A function that fetches all daily data for the app.
@@ -15,6 +15,7 @@ import {
   Horoscope,
   HoroscopeSchema,
   GoldSilverSchema,
+  Forex,
   ForexSchema,
   UpcomingEvent,
   UpcomingEventSchema,
@@ -24,52 +25,68 @@ import {
 import { getFromCache, setInCache } from '@/ai/cache';
 import customEventsData from '@/data/custom-events.json';
 import { getMonthEvents } from './month-events-flow';
+import { liveRate } from '@sapkotamadan/nrb-forex';
 
 const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
 
-const ScraperDataSchema = z.object({
+const AIGeneratedDataSchema = z.object({
     horoscope: z.array(z.object({
       rashi: z.string().describe("The name of the rashi (zodiac sign) in Nepali, e.g., 'Mesh'"),
       text: z.string().describe("The horoscope prediction text.")
     })).describe("A list of 12 horoscopes for each rashi."),
     goldSilver: GoldSilverSchema.describe("A list of gold and silver prices."),
-    forex: z.array(ForexSchema).describe("A list of foreign exchange rates against NPR."),
 });
 
 const scraperPrompt = ai.definePrompt({
     name: 'scraperPrompt',
-    output: { schema: ScraperDataSchema },
+    output: { schema: AIGeneratedDataSchema },
     prompt: `You are a data provider for a Nepali calendar application. Generate a complete and realistic set of data for today. Today's Gregorian date is ${new Date().toISOString().split('T')[0]}.
     
     1.  **Horoscope (Rashifal):** Generate a unique, plausible-sounding horoscope for all 12 rashi (zodiac signs: Mesh, Brish, Mithun, Karkat, Simha, Kanya, Tula, Brishchik, Dhanu, Makar, Kumbha, Meen). The 'rashi' field should contain the name of the sign.
     2.  **Gold/Silver Prices:** Provide realistic prices for Fine Gold (99.9%), Tejabi Gold, and Silver in Nepalese Rupees (NPR) per Tola.
-    3.  **Foreign Exchange (Forex):** Provide a list of buy and sell rates for at least 15 major currencies against NPR. Include the currency name, ISO3 code, unit, and a valid flag image URL.
     `
 });
 
-const generateAIFallbackData = async (): Promise<Omit<PatroDataResponse, 'today' | 'upcomingEvents' | 'todaysEvent'>> => {
-    console.log("Generating patro data using AI fallback...");
+const generateAIFallbackData = async (): Promise<Omit<PatroDataResponse, 'today' | 'upcomingEvents' | 'todaysEvent' | 'forex'>> => {
+    console.log("Generating horoscope and gold/silver data using AI...");
     const aiResponse = await scraperPrompt().then(r => r.output).catch(e => {
         console.error("AI call to scraperPrompt failed:", e);
         return null;
     });
 
     if (aiResponse) {
-        const fullHoroscope: Horoscope[] = aiResponse.horoscope.map((h, index) => ({
+        const fullHoroscope: Horoscope[] = aiResponse.horoscope.map((h) => ({
             rashi: h.rashi,
-            name: h.rashi, // Ensure name is populated
+            name: h.rashi,
             text: h.text,
         }));
          return {
             horoscope: fullHoroscope,
             goldSilver: aiResponse.goldSilver,
-            forex: aiResponse.forex,
         };
     }
     // If AI also fails, return an empty but valid response shape to prevent crashes
     return {
-        horoscope: [], goldSilver: null, forex: []
+        horoscope: [], goldSilver: null
     };
+};
+
+const getForexData = async (): Promise<Forex[]> => {
+    try {
+        const data = await liveRate();
+        const forexRates = data.rates.map(rate => ({
+            name: rate.currency.name,
+            unit: String(rate.currency.unit),
+            buy: rate.buy,
+            sell: rate.sell,
+            iso3: rate.currency.iso3,
+            flag: `https://flagsapi.com/${rate.currency.iso3.substring(0,2)}/shiny/64.png`
+        }));
+        return forexRates;
+    } catch (error) {
+        console.error("Failed to fetch forex data from @sapkotamadan/nrb-forex:", error);
+        return []; // Return empty array on error
+    }
 };
 
 const getLocalTodayData = (): { todayInfo: CurrentDateInfoResponse, todaysEvent?: string } => {
@@ -91,7 +108,6 @@ const getLocalTodayData = (): { todayInfo: CurrentDateInfoResponse, todaysEvent?
         adDay: todayAD.getDate(),
     };
     
-    // Find custom event for today
     const todayADString = todayAD.toISOString().split('T')[0];
     const todaysCustomEvent = customEventsData.find(event => event.startDate === todayADString);
     
@@ -106,26 +122,24 @@ const patroDataFlow = ai.defineFlow(
     outputSchema: PatroDataResponseSchema,
   },
   async () => {
-    const cacheKey = `patro_data_v25_local_today`;
+    const cacheKey = `patro_data_v26_nrb_forex`;
     const cachedData = getFromCache<PatroDataResponse>(cacheKey, CACHE_DURATION_MS);
     if (cachedData) {
-        console.log("Returning cached patro data (local today).");
+        console.log("Returning cached patro data.");
         return cachedData;
     }
 
-    console.log("Fetching new Patro data from sources (local today)...");
-
-    let aiData: Omit<PatroDataResponse, 'today' | 'upcomingEvents' | 'todaysEvent'> = { horoscope: [], goldSilver: null, forex: [] };
+    console.log("Fetching new Patro data from sources...");
 
     const { todayInfo, todaysEvent } = getLocalTodayData();
     
-    // Fetch AI data for horoscope, gold/silver, forex in parallel
-    aiData = await generateAIFallbackData();
+    // Fetch AI data (horoscope, gold/silver) and real forex data in parallel
+    const [aiData, forexData, monthEvents] = await Promise.all([
+        generateAIFallbackData(),
+        getForexData(),
+        getMonthEvents({ year: todayInfo.bsYear, month: todayInfo.bsMonth })
+    ]);
 
-    // Fetch and process events for the upcoming events list
-    // This will fetch from API and merge with local custom events
-    const monthEvents = await getMonthEvents({ year: todayInfo.bsYear, month: todayInfo.bsMonth });
-    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -147,11 +161,9 @@ const patroDataFlow = ai.defineFlow(
       })
       .filter((e): e is UpcomingEvent => e !== null);
 
-    // Merge and de-duplicate events from the month flow
     const uniqueEventsMap = new Map<string, UpcomingEvent>();
 
     upcomingEvents.forEach(event => {
-        // Use a key of date + summary to identify unique events
         const key = `${event.startDate}-${event.summary}`;
         if (!uniqueEventsMap.has(key)) {
             uniqueEventsMap.set(key, event);
@@ -159,12 +171,11 @@ const patroDataFlow = ai.defineFlow(
     });
 
     const finalEvents = Array.from(uniqueEventsMap.values());
-
-    // Sort all events by date
     finalEvents.sort((a,b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
     
     const response: PatroDataResponse = {
         ...aiData,
+        forex: forexData,
         today: todayInfo,
         todaysEvent: todaysEvent,
         upcomingEvents: finalEvents,
@@ -178,5 +189,3 @@ const patroDataFlow = ai.defineFlow(
 export async function getPatroData(): Promise<PatroDataResponse> {
   return patroDataFlow();
 }
-
-    
