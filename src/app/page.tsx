@@ -232,10 +232,7 @@ export default function Home() {
           <div className="lg:col-span-3 space-y-8">
             <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
                 <CardContent className="p-2 sm:p-4">
-                     <NepaliCalendarComponent
-                        isLoading={loading}
-                        monthEvents={patroData?.monthEvents}
-                    />
+                     <NepaliCalendarComponent />
                 </CardContent>
               </Card>
 
