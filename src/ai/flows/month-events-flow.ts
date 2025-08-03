@@ -62,8 +62,9 @@ const processMonthData = async (data: z.infer<typeof NpCalendarSajjanApiResponse
     const NepaliDate = (await import('nepali-date-converter')).default;
     
     return data.days.map(dayData => {
-        const nepaliDateConverter = new NepaliDate(0,0,0);
-        const bsDay = parseInt(nepaliDateConverter.convert(dayData.n, 'np', 'en'));
+        // The day number can be extracted directly from the nepali date string 'dayData.n'
+        // by parsing the integer from it. This is more reliable than conversion.
+        const bsDay = parseInt(dayData.n); 
         const adDate = new NepaliDate(year, month - 1, bsDay).toJsDate();
         const events = [];
         if (dayData.f) {
@@ -87,7 +88,7 @@ const monthEventsFlow = ai.defineFlow(
     outputSchema: z.array(CalendarEventSchema),
   },
   async ({ year, month }) => {
-    const cacheKey = `sajjan_monthEvents_v3_${year}_${month}`;
+    const cacheKey = `sajjan_monthEvents_v4_${year}_${month}`;
     const cachedData = getFromCache<CalendarEvent[]>(cacheKey, 24 * 60 * 60 * 1000); // Cache for 24 hours
     if (cachedData) {
         console.log(`Returning cached month events for ${year}-${month} from Sajjan API + Custom.`);
