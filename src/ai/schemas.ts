@@ -39,27 +39,6 @@ export const FestivalResponseSchema = z.object({
 });
 export type FestivalResponse = z.infer<typeof FestivalResponseSchema>;
 
-// Calendar Events Schemas from npEventsAPI
-const NpApiDateSchema = z.object({
-    ad: z.object({ day: z.number(), month: z.number(), year: z.number() }),
-    bs: z.object({ day: z.number(), month: z.number(), year: z.number() }),
-});
-
-export const NpApiDayEventSchema = z.object({
-    date: NpApiDateSchema,
-    event: z.array(z.string()),
-    panchangam: z.array(z.string()),
-    public_holiday: z.boolean(),
-    tithi: z.string(),
-});
-
-export const NpEventsApiResponseSchema = z.record( // year
-    z.record( // month
-        z.record( // day
-            NpApiDayEventSchema
-        )
-    )
-);
 
 export const CalendarEventSchema = z.object({
   day: z.number().describe('The day of the month.'),

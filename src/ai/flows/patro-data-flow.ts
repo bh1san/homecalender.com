@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A flow for fetching data like horoscopes, gold/silver prices, and forex rates using Genkit AI.
@@ -15,10 +16,8 @@ import {
   ForexSchema,
   UpcomingEvent,
   UpcomingEventSchema,
-  NpEventsApiResponseSchema,
   CurrentDateInfoResponse,
   CurrentDateInfoResponseSchema,
-  NpApiDayEventSchema,
 } from '@/ai/schemas';
 import { getFromCache, setInCache } from '@/ai/cache';
 
@@ -61,10 +60,38 @@ const generateAIFallbackData = async (): Promise<Omit<PatroDataResponse, 'today'
     };
 };
 
-const fetchFromNpEventsAPI = async (endpoint: string, schema: z.ZodType) => {
-    const baseUrl = 'https://npclapi.casualsnek.eu.org';
+const TodayApiResponseSchema = z.object({
+    year: z.number(),
+    month: z.number(),
+    day: z.number(),
+    ad_year: z.number(),
+    ad_month: z.number(),
+    ad_day: z.number(),
+    tithi: z.string(),
+});
+
+const HolidaysApiResponseSchema = z.array(z.object({
+    event_title: z.string(),
+    event_date: z.string(),
+}));
+
+
+const fetchFromRapidAPI = async (endpoint: string, schema: z.ZodType) => {
+    const baseUrl = 'https://nepali-calendar-api.p.rapidapi.com/api/v1/date';
+    const apiKey = process.env.RAPIDAPI_KEY;
+
+    if (!apiKey) {
+        console.error("RapidAPI key is not configured. Please add RAPIDAPI_KEY to your .env file.");
+        return null;
+    }
+
     try {
-        const response = await fetch(`${baseUrl}/${endpoint}`);
+        const response = await fetch(`${baseUrl}/${endpoint}`, {
+            headers: {
+                'X-RapidAPI-Key': apiKey,
+                'X-RapidAPI-Host': 'nepali-calendar-api.p.rapidapi.com'
+            }
+        });
 
         if (!response.ok) {
             console.error(`API request to ${endpoint} failed with status ${response.status}: ${await response.text()}`);
@@ -85,59 +112,37 @@ const fetchFromNpEventsAPI = async (endpoint: string, schema: z.ZodType) => {
     }
 };
 
-const processRangeData = (data: z.infer<typeof NpEventsApiResponseSchema>): UpcomingEvent[] => {
-    const events: UpcomingEvent[] = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Normalize today's date
-
-    if (!data) return events;
-
-    for (const year in data) {
-        for (const month in data[year]) {
-            for (const day in data[year][month]) {
-                const dayData = data[year][month][day];
-                
-                const eventDate = new Date(dayData.date.ad.year, dayData.date.ad.month - 1, dayData.date.ad.day);
-                
-                if (dayData.public_holiday && eventDate >= today) {
-                    const summary = dayData.event.length > 0 ? dayData.event.join(', ') : "Public Holiday";
-                    
-                    events.push({
-                        summary: summary,
-                        startDate: `${dayData.date.ad.year}-${String(dayData.date.ad.month).padStart(2, '0')}-${String(dayData.date.ad.day).padStart(2, '0')}`,
-                        isHoliday: dayData.public_holiday
-                    });
-                }
-            }
-        }
-    }
-
-    events.sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
-    return events;
+const processTodayData = (data: z.infer<typeof TodayApiResponseSchema>): CurrentDateInfoResponse | null => {
+    if (!data) return null;
+    return {
+        bsYear: data.year,
+        bsMonth: data.month,
+        bsDay: data.day,
+        adYear: data.ad_year,
+        adMonth: data.ad_month,
+        adDay: data.ad_day,
+        tithi: data.tithi,
+    };
 };
 
-const processTodayData = (data: z.infer<typeof NpEventsApiResponseSchema>): CurrentDateInfoResponse | null => {
-    if (!data) return null;
-    try {
-        // Since we query for @today, we expect a very specific structure
-        const yearKey = Object.keys(data)[0];
-        const monthKey = Object.keys(data[yearKey])[0];
-        const dayKey = Object.keys(data[yearKey][monthKey])[0];
-        const todayData = data[yearKey][monthKey][dayKey];
+const processHolidays = (data: z.infer<typeof HolidaysApiResponseSchema>): UpcomingEvent[] => {
+    if (!data) return [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-        return {
-            adYear: todayData.date.ad.year,
-            adMonth: todayData.date.ad.month,
-            adDay: todayData.date.ad.day,
-            bsYear: todayData.date.bs.year,
-            bsMonth: todayData.date.bs.month,
-            bsDay: todayData.date.bs.day,
-            tithi: todayData.tithi,
-        };
-    } catch (e) {
-        console.error("Error processing today's data:", e);
-        return null;
-    }
+    return data
+        .map(event => {
+            const eventDate = new Date(event.event_date);
+            return {
+                summary: event.event_title,
+                startDate: event.event_date,
+                isHoliday: true,
+                eventDate: eventDate
+            };
+        })
+        .filter(event => event.eventDate >= today)
+        .sort((a, b) => a.eventDate.getTime() - b.eventDate.getTime())
+        .map(({ eventDate, ...rest }) => rest);
 };
 
 
@@ -148,7 +153,7 @@ const patroDataFlow = ai.defineFlow(
     outputSchema: PatroDataResponseSchema,
   },
   async () => {
-    const cacheKey = `patro_data_v11_today_holidays`;
+    const cacheKey = `patro_data_v12_rapidapi`;
     const cachedData = getFromCache<PatroDataResponse>(cacheKey, CACHE_DURATION_MS);
     if (cachedData) {
         console.log("Returning cached patro data.");
@@ -157,14 +162,20 @@ const patroDataFlow = ai.defineFlow(
 
     console.log("Fetching new Patro data from sources...");
 
-    const [todayRawData, upcomingData] = await Promise.all([
-        fetchFromNpEventsAPI(`v2/date/bs/@today`, NpEventsApiResponseSchema),
-        fetchFromNpEventsAPI(`v2/date/bs/@cur_year?only_holidays=1`, NpEventsApiResponseSchema)
-    ]);
-    
-    const todayInfo = todayRawData ? processTodayData(todayRawData) : null;
-    
-    const upcomingEvents = upcomingData ? processRangeData(upcomingData) : [];
+    const apiKey = process.env.RAPIDAPI_KEY;
+
+    let todayInfo: CurrentDateInfoResponse | null = null;
+    let upcomingEvents: UpcomingEvent[] = [];
+
+    if (apiKey) {
+      const [todayRawData, holidaysRawData] = await Promise.all([
+          fetchFromRapidAPI(``, TodayApiResponseSchema),
+          fetchFromRapidAPI(`holidays`, HolidaysApiResponseSchema)
+      ]);
+      
+      todayInfo = todayRawData ? processTodayData(todayRawData) : null;
+      upcomingEvents = holidaysRawData ? processHolidays(holidaysRawData) : [];
+    }
     
     const aiData = await generateAIFallbackData();
     

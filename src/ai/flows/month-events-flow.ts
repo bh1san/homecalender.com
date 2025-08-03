@@ -10,36 +10,42 @@ import {z} from 'genkit';
 import { 
   CalendarEvent,
   CalendarEventSchema,
-  NpEventsApiResponseSchema,
   CalendarEventsRequestSchema
 } from '@/ai/schemas';
 import { getFromCache, setInCache } from '@/ai/cache';
 
-const processMonthData = (data: z.infer<typeof NpEventsApiResponseSchema>): CalendarEvent[] => {
-    const events: CalendarEvent[] = [];
-    if (!data) return events;
-    for (const year in data) {
-        for (const month in data[year]) {
-            for (const day in data[year][month]) {
-                const dayData = data[year][month][day];
-                events.push({
-                    day: dayData.date.bs.day,
-                    tithi: dayData.tithi,
-                    gregorian_date: `${dayData.date.ad.year}-${String(dayData.date.ad.month).padStart(2, '0')}-${String(dayData.date.ad.day).padStart(2, '0')}`,
-                    events: [...dayData.event, ...dayData.panchangam],
-                    is_holiday: dayData.public_holiday,
-                });
-            }
-        }
+const NpCalendarApiResponseSchema = z.array(z.object({
+    day: z.number(),
+    day_np: z.string(),
+    day_en: z.string(),
+    month_np: z.string(),
+    month_en: z.string(),
+    year_np: z.number(),
+    year_en: z.number(),
+    ad_month_en: z.string(),
+    ad_date_en: z.string(),
+    ad_year_en: z.string(),
+    events: z.array(z.string()),
+    tithi: z.string(),
+    is_holiday: z.boolean(),
+}));
+
+const fetchFromRapidAPI = async (endpoint: string, schema: z.ZodType) => {
+    const baseUrl = 'https://nepali-calendar-api.p.rapidapi.com/api/v1';
+    const apiKey = process.env.RAPIDAPI_KEY;
+
+    if (!apiKey) {
+        console.error("RapidAPI key is not configured. Please add RAPIDAPI_KEY to your .env file.");
+        return null;
     }
-    return events;
-};
 
-
-const fetchFromNpEventsAPI = async (endpoint: string, schema: z.ZodType) => {
-    const baseUrl = 'https://npclapi.casualsnek.eu.org';
     try {
-        const response = await fetch(`${baseUrl}/${endpoint}`);
+        const response = await fetch(`${baseUrl}/${endpoint}`, {
+            headers: {
+                'X-RapidAPI-Key': apiKey,
+                'X-RapidAPI-Host': 'nepali-calendar-api.p.rapidapi.com'
+            }
+        });
 
         if (!response.ok) {
             console.error(`API request to ${endpoint} failed with status ${response.status}: ${await response.text()}`);
@@ -60,6 +66,16 @@ const fetchFromNpEventsAPI = async (endpoint: string, schema: z.ZodType) => {
     }
 };
 
+const processMonthData = (data: z.infer<typeof NpCalendarApiResponseSchema>): CalendarEvent[] => {
+    if (!data) return [];
+    return data.map(dayData => ({
+        day: dayData.day,
+        tithi: dayData.tithi,
+        gregorian_date: `${dayData.ad_year_en}-${dayData.ad_month_en.padStart(2, '0')}-${dayData.ad_date_en.padStart(2, '0')}`,
+        events: dayData.events,
+        is_holiday: dayData.is_holiday,
+    }));
+};
 
 const monthEventsFlow = ai.defineFlow(
   {
@@ -77,7 +93,7 @@ const monthEventsFlow = ai.defineFlow(
 
     console.log(`Fetching new month events for ${year}-${month}.`);
 
-    const monthData = await fetchFromNpEventsAPI(`v2/date/bs/${year}-${month}-0?bs_as_key=1`, NpEventsApiResponseSchema);
+    const monthData = await fetchFromRapidAPI(`month?year=${year}&month=${month}`, NpCalendarApiResponseSchema);
     
     const events = monthData ? processMonthData(monthData) : [];
     
