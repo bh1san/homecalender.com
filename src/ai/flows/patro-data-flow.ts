@@ -12,6 +12,7 @@ import NepaliDate from 'nepali-date-converter';
 import { 
   PatroDataResponse, 
   PatroDataResponseSchema, 
+  Horoscope,
   HoroscopeSchema,
   GoldSilverSchema,
   ForexSchema,
@@ -123,49 +124,65 @@ const processTodayData = (bsDate: NepaliDate, monthData: z.infer<typeof SajjanAp
 };
 
 const processHolidays = (monthData: z.infer<typeof SajjanApiMonthSchema>, bsYear: number, bsMonth: number): UpcomingEvent[] => {
-    if (!monthData || !monthData.holiFest) return [];
+    if (!monthData) return [];
     
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const events: UpcomingEvent[] = [];
-    
+    const addedSummaries = new Set<string>();
+
+    const tempDateConverter = new NepaliDate(0,0,0);
+
     // Process holiFest
-    monthData.holiFest.forEach(eventStr => {
-        const match = eventStr.match(/^(\d+)\s*गते\s*(.*)/);
-        if (match) {
-            const day = parseInt(match[1]);
-            const summary = match[2];
-            try {
-                const eventDate = new NepaliDate(bsYear, bsMonth, day).toJsDate();
-                if (eventDate >= today) {
-                    events.push({
-                        summary: summary,
-                        startDate: eventDate.toISOString().split('T')[0],
-                        isHoliday: true
-                    });
+    if (monthData.holiFest) {
+        monthData.holiFest.forEach(eventStr => {
+            const match = eventStr.match(/^(\S+)\s*गते\s*(.*)/);
+            if (match) {
+                try {
+                    const dayNp = match[1];
+                    const dayEn = tempDateConverter.convert(dayNp, 'np', 'en');
+                    const day = parseInt(dayEn);
+                    const summary = match[2];
+
+                    if (!isNaN(day) && !addedSummaries.has(summary)) {
+                        const eventDate = new NepaliDate(bsYear, bsMonth -1, day).toJsDate();
+                        if (eventDate >= today) {
+                            events.push({
+                                summary: summary,
+                                startDate: eventDate.toISOString().split('T')[0],
+                                isHoliday: true // Assuming holiFest items are holidays
+                            });
+                            addedSummaries.add(summary);
+                        }
+                    }
+                } catch (e) {
+                    console.error("Could not parse holiFest date:", eventStr, e);
                 }
-            } catch (e) {
-                // Ignore invalid dates that might be in the data
             }
-        }
-    });
+        });
+    }
 
     // Add day-specific festivals
      monthData.days.forEach(day => {
         if (day.f) {
              try {
-                const dayNum = parseInt(new NepaliDate(0,0,0).convert(day.n, 'np', 'en'));
-                const eventDate = new NepaliDate(bsYear, bsMonth, dayNum).toJsDate();
+                const dayNum = parseInt(tempDateConverter.convert(day.n, 'np', 'en'));
+                if (isNaN(dayNum)) return;
+                
+                const eventDate = new NepaliDate(bsYear, bsMonth - 1, dayNum).toJsDate();
 
-                if (eventDate >= today && !events.some(e => e.summary === day.f)) {
+                if (eventDate >= today && !addedSummaries.has(day.f)) {
                      events.push({
                         summary: day.f,
                         startDate: eventDate.toISOString().split('T')[0],
                         isHoliday: day.h
                     });
+                    addedSummaries.add(day.f);
                 }
-             } catch (e) {}
+             } catch (e) {
+                console.error("Could not parse day-specific festival date:", day, e);
+             }
         }
     });
     
@@ -180,7 +197,7 @@ const patroDataFlow = ai.defineFlow(
     outputSchema: PatroDataResponseSchema,
   },
   async () => {
-    const cacheKey = `patro_data_v16_sajjan`;
+    const cacheKey = `patro_data_v17_sajjan`;
     const cachedData = getFromCache<PatroDataResponse>(cacheKey, CACHE_DURATION_MS);
     if (cachedData) {
         console.log("Returning cached patro data (Sajjan API).");
@@ -195,9 +212,9 @@ const patroDataFlow = ai.defineFlow(
 
     const todayBS = new NepaliDate();
     const bsYear = todayBS.getYear();
-    const bsMonth = todayBS.getMonth(); // 0-indexed
+    const bsMonth = todayBS.getMonth() + 1; // 1-indexed
     
-    const monthData = await fetchFromSajjanAPI(`${bsYear}/${bsMonth + 1}.json`, SajjanApiMonthSchema);
+    const monthData = await fetchFromSajjanAPI(`${bsYear}/${bsMonth}.json`, SajjanApiMonthSchema);
 
     if (monthData) {
         todayInfo = processTodayData(todayBS, monthData);
