@@ -13,6 +13,14 @@ interface FestivalListProps {
 }
 
 export default function FestivalList({ festivals }: FestivalListProps) {
+  if (!festivals || festivals.length === 0) {
+    return (
+      <div className="flex items-center justify-center p-4 text-center text-muted-foreground bg-muted/50 rounded-lg">
+        No upcoming holidays found for the rest of the year.
+      </div>
+    );
+  }
+
   return (
     <div className="w-full">
       <Accordion type="single" collapsible className="w-full space-y-2">
