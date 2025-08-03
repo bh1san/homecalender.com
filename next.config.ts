@@ -78,6 +78,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'annapurnapost.prixacdn.net',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 };
