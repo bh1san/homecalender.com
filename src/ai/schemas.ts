@@ -109,7 +109,6 @@ export const CurrentDateInfoResponseSchema = z.object({
     adYear: z.number(),
     adMonth: z.number(),
     adDay: z.number(),
-    tithi: z.string(),
 });
 export type CurrentDateInfoResponse = z.infer<typeof CurrentDateInfoResponseSchema>;
 
@@ -123,3 +122,5 @@ export const PatroDataResponseSchema = z.object({
     upcomingEvents: z.array(UpcomingEventSchema).optional(),
 });
 export type PatroDataResponse = z.infer<typeof PatroDataResponseSchema>;
+
+    

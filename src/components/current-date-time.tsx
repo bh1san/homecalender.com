@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -80,9 +81,11 @@ export default function CurrentDateTime({ today, todaysEvent }: CurrentDateTimeP
   return (
     <div className="space-y-1 text-primary-foreground">
       <h1 className="text-3xl font-bold">{nepaliDateStr}</h1>
-      <p className="text-lg">{todaysEvent || today.tithi}</p>
+      {todaysEvent && <p className="text-lg">{todaysEvent}</p>}
       <p className="text-lg">{nepaliTimeString ? `${localizedTimePrefix} ${nepaliTimeString}` : ""}</p>
       <p className="text-base">{gregorianDateStr}</p>
     </div>
   );
 }
+
+    

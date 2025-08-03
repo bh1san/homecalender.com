@@ -2,7 +2,7 @@
 'use server';
 /**
  * @fileOverview A flow for fetching data like horoscopes, gold/silver prices, and forex rates using Genkit AI.
- * It now uses the nepalicalendar.sajjan.com.np public API for calendar data and a local file for custom events.
+ * Today's date information for the banner is sourced locally for reliability.
  *
  * - getPatroData - A function that fetches all daily data for the app.
  */
@@ -23,6 +23,7 @@ import {
 } from '@/ai/schemas';
 import { getFromCache, setInCache } from '@/ai/cache';
 import customEventsData from '@/data/custom-events.json';
+import { getMonthEvents } from './month-events-flow';
 
 const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
 
@@ -71,132 +72,30 @@ const generateAIFallbackData = async (): Promise<Omit<PatroDataResponse, 'today'
     };
 };
 
-const SajjanApiMonthSchema = z.object({
-    days: z.array(z.object({
-        n: z.string(),
-        e: z.string(),
-        t: z.string(),
-        f: z.string(),
-        h: z.boolean(),
-        d: z.number(),
-    })),
-    holiFest: z.array(z.string()),
-});
+const getLocalTodayData = (): { todayInfo: CurrentDateInfoResponse, todaysEvent?: string } => {
+    const todayAD = new Date();
+    todayAD.setHours(0, 0, 0, 0);
 
-const fetchFromSajjanAPI = async (endpoint: string, schema: z.ZodType) => {
-    const baseUrl = 'https://nepalicalendar.sajjan.com.np/data';
-    try {
-        const response = await fetch(`${baseUrl}/${endpoint}`);
-        if (!response.ok) {
-            console.error(`Sajjan API request to ${endpoint} failed with status ${response.status}: ${await response.text()}`);
-            return null;
-        }
-        const data = await response.json();
-        const parsed = schema.safeParse(data);
-        if (!parsed.success) {
-            console.error(`Failed to parse Sajjan API response from ${endpoint}:`, parsed.error);
-            return null;
-        }
-        return parsed.data;
-    } catch (error) {
-        console.error(`Error fetching from Sajjan API endpoint ${endpoint}:`, error);
-        return null;
-    }
-};
-
-const processTodayData = (bsDate: NepaliDate, monthData: z.infer<typeof SajjanApiMonthSchema>): CurrentDateInfoResponse | null => {
-    if (!monthData) return null;
-    
-    const bsDay = bsDate.getDate();
-    const tempDateConverter = new NepaliDate(0,0,0);
-    const bsDayString = tempDateConverter.convert(String(bsDay), 'en', 'np');
-    
-    const todayData = monthData.days.find(d => d.n === bsDayString);
-    let todayTithi = todayData?.t || '';
-
-    if (!todayData) return null;
-
-    const adDate = bsDate.toJsDate();
+    const todayBS = new NepaliDate(todayAD);
     const npMonths = ['बैशाख', 'जेठ', 'असार', 'श्रावण', 'भदौ', 'असोज', 'कार्तिक', 'मंसिर', 'पुष', 'माघ', 'फागुन', 'चैत'];
     const npDays = ['आइतबार', 'सोमबार', 'मङ्गलबार', 'बुधबार', 'बिहिबार', 'शुक्रबार', 'शनिबार'];
 
-    return {
-        bsYear: bsDate.getYear(),
-        bsMonth: bsDate.getMonth() + 1,
-        bsDay: bsDay,
-        bsMonthName: npMonths[bsDate.getMonth()],
-        dayOfWeek: npDays[bsDate.getDay()],
-        adYear: adDate.getFullYear(),
-        adMonth: adDate.getMonth() + 1,
-        adDay: adDate.getDate(),
-        tithi: todayTithi,
+    const todayInfo: CurrentDateInfoResponse = {
+        bsYear: todayBS.getYear(),
+        bsMonth: todayBS.getMonth() + 1,
+        bsDay: todayBS.getDate(),
+        bsMonthName: npMonths[todayBS.getMonth()],
+        dayOfWeek: npDays[todayBS.getDay()],
+        adYear: todayAD.getFullYear(),
+        adMonth: todayAD.getMonth() + 1,
+        adDay: todayAD.getDate(),
     };
-};
-
-const processEvents = (monthData: z.infer<typeof SajjanApiMonthSchema>, bsYear: number, bsMonth: number): UpcomingEvent[] => {
-    if (!monthData) return [];
     
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const events: UpcomingEvent[] = [];
-    const addedSummaries = new Set<string>();
-
-    const tempDateConverter = new NepaliDate(0,0,0);
-
-    // Process holiFest
-    if (monthData.holiFest) {
-        monthData.holiFest.forEach(eventStr => {
-            const match = eventStr.match(/^(\S+)\s*गते\s*(.*)/);
-            if (match) {
-                try {
-                    const dayNp = match[1];
-                    const dayEn = tempDateConverter.convert(dayNp, 'np', 'en');
-                    const day = parseInt(dayEn);
-                    const summary = match[2];
-
-                    if (!isNaN(day) && !addedSummaries.has(summary)) {
-                        const eventDate = new NepaliDate(bsYear, bsMonth -1, day).toJsDate();
-                        if (eventDate >= today) {
-                            events.push({
-                                summary: summary,
-                                startDate: eventDate.toISOString().split('T')[0],
-                                isHoliday: true // Assuming holiFest items are holidays
-                            });
-                            addedSummaries.add(summary);
-                        }
-                    }
-                } catch (e) {
-                    console.error("Could not parse holiFest date:", eventStr, e);
-                }
-            }
-        });
-    }
-
-    // Add day-specific festivals
-     monthData.days.forEach(day => {
-        if (day.f) {
-             try {
-                const dayNum = parseInt(tempDateConverter.convert(day.n, 'np', 'en'));
-                if (isNaN(dayNum)) return;
-                
-                const eventDate = new NepaliDate(bsYear, bsMonth - 1, dayNum).toJsDate();
-
-                if (eventDate >= today && !addedSummaries.has(day.f)) {
-                     events.push({
-                        summary: day.f,
-                        startDate: eventDate.toISOString().split('T')[0],
-                        isHoliday: day.h
-                    });
-                    addedSummaries.add(day.f);
-                }
-             } catch (e) {
-                console.error("Could not parse day-specific festival date:", day, e);
-             }
-        }
-    });
+    // Find custom event for today
+    const todayADString = todayAD.toISOString().split('T')[0];
+    const todaysCustomEvent = customEventsData.find(event => event.startDate === todayADString);
     
-    return events;
+    return { todayInfo, todaysEvent: todaysCustomEvent?.summary };
 };
 
 
@@ -207,58 +106,51 @@ const patroDataFlow = ai.defineFlow(
     outputSchema: PatroDataResponseSchema,
   },
   async () => {
-    const cacheKey = `patro_data_v23_event_fix`;
+    const cacheKey = `patro_data_v25_local_today`;
     const cachedData = getFromCache<PatroDataResponse>(cacheKey, CACHE_DURATION_MS);
     if (cachedData) {
-        console.log("Returning cached patro data (Sajjan API + Custom).");
+        console.log("Returning cached patro data (local today).");
         return cachedData;
     }
 
-    console.log("Fetching new Patro data from sources (Sajjan API + Custom)...");
+    console.log("Fetching new Patro data from sources (local today)...");
 
-    let todayInfo: CurrentDateInfoResponse | null = null;
-    let upcomingEvents: UpcomingEvent[] = [];
     let aiData: Omit<PatroDataResponse, 'today' | 'upcomingEvents' | 'todaysEvent'> = { horoscope: [], goldSilver: null, forex: [] };
-    let todaysEventSummary: string | undefined = undefined;
 
-    const todayBS = new NepaliDate();
-    const bsYear = todayBS.getYear();
-    const bsMonth = todayBS.getMonth() + 1; // 1-indexed
+    const { todayInfo, todaysEvent } = getLocalTodayData();
     
-    // Fetch and process API data for today and upcoming events
-    const monthData = await fetchFromSajjanAPI(`${bsYear}/${bsMonth}.json`, SajjanApiMonthSchema);
-    if (monthData) {
-        todayInfo = processTodayData(todayBS, monthData);
-        upcomingEvents = processEvents(monthData, bsYear, bsMonth);
-    }
-    
-    // Always fetch AI data for horoscope, gold/silver, forex
+    // Fetch AI data for horoscope, gold/silver, forex in parallel
     aiData = await generateAIFallbackData();
 
-    // Process local custom events
+    // Fetch and process events for the upcoming events list
+    // This will fetch from API and merge with local custom events
+    const monthEvents = await getMonthEvents({ year: todayInfo.bsYear, month: todayInfo.bsMonth });
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Find custom event for today specifically
-    const todayADString = today.toISOString().split('T')[0];
-    const todaysCustomEvent = customEventsData.find(event => event.startDate === todayADString);
-    if (todaysCustomEvent) {
-      todaysEventSummary = todaysCustomEvent.summary;
-    }
+    const upcomingEvents: UpcomingEvent[] = monthEvents
+      .map(event => {
+        try {
+          const eventDate = new Date(event.gregorian_date!);
+          if (eventDate >= today) {
+            return {
+              summary: event.events[0] || 'Event',
+              startDate: event.gregorian_date!,
+              isHoliday: event.is_holiday,
+            };
+          }
+          return null;
+        } catch(e) {
+          return null;
+        }
+      })
+      .filter((e): e is UpcomingEvent => e !== null);
 
-
-    const localEvents: UpcomingEvent[] = customEventsData
-        .map(event => ({
-            ...event,
-            isHoliday: false, // Assuming custom events are not holidays unless specified
-        }))
-        .filter(event => new Date(event.startDate) >= today);
-    
-    // Merge and de-duplicate events
-    const allEvents = [...upcomingEvents, ...localEvents];
+    // Merge and de-duplicate events from the month flow
     const uniqueEventsMap = new Map<string, UpcomingEvent>();
 
-    allEvents.forEach(event => {
+    upcomingEvents.forEach(event => {
         // Use a key of date + summary to identify unique events
         const key = `${event.startDate}-${event.summary}`;
         if (!uniqueEventsMap.has(key)) {
@@ -274,7 +166,7 @@ const patroDataFlow = ai.defineFlow(
     const response: PatroDataResponse = {
         ...aiData,
         today: todayInfo,
-        todaysEvent: todaysEventSummary,
+        todaysEvent: todaysEvent,
         upcomingEvents: finalEvents,
     };
     
@@ -286,3 +178,5 @@ const patroDataFlow = ai.defineFlow(
 export async function getPatroData(): Promise<PatroDataResponse> {
   return patroDataFlow();
 }
+
+    
