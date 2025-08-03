@@ -21,7 +21,6 @@ import {
   UpcomingEventSchema,
 } from '@/ai/schemas';
 import { getFromCache, setInCache } from '@/ai/cache';
-import NepaliCalendar from 'nepali-calendar-js';
 
 const CACHE_DURATION_MS = 10 * 60 * 1000; // 10 minutes
 

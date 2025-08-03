@@ -27,8 +27,12 @@ export default function NepaliCalendarComponent({ today: initialToday, monthEven
 
     useEffect(() => {
         if (isMounted) {
-            const todayBS = (NepaliCalendar as any).default.toBS(new Date());
-            setCurrentDate({ year: todayBS.bs_year, month: todayBS.bs_month });
+            try {
+                const todayBS = (NepaliCalendar as any).default.toBS(new Date());
+                setCurrentDate({ year: todayBS.bs_year, month: todayBS.bs_month });
+            } catch (e) {
+                 console.error("Failed to get BS date", e);
+            }
         }
     }, [isMounted]);
 
