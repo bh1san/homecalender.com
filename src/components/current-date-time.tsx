@@ -63,11 +63,10 @@ export default function CurrentDateTime({ today, todaysEvent }: CurrentDateTimeP
       </div>
     );
   }
-
-  // Create a single valid NepaliDate instance to use for conversions
-  const dateConverter = new NepaliDate();
-  const nepaliDay = dateConverter.convert(String(today.bsDay), 'en', 'np');
-  const nepaliYear = dateConverter.convert(String(today.bsYear), 'en', 'np');
+  
+  const todayBS = new NepaliDate(new Date(today.adYear, today.adMonth -1, today.adDay));
+  const nepaliDay = todayBS.format('D', 'np');
+  const nepaliYear = todayBS.format('YYYY', 'np');
   const nepaliDateStr = `${nepaliDay} ${today.bsMonthName} ${nepaliYear}, ${today.dayOfWeek}`;
 
   const gregorianDate = new Date(today.adYear, today.adMonth - 1, today.adDay);
