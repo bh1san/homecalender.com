@@ -45,7 +45,7 @@ export default function CurrentDateTime({ today, todaysEvent }: CurrentDateTimeP
     return () => clearInterval(intervalId);
   }, [time]);
 
-  if (!isMounted || !today || !time) {
+  if (!isMounted || !today) {
     return (
       <div className="space-y-2 text-primary-foreground">
         <div className="h-9 w-64 bg-white/20 animate-pulse rounded-md" />
@@ -67,17 +67,25 @@ export default function CurrentDateTime({ today, todaysEvent }: CurrentDateTimeP
       year: 'numeric'
   });
   
-  const timeString = time.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true });
-  const timeSuffix = timeString.slice(-2);
-  const localizedTimePrefix = timeSuffix === 'AM' ? 'बिहानको' : (timeSuffix === 'PM' ? 'बेलुकीको' : '');
-  const nepaliTimeString = new NepaliDate(time).format('K:mm:ss', 'np');
+  let timeString = null;
+  let localizedTimePrefix = '';
+  let nepaliTimeString = '';
+
+  if (time) {
+      timeString = time.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true });
+      const timeSuffix = timeString.slice(-2);
+      localizedTimePrefix = timeSuffix === 'AM' ? 'बिहानको' : (timeSuffix === 'PM' ? 'बेलुकीको' : '');
+      nepaliTimeString = new NepaliDate(time).format('K:mm:ss', 'np');
+  }
+
 
   return (
     <div className="space-y-1 text-primary-foreground">
       <h1 className="text-3xl font-bold">{nepaliDateStr}</h1>
       {todaysEvent && <p className="text-lg">{todaysEvent}</p>}
-      <p className="text-lg">{nepaliTimeString ? `${localizedTimePrefix} ${nepaliTimeString}` : ""}</p>
+      <p className="text-lg">{nepaliTimeString ? `${localizedTimePrefix} ${nepaliTimeString}` : "Loading..."}</p>
       <p className="text-base">{gregorianDateStr}</p>
     </div>
   );
 }
+
