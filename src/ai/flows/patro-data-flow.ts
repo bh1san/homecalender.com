@@ -122,7 +122,7 @@ const patroDataFlow = ai.defineFlow(
     outputSchema: PatroDataResponseSchema,
   },
   async () => {
-    const cacheKey = `patro_data_v26_nrb_forex`;
+    const cacheKey = `patro_data_v27_nrb_forex`;
     const cachedData = getFromCache<PatroDataResponse>(cacheKey, CACHE_DURATION_MS);
     if (cachedData) {
         console.log("Returning cached patro data.");
@@ -143,19 +143,21 @@ const patroDataFlow = ai.defineFlow(
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const upcomingEvents: UpcomingEvent[] = monthEvents
+    const upcomingEvents: UpcomingEvent[] = (monthEvents || []) // Ensure monthEvents is not null
       .map(event => {
         try {
-          const eventDate = new Date(event.gregorian_date!);
+          if (!event?.gregorian_date) return null; // Guard against missing date
+          const eventDate = new Date(event.gregorian_date);
           if (eventDate >= today) {
             return {
               summary: event.events[0] || 'Event',
-              startDate: event.gregorian_date!,
+              startDate: event.gregorian_date,
               isHoliday: event.is_holiday,
             };
           }
           return null;
         } catch(e) {
+          console.error("Error processing event date:", e);
           return null;
         }
       })

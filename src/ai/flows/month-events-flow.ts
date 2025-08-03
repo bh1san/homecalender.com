@@ -87,7 +87,7 @@ const monthEventsFlow = ai.defineFlow(
     outputSchema: z.array(CalendarEventSchema),
   },
   async ({ year, month }) => {
-    const cacheKey = `sajjan_monthEvents_v2_${year}_${month}`;
+    const cacheKey = `sajjan_monthEvents_v3_${year}_${month}`;
     const cachedData = getFromCache<CalendarEvent[]>(cacheKey, 24 * 60 * 60 * 1000); // Cache for 24 hours
     if (cachedData) {
         console.log(`Returning cached month events for ${year}-${month} from Sajjan API + Custom.`);
@@ -160,5 +160,11 @@ const monthEventsFlow = ai.defineFlow(
 );
 
 export async function getMonthEvents(input: z.infer<typeof CalendarEventsRequestSchema>): Promise<CalendarEvent[]> {
-  return monthEventsFlow(input);
+  try {
+    const events = await monthEventsFlow(input);
+    return events;
+  } catch (error) {
+    console.error("Error in getMonthEvents, returning empty array", error);
+    return []; // Ensure it always returns a valid array
+  }
 }
