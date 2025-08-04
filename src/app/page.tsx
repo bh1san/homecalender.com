@@ -1,7 +1,5 @@
 
-"use client";
-
-import { ArrowRightLeft, CalendarDays, PartyPopper, Search, Menu } from "lucide-react";
+import { ArrowRightLeft, PartyPopper, Search, Menu } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -17,9 +15,7 @@ import DateConverter from "@/components/date-converter";
 import FestivalList from "@/components/festival-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { NewsItem, PatroDataResponse } from "@/ai/schemas";
 import CurrentDateTime from "@/components/current-date-time";
-import { useEffect, useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import MotivationalQuote from "@/components/motivational-quote";
 import { User } from "lucide-react";
@@ -27,246 +23,9 @@ import UpcomingEventsWidget from "@/components/upcoming-events-widget";
 import Rashifal from "@/components/rashifal";
 import GoldSilver from "@/components/gold-silver";
 import Forex from "@/components/forex";
-import { useIsMounted } from "@/hooks/use-is-mounted";
+import { getPageData } from "@/app/actions";
 
-
-type Settings = {
-    logoUrl: string;
-    navLinks: string[];
-}
-
-export default function Home() {
-  const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
-  const [patroData, setPatroData] = useState<PatroDataResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [settings, setSettings] = useState<Settings>({ logoUrl: "https://placehold.co/200x50.png", navLinks: [] });
-  const [loadingSettings, setLoadingSettings] = useState(true);
-  
-  useEffect(() => {
-    const fetchSettings = async () => {
-        setLoadingSettings(true);
-        try {
-            const response = await fetch('/api/settings');
-            if (response.ok) {
-                const data = await response.json();
-                setSettings(data);
-            }
-        } catch (error) {
-            console.error("Failed to fetch settings, using defaults.", error);
-        } finally {
-            setLoadingSettings(false);
-        }
-    }
-    fetchSettings();
-  }, []);
-  
-
-  useEffect(() => {
-    const fetchAllData = async () => {
-      setLoading(true);
-      try {
-        const [patroRes, newsRes] = await Promise.all([
-            fetch('/api/patro'),
-            fetch('/api/news'),
-        ]);
-
-        if (patroRes.ok) {
-            const patroData = await patroRes.json();
-            setPatroData(patroData);
-        } else {
-            console.error("Failed to fetch patro data");
-        }
-        
-        if (newsRes.ok) {
-            const newsData = await newsRes.json();
-            setNewsItems(newsData.headlines);
-        } else {
-            console.error("Failed to fetch news data");
-        }
-        
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAllData();
-  }, []);
-
-
-  return (
-    <>
-      <Header navLinks={settings.navLinks} logoUrl={settings.logoUrl} isLoading={loadingSettings} />
-      <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 bg-primary text-primary-foreground p-4 rounded-lg shadow-md items-center">
-            <CurrentDateTime today={patroData?.today} todaysEvent={patroData?.todaysEvent} />
-            <div className="hidden sm:flex justify-end">
-                <MotivationalQuote />
-            </div>
-        </div>
-
-        <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-foreground">Nepal</h2>
-            <div className="relative w-full max-w-xs">
-                <Input type="search" placeholder="Search events" className="pl-10 bg-white/80"/>
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400"/>
-            </div>
-        </div>
-
-        <section className="mb-8">
-          <h3 className="text-lg font-semibold mb-3 text-accent-foreground dark:text-gray-200 bg-accent/20 p-2 rounded">
-            News Bulletin from Nepal
-          </h3>
-            {loading ? (
-                <div className="flex space-x-4 overflow-x-auto pb-4">
-                    {[...Array(8)].map((_, index) => (
-                        <div key={index} className="flex-shrink-0 w-48 bg-card/80 rounded-lg shadow-md overflow-hidden animate-pulse">
-                             <div className="w-full h-32 bg-muted" />
-                            <div className="p-3">
-                                 <div className="h-4 bg-muted-foreground/20 rounded w-3/4 mb-2" />
-                                 <div className="h-4 bg-muted-foreground/20 rounded w-1/2" />
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            ) : newsItems.length > 0 ? (
-                <div className="flex space-x-4 overflow-x-auto pb-4">
-                    {newsItems.map((item) => (
-                         <a 
-                            key={item.id} 
-                            href={`https://www.google.com/search?q=${encodeURIComponent(item.title)}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="flex-shrink-0 w-48 bg-card/80 rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105"
-                        >
-                            <img 
-                                src={item.imageUrl} 
-                                alt={item.title} 
-                                width={192} 
-                                height={128} 
-                                className="w-full h-32 object-cover" 
-                                loading="lazy"
-                            />
-                            <div className="p-3">
-                                <p className="text-sm font-medium text-card-foreground leading-tight">{item.title}</p>
-                            </div>
-                        </a>
-                    ))}
-                </div>
-            ) : (
-                <div className="text-center text-muted-foreground p-4 bg-muted/50 rounded-lg">
-                    Could not load news headlines. Please ensure the NewsData.io API key is set.
-                </div>
-            )}
-        </section>
-
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <aside className="lg:col-span-1 space-y-8">
-             <Card className="bg-card/80 backdrop-blur-sm">
-                <CardHeader>
-                    <CardTitle className="text-lg font-semibold text-card-foreground">आउँदा दिनहरु</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <UpcomingEventsWidget loading={loading} events={patroData?.upcomingEvents} />
-                </CardContent>
-            </Card>
-
-             <Card className="bg-card/80 backdrop-blur-sm">
-                <CardHeader>
-                    <CardTitle className="text-lg font-semibold text-card-foreground">राशीफल</CardTitle>
-                </CardHeader>
-                <CardContent>
-                     <Rashifal loading={loading} horoscope={patroData?.horoscope} />
-                </CardContent>
-            </Card>
-          </aside>
-
-          <div className="lg:col-span-3 space-y-8">
-            <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
-                <CardContent className="p-2 sm:p-4">
-                     <NepaliCalendarComponent />
-                </CardContent>
-              </Card>
-              <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle>Tools</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Tabs defaultValue="converter" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 bg-muted/60">
-                      <TabsTrigger value="converter">
-                        <ArrowRightLeft className="mr-2 h-4 w-4" /> Converter
-                      </TabsTrigger>
-                      <TabsTrigger value="festivals">
-                        <PartyPopper className="mr-2 h-4 w-4" /> Festivals
-                      </TabsTrigger>
-                       <TabsTrigger value="gold">
-                        Gold/Silver
-                      </TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="converter" className="mt-6">
-                      <DateConverter />
-                    </TabsContent>
-                    <TabsContent value="festivals" className="mt-6">
-                      {loading ? (
-                         <div className="space-y-2">
-                            {[...Array(5)].map((_, i) => (
-                               <div key={i} className="h-16 bg-muted/50 rounded animate-pulse" />
-                            ))}
-                         </div>
-                      ) : patroData?.upcomingEvents && patroData.upcomingEvents.length > 0 ? (
-                           <FestivalList festivals={patroData.upcomingEvents} />
-                         ) : (
-                           <p className="text-center text-muted-foreground p-4 bg-background/80 rounded">No upcoming festivals found for the current month.</p>
-                         )
-                      }
-                    </TabsContent>
-                     <TabsContent value="gold" className="mt-6">
-                         <GoldSilver loading={loading} prices={patroData?.goldSilver} />
-                    </TabsContent>
-                  </Tabs>
-                </CardContent>
-              </Card>
-
-              <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle>Foreign Exchange Rates</CardTitle>
-                  <CardDescription>Rates are against NPR and provided by Nepal Rastra Bank.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Forex loading={loading} rates={patroData?.forex} />
-                </CardContent>
-              </Card>
-
-          </div>
-        </div>
-      </main>
-    </>
-  );
-}
-
-function Header({ navLinks, logoUrl, isLoading }: { navLinks: string[], logoUrl: string, isLoading: boolean }) {
-    const isMounted = useIsMounted();
-
-    if (!isMounted || isLoading) {
-        return (
-             <header className="bg-white text-primary-foreground shadow-md backdrop-blur-sm sticky top-0 z-50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between h-16">
-                        <div className="h-8 w-48 bg-gray-300/20 animate-pulse rounded-md" />
-                        <div className="hidden md:flex items-center space-x-4">
-                           <div className="h-5 w-64 bg-gray-300/20 animate-pulse rounded-md" />
-                           <div className="h-8 w-10 bg-gray-300/20 animate-pulse rounded-md" />
-                           <div className="h-8 w-8 bg-gray-300/20 animate-pulse rounded-full" />
-                        </div>
-                         <div className="md:hidden h-8 w-8 bg-gray-300/20 animate-pulse rounded-md" />
-                    </div>
-                </div>
-            </header>
-        )
-    }
-    
+function Header({ navLinks, logoUrl }: { navLinks: string[], logoUrl: string }) {
     return (
         <header className="bg-white text-foreground shadow-md backdrop-blur-sm sticky top-0 z-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -307,4 +66,143 @@ function Header({ navLinks, logoUrl, isLoading }: { navLinks: string[], logoUrl:
             </div>
         </header>
     )
+}
+
+
+export default async function Home() {
+  const { patroData, newsItems, settings } = await getPageData();
+  const loading = false; // Data is pre-fetched on the server
+
+  return (
+    <>
+      <Header navLinks={settings.navLinks} logoUrl={settings.logoUrl} />
+      <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 bg-primary text-primary-foreground p-4 rounded-lg shadow-md items-center">
+            <CurrentDateTime today={patroData?.today} todaysEvent={patroData?.todaysEvent} />
+            <div className="hidden sm:flex justify-end">
+                <MotivationalQuote />
+            </div>
+        </div>
+
+        <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-foreground">Nepal</h2>
+            <div className="relative w-full max-w-xs">
+                <Input type="search" placeholder="Search events" className="pl-10 bg-white/80"/>
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400"/>
+            </div>
+        </div>
+
+        <section className="mb-8">
+          <h3 className="text-lg font-semibold mb-3 text-accent-foreground dark:text-gray-200 bg-accent/20 p-2 rounded">
+            News Bulletin from Nepal
+          </h3>
+            {newsItems.length > 0 ? (
+                <div className="flex space-x-4 overflow-x-auto pb-4">
+                    {newsItems.map((item) => (
+                         <a 
+                            key={item.id} 
+                            href={`https://www.google.com/search?q=${encodeURIComponent(item.title)}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex-shrink-0 w-48 bg-card/80 rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105"
+                        >
+                            <img 
+                                src={item.imageUrl} 
+                                alt={item.title} 
+                                width={192} 
+                                height={128} 
+                                className="w-full h-32 object-cover" 
+                                loading="lazy"
+                            />
+                            <div className="p-3">
+                                <p className="text-sm font-medium text-card-foreground leading-tight">{item.title}</p>
+                            </div>
+                        </a>
+                    ))}
+                </div>
+            ) : (
+                <div className="text-center text-muted-foreground p-4 bg-muted/50 rounded-lg">
+                    Could not load news headlines. Please ensure the NewsData.io API key is set in the environment variables.
+                </div>
+            )}
+        </section>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          <aside className="lg:col-span-1 space-y-8">
+             <Card className="bg-card/80 backdrop-blur-sm">
+                <CardHeader>
+                    <CardTitle className="text-lg font-semibold text-card-foreground">आउँदा दिनहरु</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <UpcomingEventsWidget loading={loading} events={patroData?.upcomingEvents} />
+                </CardContent>
+            </Card>
+
+             <Card className="bg-card/80 backdrop-blur-sm">
+                <CardHeader>
+                    <CardTitle className="text-lg font-semibold text-card-foreground">राशीफल</CardTitle>
+                </CardHeader>
+                <CardContent>
+                     <Rashifal loading={loading} horoscope={patroData?.horoscope} />
+                </CardContent>
+            </Card>
+          </aside>
+
+          <div className="lg:col-span-3 space-y-8">
+            <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
+                <CardContent className="p-2 sm:p-4">
+                     <NepaliCalendarComponent />
+                </CardContent>
+              </Card>
+
+              <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle>Foreign Exchange Rates</CardTitle>
+                  <CardDescription>Rates are against NPR and provided by Nepal Rastra Bank.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Forex loading={loading} rates={patroData?.forex} />
+                </CardContent>
+              </Card>
+
+              <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle>Tools</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Tabs defaultValue="converter" className="w-full">
+                    <TabsList className="grid w-full grid-cols-3 bg-muted/60">
+                      <TabsTrigger value="converter">
+                        <ArrowRightLeft className="mr-2 h-4 w-4" /> Converter
+                      </TabsTrigger>
+                      <TabsTrigger value="festivals">
+                        <PartyPopper className="mr-2 h-4 w-4" /> Festivals
+                      </TabsTrigger>
+                       <TabsTrigger value="gold">
+                        Gold/Silver
+                      </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="converter" className="mt-6">
+                      <DateConverter />
+                    </TabsContent>
+                    <TabsContent value="festivals" className="mt-6">
+                      {patroData?.upcomingEvents && patroData.upcomingEvents.length > 0 ? (
+                           <FestivalList festivals={patroData.upcomingEvents} />
+                         ) : (
+                           <p className="text-center text-muted-foreground p-4 bg-background/80 rounded">No upcoming festivals found for the current month.</p>
+                         )
+                      }
+                    </TabsContent>
+                     <TabsContent value="gold" className="mt-6">
+                         <GoldSilver loading={loading} prices={patroData?.goldSilver} />
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </Card>
+
+          </div>
+        </div>
+      </main>
+    </>
+  );
 }

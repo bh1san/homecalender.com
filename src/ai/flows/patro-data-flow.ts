@@ -43,7 +43,6 @@ const scraperPrompt = ai.definePrompt({
 });
 
 const generateAIFallbackData = async (): Promise<Omit<PatroDataResponse, 'today' | 'upcomingEvents' | 'todaysEvent' | 'forex'>> => {
-    // This function will only be called if GEMINI_API_KEY is available
     if (!process.env.GEMINI_API_KEY) {
         console.log("GEMINI_API_KEY not found. Skipping AI data generation.");
         return { horoscope: [], goldSilver: null };
@@ -68,7 +67,6 @@ const generateAIFallbackData = async (): Promise<Omit<PatroDataResponse, 'today'
         console.error("AI call to scraperPrompt failed:", e);
     }
     
-    // If AI fails for any reason, return an empty but valid response shape to prevent crashes
     return { horoscope: [], goldSilver: null };
 };
 
@@ -86,7 +84,7 @@ const getForexData = async (): Promise<Forex[]> => {
         return forexRates;
     } catch (error) {
         console.error("Failed to fetch forex data from @sapkotamadan/nrb-forex:", error);
-        return []; // Return empty array on error
+        return [];
     }
 };
 
@@ -129,7 +127,6 @@ const patroDataFlow = ai.defineFlow(
     console.log("Fetching new Patro data from sources...");
     const { todayInfo, todaysEvent } = await getLocalTodayData();
     
-    // Fetch AI data, real forex data, and month events in parallel for efficiency
     const [aiData, forexData, monthEvents] = await Promise.all([
         generateAIFallbackData(),
         getForexData(),
@@ -139,13 +136,12 @@ const patroDataFlow = ai.defineFlow(
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Process upcoming events
     const upcomingEvents: UpcomingEvent[] = (monthEvents || [])
       .map(event => {
         try {
           if (!event?.gregorian_date) return null;
           const eventDate = new Date(event.gregorian_date);
-          eventDate.setHours(0,0,0,0); // Normalize time
+          eventDate.setHours(0,0,0,0);
           if (eventDate >= today) {
             return {
               summary: event.events[0] || 'Event',
@@ -161,7 +157,6 @@ const patroDataFlow = ai.defineFlow(
       })
       .filter((e): e is UpcomingEvent => e !== null);
 
-    // Make events unique and sort them
     const uniqueEventsMap = new Map<string, UpcomingEvent>();
     upcomingEvents.forEach(event => {
         const key = `${event.startDate}-${event.summary}`;
@@ -173,7 +168,6 @@ const patroDataFlow = ai.defineFlow(
     const finalEvents = Array.from(uniqueEventsMap.values());
     finalEvents.sort((a,b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
     
-    // Assemble the final response object
     const response: PatroDataResponse = {
         ...aiData,
         forex: forexData,

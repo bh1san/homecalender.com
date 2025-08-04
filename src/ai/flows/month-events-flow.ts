@@ -19,12 +19,12 @@ const NpCalendarSajjanApiResponseSchema = z.object({
         np: z.string(),
     }),
     days: z.array(z.object({
-        n: z.string(), // nepali date
-        e: z.string(), // english date
-        t: z.string(), // tithi
-        f: z.string(), // festival
-        h: z.boolean(), // holiday
-        d: z.number(), // day of week
+        n: z.string(),
+        e: z.string(),
+        t: z.string(),
+        f: z.string(),
+        h: z.boolean(),
+        d: z.number(),
     })),
     holiFest: z.array(z.string()),
     marriage: z.array(z.string()),
@@ -34,7 +34,6 @@ const NpCalendarSajjanApiResponseSchema = z.object({
 const fetchFromSajjanAPI = async (endpoint: string, schema: z.ZodType) => {
     const baseUrl = 'https://nepalicalendar.sajjan.com.np/data';
     try {
-        // Use Next.js built-in fetch caching, revalidate data every 24 hours.
         const response = await fetch(`${baseUrl}/${endpoint}`, { next: { revalidate: 86400 } });
 
         if (!response.ok) {
@@ -61,8 +60,6 @@ const processMonthData = async (data: z.infer<typeof NpCalendarSajjanApiResponse
     const NepaliDate = (await import('nepali-date-converter')).default;
     
     return data.days.map(dayData => {
-        // The day number can be extracted directly from the nepali date string 'dayData.n'
-        // by parsing the integer from it. This is more reliable than conversion.
         const bsDay = parseInt(dayData.n); 
         const adDate = new NepaliDate(year, month - 1, bsDay).toJsDate();
         const events = [];
@@ -87,68 +84,66 @@ const monthEventsFlow = ai.defineFlow(
     outputSchema: z.array(CalendarEventSchema),
   },
   async ({ year, month }) => {
-    console.log(`Fetching new month events for ${year}-${month} from Sajjan API + Custom.`);
-    const NepaliDate = (await import('nepali-date-converter')).default;
-    const customEventsData = (await import('@/data/custom-events.json')).default;
+    try {
+        console.log(`Fetching new month events for ${year}-${month} from Sajjan API + Custom.`);
+        const NepaliDate = (await import('nepali-date-converter')).default;
+        const customEventsData = (await import('@/data/custom-events.json')).default;
 
-    // 1. Fetch events from Sajjan API
-    const monthData = await fetchFromSajjanAPI(`${year}/${month}.json`, NpCalendarSajjanApiResponseSchema);
-    const apiEvents = monthData ? await processMonthData(monthData, year, month) : [];
+        const monthData = await fetchFromSajjanAPI(`${year}/${month}.json`, NpCalendarSajjanApiResponseSchema);
+        const apiEvents = monthData ? await processMonthData(monthData, year, month) : [];
 
-    // 2. Filter custom events for the given year and month
-    const customEventsForMonth = customEventsData
-        .map(event => {
-            try {
-                const eventDate = new Date(event.startDate);
-                const nepaliEventDate = new NepaliDate(eventDate);
-                return {
-                    ...event,
-                    bsYear: nepaliEventDate.getYear(),
-                    bsMonth: nepaliEventDate.getMonth() + 1,
-                    bsDay: nepaliEventDate.getDate()
-                };
-            } catch (e) {
-                return null;
+        const customEventsForMonth = customEventsData
+            .map(event => {
+                try {
+                    const eventDate = new Date(event.startDate);
+                    const nepaliEventDate = new NepaliDate(eventDate);
+                    return {
+                        ...event,
+                        bsYear: nepaliEventDate.getYear(),
+                        bsMonth: nepaliEventDate.getMonth() + 1,
+                        bsDay: nepaliEventDate.getDate()
+                    };
+                } catch (e) {
+                    return null;
+                }
+            })
+            .filter(event => event && event.bsYear === year && event.bsMonth === month);
+
+        const eventsMap = new Map<number, CalendarEvent>();
+
+        apiEvents.forEach(event => {
+            eventsMap.set(event.day, event);
+        });
+
+        customEventsForMonth.forEach(customEvent => {
+            if (!customEvent) return;
+
+            const day = customEvent.bsDay;
+            const existingEvent = eventsMap.get(day);
+
+            if (existingEvent) {
+                if (!existingEvent.events.includes(customEvent.summary)) {
+                    existingEvent.events.push(customEvent.summary);
+                }
+            } else {
+                const adDate = new NepaliDate(year, month - 1, day).toJsDate();
+                eventsMap.set(day, {
+                    day: day,
+                    tithi: '',
+                    gregorian_date: adDate.toISOString().split('T')[0],
+                    events: [customEvent.summary],
+                    is_holiday: false,
+                });
             }
-        })
-        .filter(event => event && event.bsYear === year && event.bsMonth === month);
+        });
 
-    // 3. Merge API events and custom events
-    const eventsMap = new Map<number, CalendarEvent>();
-
-    // Add API events to the map first
-    apiEvents.forEach(event => {
-        eventsMap.set(event.day, event);
-    });
-
-    // Add or merge custom events
-    customEventsForMonth.forEach(customEvent => {
-        if (!customEvent) return;
-
-        const day = customEvent.bsDay;
-        const existingEvent = eventsMap.get(day);
-
-        if (existingEvent) {
-            // If event for this day already exists, add custom event summary if not already present
-            if (!existingEvent.events.includes(customEvent.summary)) {
-                existingEvent.events.push(customEvent.summary);
-            }
-        } else {
-            // If no event for this day, create a new one
-            const adDate = new NepaliDate(year, month - 1, day).toJsDate();
-            eventsMap.set(day, {
-                day: day,
-                tithi: '', // Tithi info comes from API, not available for custom-only dates
-                gregorian_date: adDate.toISOString().split('T')[0],
-                events: [customEvent.summary],
-                is_holiday: false, // Assume custom events aren't holidays unless specified
-            });
-        }
-    });
-
-    const mergedEvents = Array.from(eventsMap.values()).sort((a, b) => a.day - b.day);
-    
-    return mergedEvents;
+        const mergedEvents = Array.from(eventsMap.values()).sort((a, b) => a.day - b.day);
+        
+        return mergedEvents;
+    } catch (error) {
+        console.error("Error in monthEventsFlow, returning empty array", error);
+        return [];
+    }
   }
 );
 
@@ -158,6 +153,6 @@ export async function getMonthEvents(input: z.infer<typeof CalendarEventsRequest
     return events;
   } catch (error) {
     console.error("Error in getMonthEvents, returning empty array", error);
-    return []; // Ensure it always returns a valid array
+    return [];
   }
 }

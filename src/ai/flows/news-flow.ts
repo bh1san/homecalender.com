@@ -14,7 +14,6 @@ const NewsApiRequestSchema = z.object({
   country: z.string().describe('The country for which to fetch news headlines (e.g., "Nepal").'),
 });
 
-// Mapping for country names to ISO 3166-1 alpha-2 codes used by the API
 const countryCodeMapping: { [key: string]: string } = {
     "Nepal": "np",
     "India": "in",
@@ -34,15 +33,14 @@ const newsFlow = ai.defineFlow(
     const apiKey = process.env.NEWSDATA_API_KEY;
     if (!apiKey) {
         console.error("NewsData.io API key is not configured in .env file (NEWSDATA_API_KEY).");
-        // Return an empty response instead of throwing to prevent page crashes.
         return { headlines: [] };
     }
     
-    const countryCode = countryCodeMapping[country] || 'us'; // Default to US if not found
+    const countryCode = countryCodeMapping[country] || 'us';
     const apiUrl = `https://newsdata.io/api/1/news?apikey=${apiKey}&country=${countryCode}&size=10`;
 
     try {
-        const response = await fetch(apiUrl, { next: { revalidate: 3600 } }); // Use Next.js built-in caching (1 hour)
+        const response = await fetch(apiUrl, { next: { revalidate: 86400 } }); 
         if (!response.ok) {
             const errorBody = await response.text();
             console.error(`News API request failed with status ${response.status}: ${errorBody}`);
@@ -57,7 +55,7 @@ const newsFlow = ai.defineFlow(
         }
 
         const headlinesWithImages = data.results
-            .filter((article: any) => article.title && article.link) // Ensure basic article data exists
+            .filter((article: any) => article.title && article.link)
             .map((article: any) => ({
                 id: article.article_id || article.link,
                 title: article.title,
@@ -69,7 +67,6 @@ const newsFlow = ai.defineFlow(
 
     } catch (error) {
         console.error("Error fetching or processing news data:", error);
-        // Fallback to empty response to prevent crashing the page
         return { headlines: [] };
     }
   }
