@@ -42,7 +42,7 @@ const newsFlow = ai.defineFlow(
     const apiUrl = `https://newsdata.io/api/1/news?apikey=${apiKey}&country=${countryCode}&size=10`;
 
     try {
-        const response = await fetch(apiUrl, { next: { revalidate: 3600 } }); // Use Next.js built-in caching (1 hour)
+        const response = await fetch(apiUrl, { next: { revalidate: 86400 } }); // Use Next.js built-in caching (24 hours)
         if (!response.ok) {
             const errorBody = await response.text();
             console.error(`News API request failed with status ${response.status}: ${errorBody}`);

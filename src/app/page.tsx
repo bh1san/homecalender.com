@@ -123,32 +123,34 @@ export default function Home() {
                         </div>
                     ))}
                 </div>
+            ) : newsItems.length > 0 ? (
+                <div className="flex space-x-4 overflow-x-auto pb-4">
+                    {newsItems.map((item) => (
+                         <a 
+                            key={item.id} 
+                            href={`https://www.google.com/search?q=${encodeURIComponent(item.title)}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex-shrink-0 w-48 bg-card/80 rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105"
+                        >
+                            <img 
+                                src={item.imageUrl} 
+                                alt={item.title} 
+                                width={192} 
+                                height={128} 
+                                className="w-full h-32 object-cover" 
+                                loading="lazy"
+                            />
+                            <div className="p-3">
+                                <p className="text-sm font-medium text-card-foreground leading-tight">{item.title}</p>
+                            </div>
+                        </a>
+                    ))}
+                </div>
             ) : (
-                newsItems.length > 0 && (
-                    <div className="flex space-x-4 overflow-x-auto pb-4">
-                        {newsItems.map((item) => (
-                             <a 
-                                key={item.id} 
-                                href={`https://www.google.com/search?q=${encodeURIComponent(item.title)}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="flex-shrink-0 w-48 bg-card/80 rounded-lg shadow-md overflow-hidden transition-transform duration-300 hover:scale-105"
-                            >
-                                <img 
-                                    src={item.imageUrl} 
-                                    alt={item.title} 
-                                    width={192} 
-                                    height={128} 
-                                    className="w-full h-32 object-cover" 
-                                    loading="lazy"
-                                />
-                                <div className="p-3">
-                                    <p className="text-sm font-medium text-card-foreground leading-tight">{item.title}</p>
-                                </div>
-                            </a>
-                        ))}
-                    </div>
-                )
+                <div className="text-center text-muted-foreground p-4 bg-muted/50 rounded-lg">
+                    Could not load news headlines. Please ensure the NewsData.io API key is set.
+                </div>
             )}
         </section>
 
@@ -217,13 +219,12 @@ export default function Home() {
                                <div key={i} className="h-16 bg-muted/50 rounded animate-pulse" />
                             ))}
                          </div>
-                      ) : (
-                         patroData?.upcomingEvents && patroData.upcomingEvents.length > 0 ? (
+                      ) : patroData?.upcomingEvents && patroData.upcomingEvents.length > 0 ? (
                            <FestivalList festivals={patroData.upcomingEvents} />
                          ) : (
-                           <p className="text-center text-muted-foreground p-4 bg-background/80 rounded">No upcoming festivals found.</p>
+                           <p className="text-center text-muted-foreground p-4 bg-background/80 rounded">No upcoming festivals found for the current month.</p>
                          )
-                      )}
+                      }
                     </TabsContent>
                      <TabsContent value="gold" className="mt-6">
                          <GoldSilver loading={loading} prices={patroData?.goldSilver} />
