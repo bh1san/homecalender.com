@@ -10,7 +10,6 @@ import { ChevronLeft, ChevronRight, Loader, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { useIsMounted } from '@/hooks/use-is-mounted';
-import { getMonthEvents } from '@/ai/flows/month-events-flow';
 
 interface CalendarDate {
     bsYear: number;
@@ -41,8 +40,14 @@ export default function NepaliCalendarComponent() {
     const fetchEventsForMonth = useCallback(async (date: NepaliDateType) => {
         setIsLoading(true);
         try {
-            const events = await getMonthEvents({ year: date.getYear(), month: date.getMonth() + 1 });
-            setMonthEvents(events);
+            const res = await fetch(`/api/calendar/${date.getYear()}/${date.getMonth() + 1}`);
+            if (res.ok) {
+                const events = await res.json();
+                setMonthEvents(events);
+            } else {
+                 console.error("Failed to fetch month events:", await res.text());
+                 setMonthEvents([]);
+            }
         } catch (error) {
             console.error("Failed to fetch month events:", error);
             setMonthEvents([]);

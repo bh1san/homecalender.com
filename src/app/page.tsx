@@ -17,7 +17,6 @@ import DateConverter from "@/components/date-converter";
 import FestivalList from "@/components/festival-list";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getNews } from "@/ai/flows/news-flow";
 import { NewsItem, PatroDataResponse } from "@/ai/schemas";
 import CurrentDateTime from "@/components/current-date-time";
 import { useEffect, useState } from "react";
@@ -25,7 +24,6 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import MotivationalQuote from "@/components/motivational-quote";
 import { User } from "lucide-react";
 import UpcomingEventsWidget from "@/components/upcoming-events-widget";
-import { getPatroData } from "@/ai/flows/patro-data-flow";
 import Rashifal from "@/components/rashifal";
 import GoldSilver from "@/components/gold-silver";
 import Forex from "@/components/forex";
@@ -67,15 +65,24 @@ export default function Home() {
     const fetchAllData = async () => {
       setLoading(true);
       try {
-        const country = "Nepal";
-        
-        const [patroData, newsData] = await Promise.all([
-            getPatroData(),
-            getNews(country),
+        const [patroRes, newsRes] = await Promise.all([
+            fetch('/api/patro'),
+            fetch('/api/news'),
         ]);
 
-        setPatroData(patroData);
-        setNewsItems(newsData.headlines);
+        if (patroRes.ok) {
+            const patroData = await patroRes.json();
+            setPatroData(patroData);
+        } else {
+            console.error("Failed to fetch patro data");
+        }
+        
+        if (newsRes.ok) {
+            const newsData = await newsRes.json();
+            setNewsItems(newsData.headlines);
+        } else {
+            console.error("Failed to fetch news data");
+        }
         
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -181,20 +188,9 @@ export default function Home() {
                      <NepaliCalendarComponent />
                 </CardContent>
               </Card>
-
               <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
                 <CardHeader>
-                  <CardTitle>Foreign Exchange Rates</CardTitle>
-                  <CardDescription>Rates are against NPR and provided by Nepal Rastra Bank.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Forex loading={loading} rates={patroData?.forex} />
-                </CardContent>
-              </Card>
-
-               <Card className="shadow-lg bg-card/80 backdrop-blur-sm">
-                <CardHeader>
-                    <CardTitle>Tools</CardTitle>
+                  <CardTitle>Tools</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <Tabs defaultValue="converter" className="w-full">
@@ -232,6 +228,17 @@ export default function Home() {
                   </Tabs>
                 </CardContent>
               </Card>
+
+              <Card className="w-full shadow-lg bg-card/80 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle>Foreign Exchange Rates</CardTitle>
+                  <CardDescription>Rates are against NPR and provided by Nepal Rastra Bank.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Forex loading={loading} rates={patroData?.forex} />
+                </CardContent>
+              </Card>
+
           </div>
         </div>
       </main>
