@@ -199,14 +199,15 @@ export default function NepaliCalendarComponent() {
                                     <h4 className="font-bold text-lg text-primary">{new NepaliDate(bsYear, bsMonth, bsDay).format('DD MMMM', 'np')}</h4>
                                     {dayEvent?.tithi && <p className="text-sm text-muted-foreground font-semibold">{dayEvent.tithi}</p>}
                                     <hr />
-                                    {dayEvent && dayEvent.events.length > 0 ? (
+                                    {(dayEvent && dayEvent.events.length > 0) || isHoliday ? (
                                         <ul className="space-y-1.5">
-                                            {dayEvent.events.map((e, i) => <li key={i} className="text-sm font-medium flex items-center gap-2"><Info className="w-4 h-4 text-accent" />{e}</li>)}
+                                            {dayEvent?.events.map((e, i) => <li key={i} className="text-sm font-medium flex items-center gap-2"><Info className="w-4 h-4 text-accent" />{e}</li>)}
+                                            {isSaturday && <li className="text-sm font-medium flex items-center gap-2"><Info className="w-4 h-4 text-accent" />शनिबार (सार्वजनिक बिदा)</li>}
+                                            {dayEvent?.is_holiday && !isSaturday && <li className="text-sm font-medium flex items-center gap-2"><Info className="w-4 h-4 text-accent" />सार्वजनिक बिदा</li>}
                                         </ul>
-                                    ): (
-                                         isSaturday ? <li className="text-sm font-medium flex items-center gap-2"><Info className="w-4 h-4 text-accent" />शनिबार (सार्वजनिक बिदा)</li> : <p className="text-sm text-muted-foreground">कुनै कार्यक्रम छैन।</p>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground">कुनै कार्यक्रम छैन।</p>
                                     )}
-                                     {dayEvent && dayEvent.events.length === 0 && isSaturday && <li className="text-sm font-medium flex items-center gap-2"><Info className="w-4 h-4 text-accent" />शनिबार (सार्वजनिक बिदा)</li>}
                                 </div>
                             </PopoverContent>
                         </Popover>

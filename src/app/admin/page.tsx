@@ -24,7 +24,8 @@ import { Label } from "@/components/ui/label";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import FlagLoader from "@/components/flag-loader";
-import { NewsItem } from "@/ai/schemas";
+import { NewsItem, PatroDataResponse } from "@/ai/schemas";
+import { getPageData } from "@/app/actions";
 
 type Settings = {
     logoUrl: string;
@@ -47,28 +48,9 @@ export default function AdminPage() {
   const fetchInitialData = async () => {
       setIsLoading(true);
       try {
-          // Check if the API route exists before fetching.
-          const checkResponse = await fetch('/api/settings', { method: 'HEAD' });
-          if (!checkResponse.ok) {
-              // Silently fail if route doesn't exist, use defaults
-              console.warn("Settings API route not found. Using default settings.");
-              setNews([]); // No news if backend isn't fully set up
-              setSettings({ logoUrl: "https://placehold.co/200x50.png", navLinks: ["Home", "About"] });
-              return;
-          }
-
-          const [settingsRes, newsRes] = await Promise.all([
-              fetch('/api/settings'),
-              fetch('/api/news')
-          ]);
-
-          if (!settingsRes.ok) throw new Error("Failed to fetch settings.");
-          const settingsData = await settingsRes.json();
-          setSettings(settingsData);
-          
-          if (!newsRes.ok) throw new Error("Failed to fetch news.");
-          const newsData = await newsRes.json();
-          setNews(newsData.headlines);
+          const { newsItems, settings: pageSettings } = await getPageData();
+          setSettings(pageSettings);
+          setNews(newsItems);
 
       } catch (err) {
           const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
@@ -86,13 +68,11 @@ export default function AdminPage() {
 
   const saveSettings = async (newSettings: Settings) => {
       try {
-          const response = await fetch('/api/settings', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(newSettings),
-          });
-          if (!response.ok) throw new Error("Failed to save settings.");
-          toast({ title: "Success", description: "Settings updated successfully."});
+          // This route is no longer used for saving settings directly from admin page
+          // but we can keep it for future if needed or adapt it.
+          // For now, settings are managed via data/settings.json
+          console.log("Saving settings (mock):", newSettings);
+          toast({ title: "Success", description: "Settings updated successfully (mock)."});
           return true;
       } catch (err) {
           const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";

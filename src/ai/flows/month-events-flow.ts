@@ -111,23 +111,23 @@ const monthEventsFlow = ai.defineFlow(
 
         const eventsMap = new Map<number, CalendarEvent>();
 
-        // Populate map with API events
+        // Populate map with API events first to preserve tithi and holiday info
         apiEvents.forEach(event => {
             eventsMap.set(event.day, event);
         });
 
-        // Merge custom events
+        // Merge custom events into the map
         customEventsForMonth.forEach(customEvent => {
             const day = customEvent.bsDay;
             const existingEvent = eventsMap.get(day);
 
             if (existingEvent) {
-                // Add custom event summary if not already present
+                // Add custom event summary if it's not already there from the API
                 if (!existingEvent.events.includes(customEvent.summary)) {
                     existingEvent.events.push(customEvent.summary);
                 }
             } else {
-                // Create a new event if one doesn't exist for this day
+                // If no event exists from the API, create a new one for the custom event
                 const adDate = new NepaliDate(year, month - 1, day).toJsDate();
                 eventsMap.set(day, {
                     day: day,
