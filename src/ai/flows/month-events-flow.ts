@@ -63,16 +63,20 @@ const processMonthData = async (data: z.infer<typeof NpCalendarSajjanApiResponse
         const bsDay = dayData.d; 
         const adDate = new NepaliDate(year, month - 1, bsDay).toJsDate();
         const events = [];
+
+        if (dayData.t) {
+            events.push(dayData.t);
+        }
         if (dayData.f) {
             events.push(dayData.f);
         }
 
         return {
             day: bsDay,
-            tithi: dayData.t || '', // Capture the Tithi here
             gregorian_date: adDate.toISOString().split('T')[0],
             events: events,
             is_holiday: dayData.h,
+            holiday_info: dayData.h ? (dayData.f || "Public Holiday") : undefined,
         };
     });
 };
@@ -131,7 +135,6 @@ const monthEventsFlow = ai.defineFlow(
                 const adDate = new NepaliDate(year, month - 1, day).toJsDate();
                 eventsMap.set(day, {
                     day: day,
-                    tithi: '', // No Tithi info for custom-only events
                     gregorian_date: adDate.toISOString().split('T')[0],
                     events: [customEvent.summary],
                     is_holiday: false, // Default holiday status for custom events

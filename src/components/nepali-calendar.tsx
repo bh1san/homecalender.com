@@ -172,12 +172,9 @@ export default function NepaliCalendarComponent() {
                                     {adDay}
                                 </span>
                                  <div className="text-center mt-1">
-                                     {dayEvent?.tithi && (
-                                         <p className="text-[10px] sm:text-xs text-foreground/80 truncate font-medium">{dayEvent.tithi}</p>
-                                    )}
                                      {dayEvent && dayEvent.events.length > 0 && (
                                         <p className="text-[10px] sm:text-xs text-accent/90 font-semibold text-center truncate px-1">
-                                            {dayEvent.events[0]}
+                                            {dayEvent.events.join(', ')}
                                         </p>
                                      )}
                                 </div>
@@ -197,13 +194,12 @@ export default function NepaliCalendarComponent() {
                             <PopoverContent className="w-60 p-4" align="start">
                                 <div className="space-y-2">
                                     <h4 className="font-bold text-lg text-primary">{new NepaliDate(bsYear, bsMonth, bsDay).format('DD MMMM', 'np')}</h4>
-                                    {dayEvent?.tithi && <p className="text-sm text-muted-foreground font-semibold">{dayEvent.tithi}</p>}
                                     <hr />
                                     {(dayEvent && dayEvent.events.length > 0) || isHoliday ? (
                                         <ul className="space-y-1.5">
                                             {dayEvent?.events.map((e, i) => <li key={i} className="text-sm font-medium flex items-center gap-2"><Info className="w-4 h-4 text-accent" />{e}</li>)}
-                                            {isSaturday && <li className="text-sm font-medium flex items-center gap-2"><Info className="w-4 h-4 text-accent" />शनिबार (सार्वजनिक बिदा)</li>}
-                                            {dayEvent?.is_holiday && !isSaturday && <li className="text-sm font-medium flex items-center gap-2"><Info className="w-4 h-4 text-accent" />सार्वजनिक बिदा</li>}
+                                            {isSaturday && !dayEvent?.holiday_info && <li className="text-sm font-medium flex items-center gap-2"><Info className="w-4 h-4 text-accent" />शनिबार (सार्वजनिक बिदा)</li>}
+                                            {dayEvent?.is_holiday && <li className="text-sm font-medium flex items-center gap-2"><Info className="w-4 h-4 text-accent" />{dayEvent.holiday_info || 'सार्वजनिक बिदा'}</li>}
                                         </ul>
                                     ) : (
                                         <p className="text-sm text-muted-foreground">कुनै कार्यक्रम छैन।</p>

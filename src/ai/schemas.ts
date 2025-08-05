@@ -42,12 +42,12 @@ export type FestivalResponse = z.infer<typeof FestivalResponseSchema>;
 
 export const CalendarEventSchema = z.object({
   day: z.number().describe('The day of the month.'),
-  tithi: z.string().describe('The lunar phase (Tithi) of the day, in Nepali script.'),
   gregorian_date: z.string().optional(),
   events: z
     .array(z.string())
     .describe('A list of events or festivals on this day, in Nepali script.'),
   is_holiday: z.boolean().describe('Whether the day is a public holiday.'),
+  holiday_info: z.string().optional().describe('The specific reason for the holiday, if applicable.')
 });
 export type CalendarEvent = z.infer<typeof CalendarEventSchema>;
 
@@ -122,5 +122,3 @@ export const PatroDataResponseSchema = z.object({
     upcomingEvents: z.array(UpcomingEventSchema).optional(),
 });
 export type PatroDataResponse = z.infer<typeof PatroDataResponseSchema>;
-
-    
