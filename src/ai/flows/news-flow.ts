@@ -37,10 +37,16 @@ const newsFlow = ai.defineFlow(
     }
     
     const countryCode = countryCodeMapping[country] || 'us';
-    const apiUrl = `https://newsdata.io/api/1/news?apikey=${apiKey}&country=${countryCode}&size=10`;
+    const apiUrl = `https://newsdata.io/api/1/news?country=${countryCode}&size=10`;
 
     try {
-        const response = await fetch(apiUrl, { next: { revalidate: 86400 } }); 
+        const response = await fetch(apiUrl, { 
+            next: { revalidate: 86400 },
+            headers: {
+                'X-ACCESS-KEY': apiKey
+            }
+        }); 
+        
         if (!response.ok) {
             const errorBody = await response.text();
             console.error(`News API request failed with status ${response.status}: ${errorBody}`);
