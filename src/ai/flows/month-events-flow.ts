@@ -60,7 +60,7 @@ const processMonthData = async (data: z.infer<typeof NpCalendarSajjanApiResponse
     const NepaliDate = (await import('nepali-date-converter')).default;
     
     return data.days.map(dayData => {
-        const bsDay = dayData.d; // Use the correct numeric day 'd' from the API
+        const bsDay = dayData.d; 
         const adDate = new NepaliDate(year, month - 1, bsDay).toJsDate();
         const events = [];
         if (dayData.f) {
@@ -69,7 +69,7 @@ const processMonthData = async (data: z.infer<typeof NpCalendarSajjanApiResponse
 
         return {
             day: bsDay,
-            tithi: dayData.t,
+            tithi: dayData.t || '', // Capture the Tithi here
             gregorian_date: adDate.toISOString().split('T')[0],
             events: events,
             is_holiday: dayData.h,
@@ -103,35 +103,38 @@ const monthEventsFlow = ai.defineFlow(
                         bsDay: nepaliEventDate.getDate()
                     };
                 } catch (e) {
+                    console.error("Error converting custom event date:", e);
                     return null;
                 }
             })
-            .filter(event => event && event.bsYear === year && event.bsMonth === month);
+            .filter((event): event is NonNullable<typeof event> => event !== null && event.bsYear === year && event.bsMonth === month);
 
         const eventsMap = new Map<number, CalendarEvent>();
 
+        // Populate map with API events
         apiEvents.forEach(event => {
             eventsMap.set(event.day, event);
         });
 
+        // Merge custom events
         customEventsForMonth.forEach(customEvent => {
-            if (!customEvent) return;
-
             const day = customEvent.bsDay;
             const existingEvent = eventsMap.get(day);
 
             if (existingEvent) {
+                // Add custom event summary if not already present
                 if (!existingEvent.events.includes(customEvent.summary)) {
                     existingEvent.events.push(customEvent.summary);
                 }
             } else {
+                // Create a new event if one doesn't exist for this day
                 const adDate = new NepaliDate(year, month - 1, day).toJsDate();
                 eventsMap.set(day, {
                     day: day,
-                    tithi: '',
+                    tithi: '', // No Tithi info for custom-only events
                     gregorian_date: adDate.toISOString().split('T')[0],
                     events: [customEvent.summary],
-                    is_holiday: false,
+                    is_holiday: false, // Default holiday status for custom events
                 });
             }
         });
