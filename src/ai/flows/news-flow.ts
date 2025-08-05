@@ -37,15 +37,10 @@ const newsFlow = ai.defineFlow(
     }
     
     const countryCode = countryCodeMapping[country] || 'us';
-    const apiUrl = `https://newsdata.io/api/1/news?country=${countryCode}&size=10`;
+    const apiUrl = `https://newsdata.io/api/1/news?country=${countryCode}&size=10&apikey=${apiKey}`;
 
     try {
-        const response = await fetch(apiUrl, { 
-            next: { revalidate: 86400 },
-            headers: {
-                'X-ACCESS-KEY': apiKey
-            }
-        }); 
+        const response = await fetch(apiUrl, { next: { revalidate: 86400 } }); 
         
         if (!response.ok) {
             const errorBody = await response.text();

@@ -16,6 +16,7 @@ import {
   Forex,
   UpcomingEvent,
   CurrentDateInfoResponse,
+  CalendarEvent
 } from '@/ai/schemas';
 import { getMonthEvents } from './month-events-flow';
 import { liveRate } from '@sapkotamadan/nrb-forex';
@@ -123,16 +124,38 @@ const patroDataFlow = ai.defineFlow(
     console.log("Fetching new Patro data from sources...");
     const { todayInfo, todaysEvent } = await getLocalTodayData();
     
-    const [aiData, forexData, monthEvents] = await Promise.all([
+    const [aiData, forexData] = await Promise.all([
         generateAIFallbackData(),
         getForexData(),
-        getMonthEvents({ year: todayInfo.bsYear, month: todayInfo.bsMonth })
     ]);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const upcomingEvents: UpcomingEvent[] = (monthEvents || [])
+    // Fetch events for current month, if not enough, fetch for next month as well
+    let allMonthEvents: CalendarEvent[] = await getMonthEvents({ year: todayInfo.bsYear, month: todayInfo.bsMonth });
+    
+    const upcomingEventsFromCurrentMonth = allMonthEvents.filter(event => {
+        if (!event?.gregorian_date) return false;
+        const eventDate = new Date(event.gregorian_date);
+        eventDate.setHours(0,0,0,0);
+        return eventDate >= today;
+    });
+
+    if (upcomingEventsFromCurrentMonth.length < 10) {
+        let nextMonth = todayInfo.bsMonth + 1;
+        let nextYear = todayInfo.bsYear;
+        if (nextMonth > 12) {
+            nextMonth = 1;
+            nextYear += 1;
+        }
+        const nextMonthEvents = await getMonthEvents({ year: nextYear, month: nextMonth });
+        allMonthEvents = allMonthEvents.concat(nextMonthEvents);
+    }
+
+
+    const upcomingEvents: UpcomingEvent[] = allMonthEvents
+      .filter(event => (event.events && event.events.length > 0) || event.is_holiday)
       .map(event => {
         try {
           if (!event?.gregorian_date) return null;
