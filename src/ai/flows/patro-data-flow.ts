@@ -12,14 +12,10 @@ import {
   PatroDataResponse, 
   PatroDataResponseSchema, 
   Horoscope,
-  HoroscopeSchema,
   GoldSilverSchema,
   Forex,
-  ForexSchema,
   UpcomingEvent,
-  UpcomingEventSchema,
   CurrentDateInfoResponse,
-  CurrentDateInfoResponseSchema
 } from '@/ai/schemas';
 import { getMonthEvents } from './month-events-flow';
 import { liveRate } from '@sapkotamadan/nrb-forex';

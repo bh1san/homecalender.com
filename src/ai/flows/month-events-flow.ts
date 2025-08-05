@@ -60,7 +60,7 @@ const processMonthData = async (data: z.infer<typeof NpCalendarSajjanApiResponse
     const NepaliDate = (await import('nepali-date-converter')).default;
     
     return data.days.map(dayData => {
-        const bsDay = parseInt(dayData.n); 
+        const bsDay = dayData.d; // Use the correct numeric day 'd' from the API
         const adDate = new NepaliDate(year, month - 1, bsDay).toJsDate();
         const events = [];
         if (dayData.f) {
@@ -85,7 +85,6 @@ const monthEventsFlow = ai.defineFlow(
   },
   async ({ year, month }) => {
     try {
-        console.log(`Fetching new month events for ${year}-${month} from Sajjan API + Custom.`);
         const NepaliDate = (await import('nepali-date-converter')).default;
         const customEventsData = (await import('@/data/custom-events.json')).default;
 

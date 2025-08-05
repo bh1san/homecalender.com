@@ -24,35 +24,7 @@ import { Label } from "@/components/ui/label";
 import Image from "next/image";
 import { useToast } from "@/hooks/use-toast";
 import FlagLoader from "@/components/flag-loader";
-
-// Mock data for now
-const mockNews = [
-  {
-    id: 1,
-    title: "Major Tech Conference Announced in SF",
-    imageUrl: "https://placehold.co/100x60.png",
-    category: "Technology",
-  },
-  {
-    id: 2,
-    title: "New Space Mission to Explore Jupiter's Moons",
-    imageUrl: "https://placehold.co/100x60.png",
-    category: "Science",
-  },
-  {
-    id: 3,
-    title: "Local Sports Team Wins Championship",
-    imageUrl: "https://placehold.co/100x60.png",
-    category: "Sports",
-  },
-];
-
-type NewsArticle = {
-  id?: number;
-  title: string;
-  imageUrl: string;
-  category: string;
-};
+import { NewsItem } from "@/ai/schemas";
 
 type Settings = {
     logoUrl: string;
@@ -66,32 +38,51 @@ export default function AdminPage() {
   const [error, setError] = useState("");
 
   const [isLoading, setIsLoading] = useState(true);
-  const [news, setNews] = useState<NewsArticle[]>(mockNews);
-  const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
+  const [news, setNews] = useState<NewsItem[]>([]);
+  const [selectedArticle, setSelectedArticle] = useState<Partial<NewsItem> | null>(null);
 
   const [settings, setSettings] = useState<Settings>({ logoUrl: "", navLinks: [] });
   const [newNavLink, setNewNavLink] = useState("");
 
-  useEffect(() => {
-      if (isAuthenticated) {
-          fetchSettings();
-      }
-  }, [isAuthenticated]);
-
-  const fetchSettings = async () => {
+  const fetchInitialData = async () => {
       setIsLoading(true);
       try {
-          const response = await fetch('/api/settings');
-          if (!response.ok) throw new Error("Failed to fetch settings.");
-          const data = await response.json();
-          setSettings(data);
+          // Check if the API route exists before fetching.
+          const checkResponse = await fetch('/api/settings', { method: 'HEAD' });
+          if (!checkResponse.ok) {
+              // Silently fail if route doesn't exist, use defaults
+              console.warn("Settings API route not found. Using default settings.");
+              setNews([]); // No news if backend isn't fully set up
+              setSettings({ logoUrl: "https://placehold.co/200x50.png", navLinks: ["Home", "About"] });
+              return;
+          }
+
+          const [settingsRes, newsRes] = await Promise.all([
+              fetch('/api/settings'),
+              fetch('/api/news')
+          ]);
+
+          if (!settingsRes.ok) throw new Error("Failed to fetch settings.");
+          const settingsData = await settingsRes.json();
+          setSettings(settingsData);
+          
+          if (!newsRes.ok) throw new Error("Failed to fetch news.");
+          const newsData = await newsRes.json();
+          setNews(newsData.headlines);
+
       } catch (err) {
           const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
-          toast({ variant: "destructive", title: "Error", description: errorMessage });
+          toast({ variant: "destructive", title: "Error", description: `Could not load initial data: ${errorMessage}` });
       } finally {
           setIsLoading(false);
       }
   }
+
+  useEffect(() => {
+      if (isAuthenticated) {
+          fetchInitialData();
+      }
+  }, [isAuthenticated]);
 
   const saveSettings = async (newSettings: Settings) => {
       try {
@@ -120,12 +111,12 @@ export default function AdminPage() {
     }
   };
 
-  const handleEdit = (article: NewsArticle) => {
+  const handleEdit = (article: NewsItem) => {
     setSelectedArticle(article);
   };
   
   const handleAddNew = () => {
-    setSelectedArticle({ title: "", imageUrl: "", category: "" });
+    setSelectedArticle({ title: "", imageUrl: "" });
   };
 
   const handleSave = (event: React.FormEvent<HTMLFormElement>) => {
@@ -133,12 +124,14 @@ export default function AdminPage() {
     if (!selectedArticle) return;
     // This is still mock functionality. Replace with actual save logic.
     console.log("Saving:", selectedArticle);
+    toast({ title: "Mock Save", description: "Save functionality is a placeholder." });
     setSelectedArticle(null);
   };
   
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: string) => {
     // This is still mock functionality. Replace with actual delete logic.
     console.log("Deleting article with id:", id);
+    toast({ title: "Mock Delete", description: "Delete functionality is a placeholder." });
   };
 
   const handleAddNavLink = async () => {
@@ -164,11 +157,12 @@ export default function AdminPage() {
 
   const handleLogoUrlChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const newLogoUrl = e.target.value;
-    // Debounce or save on blur in a real app might be better
     setSettings(prev => ({...prev, logoUrl: newLogoUrl}));
-    await saveSettings({ ...settings, logoUrl: newLogoUrl });
   };
 
+  const handleLogoUrlBlur = async () => {
+    await saveSettings(settings);
+  }
 
   if (!isAuthenticated) {
     return (
@@ -230,7 +224,7 @@ export default function AdminPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Logo Management</CardTitle>
-                    <CardDescription>Update the site logo by providing a URL. Changes are saved automatically.</CardDescription>
+                    <CardDescription>Update the site logo by providing a URL. Changes are saved on blur.</CardDescription>
                 </CardHeader>
                 <CardContent>
                      <div className="space-y-2">
@@ -239,6 +233,7 @@ export default function AdminPage() {
                             id="logo-url"
                             value={settings.logoUrl} 
                             onChange={handleLogoUrlChange}
+                            onBlur={handleLogoUrlBlur}
                             placeholder="https://example.com/logo.png"
                         />
                      </div>
@@ -252,6 +247,7 @@ export default function AdminPage() {
                                 height={50} 
                                 className="rounded-md object-contain border p-2"
                                 data-ai-hint="logo"
+                                unoptimized
                             />
                         </div>
                      )}
@@ -286,11 +282,11 @@ export default function AdminPage() {
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                     <div>
-                        <CardTitle>News Management (Mock)</CardTitle>
-                        <CardDescription>This section is a placeholder.</CardDescription>
+                        <CardTitle>News Management</CardTitle>
+                        <CardDescription>Add, edit, or delete news articles.</CardDescription>
                     </div>
                     <Button onClick={handleAddNew}>
-                        <PlusCircle className="mr-2" /> Add New
+                        <PlusCircle className="mr-2" /> Add New (Mock)
                     </Button>
                 </CardHeader>
                 <CardContent>
@@ -299,7 +295,6 @@ export default function AdminPage() {
                             <TableRow>
                                 <TableHead className="w-[120px]">Image</TableHead>
                                 <TableHead>Title</TableHead>
-                                <TableHead>Category</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -307,10 +302,9 @@ export default function AdminPage() {
                             {news.map((article) => (
                                 <TableRow key={article.id}>
                                     <TableCell>
-                                        <Image src={article.imageUrl} alt={article.title} width={100} height={60} className="rounded-md object-cover" />
+                                        <Image src={article.imageUrl} alt={article.title} width={100} height={60} className="rounded-md object-cover" unoptimized />
                                     </TableCell>
                                     <TableCell className="font-medium">{article.title}</TableCell>
-                                    <TableCell>{article.category}</TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" onClick={() => handleEdit(article)}>
                                             <Edit className="h-4 w-4" />
@@ -331,24 +325,20 @@ export default function AdminPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>{selectedArticle.id ? "Edit Article" : "Add New Article"}</CardTitle>
-                        <CardDescription>Fill out the details below.</CardDescription>
+                        <CardDescription>Fill out the details below. (This is a mock form)</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSave} className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="title">Title</Label>
-                                <Input id="title" placeholder="Enter news headline" value={selectedArticle.title} onChange={(e) => setSelectedArticle({...selectedArticle, title: e.target.value})} />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="category">Category</Label>
-                                <Input id="category" placeholder="e.g., Technology" value={selectedArticle.category} onChange={(e) => setSelectedArticle({...selectedArticle, category: e.target.value})} />
+                                <Input id="title" placeholder="Enter news headline" value={selectedArticle.title || ''} onChange={(e) => setSelectedArticle({...selectedArticle, title: e.target.value})} />
                             </div>
                              <div className="space-y-2">
                                 <Label htmlFor="image">Image</Label>
                                 <Input id="image" type="file" />
                                 {selectedArticle.imageUrl && (
                                     <div className="pt-2">
-                                        <Image src={selectedArticle.imageUrl} alt="Current image" width={120} height={80} className="rounded-md object-cover" />
+                                        <Image src={selectedArticle.imageUrl} alt="Current image" width={120} height={80} className="rounded-md object-cover" unoptimized/>
                                     </div>
                                 )}
                             </div>
