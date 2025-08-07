@@ -29,7 +29,7 @@ const newsFlow = ai.defineFlow(
         return { headlines: [] };
     }
     
-    const apiUrl = `https://newsdata.io/api/1/news?q=${encodeURIComponent(query)}&size=10&apikey=${apiKey}`;
+    const apiUrl = `https://newsdata.io/api/1/news?q=${encodeURIComponent(query)}&category=top&size=10&apikey=${apiKey}`;
 
     try {
         const response = await fetch(apiUrl, { next: { revalidate: 86400 } }); 
@@ -44,6 +44,10 @@ const newsFlow = ai.defineFlow(
 
         if (data.status !== 'success' || !data.results) {
              console.error('News API did not return a successful response.', data);
+             // Check for specific error messages from the API
+             if (data.results?.message) {
+                console.error('NewsData.io API Message:', data.results.message);
+             }
              return { headlines: [] };
         }
 
