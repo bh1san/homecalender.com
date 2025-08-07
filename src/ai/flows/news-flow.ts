@@ -23,9 +23,9 @@ const newsFlow = ai.defineFlow(
   async ({ query }) => {
     console.log(`Fetching new news response for query: ${query}.`);
     
-    const apiKey = process.env.NEWSDATAIO_API_KEY;
+    const apiKey = process.env.NEXT_PUBLIC_NEWSDATAIO_API_KEY;
     if (!apiKey) {
-        console.error("NewsData.io API key is not configured in .env file (NEWSDATAIO_API_KEY).");
+        console.error("NewsData.io API key is not configured in .env file (NEXT_PUBLIC_NEWSDATAIO_API_KEY).");
         return { headlines: [] };
     }
     
