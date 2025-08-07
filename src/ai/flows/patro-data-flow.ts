@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A flow for fetching data like horoscopes, gold/silver prices, and forex rates.

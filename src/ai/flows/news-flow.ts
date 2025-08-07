@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview A flow for fetching recent news headlines with images based on location.
@@ -30,9 +29,9 @@ const newsFlow = ai.defineFlow(
   async ({ country }) => {
     console.log(`Fetching new news response for ${country}.`);
     
-    const apiKey = process.env.NEWSDATA_API_KEY;
+    const apiKey = process.env.NEWSDATAIO_API_KEY;
     if (!apiKey) {
-        console.error("NewsData.io API key is not configured in .env file (NEWSDATA_API_KEY).");
+        console.error("NewsData.io API key is not configured in .env file (NEWSDATAIO_API_KEY).");
         return { headlines: [] };
     }
     
