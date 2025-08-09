@@ -16,10 +16,10 @@ This project uses the NewsData.io API to fetch news headlines.
 
 1.  Sign up for a free API key at [NewsData.io](https://newsdata.io/register).
 2.  Open the `.env` file in the project.
-3.  Set the `NEWSDATA_API_KEY` with the key you obtained.
+3.  Set the `NEWSDATAIO_API_KEY` with the key you obtained.
 
 ```
-NEWSDATA_API_KEY="YOUR_API_KEY_HERE"
+NEWSDATAIO_API_KEY="YOUR_API_KEY_HERE"
 ```
 
 ### Genkit AI
