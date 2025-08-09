@@ -2,6 +2,10 @@
 # after setting up SSL with Certbot. Certbot will typically make these
 # changes for you automatically.
 
+# NOTE: Your new server IP address is 178.128.97.241.
+# You must update the 'A' record for homecalender.com at your domain
+# registrar to point to this new IP address.
+
 # This first server block handles HTTP traffic on port 80.
 # Certbot usually modifies it to redirect all traffic to HTTPS.
 server {
