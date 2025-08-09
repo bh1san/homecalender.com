@@ -25,12 +25,12 @@ const newsFlow = ai.defineFlow(
 
     if (!apiKey) {
         console.error("NewsData.io API key is not configured in .env file (NEWSDATAIO_API_KEY). Please add it to enable the news feature.");
-        // Return empty headlines instead of throwing an error to prevent the whole app from crashing.
         return { headlines: [] };
     }
     
     console.log(`Fetching new news response for query: ${query}.`);
     
+    // Use `q` parameter which is supported on the free plan, instead of `country`.
     const apiUrl = `https://newsdata.io/api/1/news?q=${encodeURIComponent(query)}&category=top&size=10&apikey=${apiKey}`;
 
     try {
@@ -40,6 +40,7 @@ const newsFlow = ai.defineFlow(
             const errorBody = await response.json();
             console.error(`News API request failed with status ${response.status}:`, errorBody);
              if (errorBody.results?.message) {
+                // Log the specific message from the API provider.
                 console.error('NewsData.io API Message:', errorBody.results.message);
              }
             // Return empty list on failure to prevent page crash
