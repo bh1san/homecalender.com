@@ -96,7 +96,7 @@ export default async function Home() {
           <h3 className="text-lg font-semibold mb-3 text-accent-foreground dark:text-gray-200 bg-accent/20 p-2 rounded">
             News Bulletin from Nepal
           </h3>
-            {newsItems.length > 0 ? (
+            {newsItems && newsItems.length > 0 ? (
                 <div className="flex space-x-4 overflow-x-auto pb-4">
                     {newsItems.map((item) => (
                          <a 
@@ -122,7 +122,7 @@ export default async function Home() {
                 </div>
             ) : (
                 <div className="text-center text-muted-foreground p-4 bg-muted/50 rounded-lg">
-                    Could not load news headlines. Please ensure the NewsData.io API key is set in the environment variables.
+                    Could not load news headlines. Please ensure the NewsData.io API key is set correctly in the environment variables.
                 </div>
             )}
         </section>

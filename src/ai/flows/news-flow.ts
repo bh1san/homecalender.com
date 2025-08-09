@@ -21,13 +21,15 @@ const newsFlow = ai.defineFlow(
     outputSchema: NewsResponseSchema,
   },
   async ({ query }) => {
-    console.log(`Fetching new news response for query: ${query}.`);
-    
     const apiKey = process.env.NEWSDATAIO_API_KEY;
+
     if (!apiKey) {
-        console.error("NewsData.io API key is not configured in .env file (NEWSDATAIO_API_KEY).");
+        console.error("NewsData.io API key is not configured in .env file (NEWSDATAIO_API_KEY). Please add it to enable the news feature.");
+        // Return empty headlines instead of throwing an error to prevent the whole app from crashing.
         return { headlines: [] };
     }
+    
+    console.log(`Fetching new news response for query: ${query}.`);
     
     const apiUrl = `https://newsdata.io/api/1/news?q=${encodeURIComponent(query)}&category=top&size=10&apikey=${apiKey}`;
 
@@ -37,11 +39,11 @@ const newsFlow = ai.defineFlow(
         if (!response.ok) {
             const errorBody = await response.json();
             console.error(`News API request failed with status ${response.status}:`, errorBody);
-            // Check for specific error messages from the API
              if (errorBody.results?.message) {
                 console.error('NewsData.io API Message:', errorBody.results.message);
              }
-            throw new Error(`Failed to fetch news. API returned: ${errorBody.results?.message || 'Unknown error'}`);
+            // Return empty list on failure to prevent page crash
+            return { headlines: [] };
         }
 
         const data = await response.json();

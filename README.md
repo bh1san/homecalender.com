@@ -12,7 +12,7 @@ This project includes a native and interactive Nepali calendar. To enable the ca
 
 ### News API Setup
 
-This project uses the NewsData.io API to fetch news headlines.
+This project uses the NewsData.io API to fetch news headlines. The application requires this API key to be present to start up correctly.
 
 1.  Sign up for a free API key at [NewsData.io](https://newsdata.io/register).
 2.  Open the `.env` file in the project.
