@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A flow for fetching data like horoscopes, gold/silver prices, and forex rates.
@@ -40,7 +41,7 @@ const scraperPrompt = ai.definePrompt({
 
 const generateAIFallbackData = async (): Promise<Omit<PatroDataResponse, 'today' | 'upcomingEvents' | 'todaysEvent' | 'forex'>> => {
     if (!process.env.GEMINI_API_KEY) {
-        console.log("GEMINI_API_KEY not found. Skipping AI data generation.");
+        console.log("GEMINI_API_KEY not found in .env. Skipping AI-generated data (horoscope, gold/silver). The app will function without it.");
         return { horoscope: [], goldSilver: null };
     }
 
